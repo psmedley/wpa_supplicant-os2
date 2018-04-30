@@ -14,6 +14,7 @@
     History:
     20140831 AB   initial
     20180310 AB   update ArcaOS, OS/2
+    20180423 AB   added ver_min handling for beta versions
 */
 
 VendorName = 'Andreas Buchinger'  /* no more than 31 chars */
@@ -27,6 +28,7 @@ Description = 'WPA supplicant package for OS/2 - XWLAN Project'
 ver_years = '2003-2018'
 ver_rev =   ''          /* leave empty as it's taken from version.h */
 ver_build = ''          /* empty (default) or numeric value */
+ver_min ='rc1'        /* use f.i. beta or leave empty */
 
 outfile  = 'bldlvl.def'
 
@@ -109,9 +111,13 @@ IF LENGTH(Description) > 79 THEN DO
     SAY 'Description lenght corrected'
     END
 
+IF (ver_min \= '') THEN DO
+  FullString = "@#"VendorName':'ver_maj'.'ver_min'#@##1## 'datimmach''Feature'@@  'Description""
+  END
+ELSE DO
+  FullString = "@#"VendorName':'ver_maj'#@##1## 'datimmach''Feature'@@  'Description""
+  END
 
-/* FullString = "@#"VendorName':'ver_maj'.'ver_min'#@##1## 'datimmach''Feature'@@  'Description"" */
-FullString = "@#"VendorName':'ver_maj'#@##1## 'datimmach''Feature'@@  'Description""
 IF fTrace > 0 THEN SAY FullString
 
 /*
