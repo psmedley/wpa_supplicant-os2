@@ -18,7 +18,7 @@
 #endif /* _SOCKLEN_T_DECLARED */
 
 #if defined(__OS2__)
-	#define VERSION_STR_POSTFIX " (OS/2-v2beta)"
+	#define VERSION_STR_POSTFIX " (OS/2-rc1)"
 #endif /* __OS2__ */
 
 #if defined(__linux__) || defined(__GLIBC__)

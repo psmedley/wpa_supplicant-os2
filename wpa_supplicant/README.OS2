@@ -1,23 +1,40 @@
 ###############################################################################
-BetaTester installation intructions
-- replace installed wpa_supplicant.exe with the included one
-	When using xwlan widget wpa_supplicant is usually found in
-	\util\xworkplace\plugins\xcenter\xwlan\.
-	When using the standalone wlanstat then in .\xwlan\.
-- check if the new version is used by xwlan/wlanstat
-	right-click - properties - tab 'WPA supplicant' check version and path
-- connect to wpa protected networks and post your findings at correspondending
+Installation intructions for Beta & RC testers
+
+Using with XWLAN/WLANSTAT
+-------------------------
+- Replace installed wpa_supplicant.exe with the included one. When using xwlan
+  widget wpa_supplicant is usually found in
+  \util\xworkplace\plugins\xcenter\xwlan\.
+	When using the standalone wlanstat then it is in .\xwlan\.
+- Check if the new version is used by xwlan/wlanstat
+	(right-click - properties - tab 'WPA supplicant' check version and path)
+- Connect to wpa protected networks and post your findings at correspondending
 	thread at os2world.com
-- you can also test wpa_supplicant with a .conf file. F.i. set up a profile
+
+- You can also test wpa_supplicant with a .conf file. F.i. set up a profile
 	with no security, switch on wireless and start wpa_supplicant manually
-	(f.i. wpa_supplicant.exe -i lan1 -cwpa_supplicant.conf)
+	(f.i. wpa_supplicant.exe -i lan1 -cwpa_supplicant.conf - see wp.cmd)
+
+Using with wpa_gui.exe
+----------------------
+wpa_gui is a QT frontend for wpa_supplicant. You can use it instead of
+xwlan/wlanstat for managing your wireless networks. It works for me and I can
+connect to my local wireless networks here.
+- Start wpa_supplicant with a .conf file f.i. wp.cmd
+- Use wpa_gui for scanning and configuration
+
+As usual your wireless card has to be supported by genmac to use wireless
+networks with OS/2.
+
+There is also included wpa_cli.exe. But this is not tested very well.
 ###############################################################################
 wpa_supplicant package for xwlan/wlanstat
 ------------------------------------------------------------------------------
 Author:          Jouni Malinen and contributors
-                 Ported to OS/2 - eCS by Paul Smedley & Andreas Buchinger
-Last update:     20180310
-Current status:  v2.7 (OS/2-v2beta)
+                 Ported to OS/2 by Andreas Buchinger
+Last update:     20180423
+Current status:  v2.7 (OS/2-RC1)
 Home page:       https://bitbucket.org/Andi_B/os-2-wpa_supplicant/
 								 (http://trac.netlabs.org/ports/browser/wpa_supplicant/)
 
