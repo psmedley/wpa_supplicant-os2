@@ -194,7 +194,7 @@ static void wpa_supplicant_ctrl_iface_receive(int sock, void *eloop_ctx,
 				     reply_len);
 		if (sendto(sock, reply, reply_len, 0, (struct sockaddr *) &from,
 			   fromlen) < 0) {
-			int _errnoAB = errno;
+			int _errnoAB = errno;	 						// 201804xx AB _errno is used on OS/2 so change to something else
 			wpa_dbg(wpa_s, MSG_DEBUG,
 				"ctrl_iface sendto failed: %d - %s",
 				_errnoAB, strerror(_errnoAB));
@@ -926,7 +926,7 @@ static void wpa_supplicant_ctrl_iface_send(struct wpa_supplicant *wpa_s,
 	msg.msg_iovlen = idx;
 
 	dl_list_for_each_safe(dst, next, ctrl_dst, struct wpa_ctrl_dst, list) {
-		int _errnoAB;
+		int _errnoAB;					// 201804xx AB errno is used on OS/2 so change to something else
 		char txt[200];
 
 		if (level < dst->debug_level)
@@ -985,7 +985,7 @@ void wpa_supplicant_ctrl_iface_wait(struct ctrl_iface_priv *priv)
 {
 	char buf[256];
 	int res;
-  struct sockaddr_storage from;
+	struct sockaddr_storage from;
 	socklen_t fromlen = sizeof(from);
 
 	if (priv->sock == -1)

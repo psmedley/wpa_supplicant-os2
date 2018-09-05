@@ -256,7 +256,8 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 	}
 #endif /* CONFIG_ACS */
 
-	if (ieee80211_is_dfs(ssid->frequency) && wpa_s->conf->country[0]) {
+	if (ieee80211_is_dfs(ssid->frequency, wpa_s->hw.modes,
+			     wpa_s->hw.num_modes) && wpa_s->conf->country[0]) {
 		conf->ieee80211h = 1;
 		conf->ieee80211d = 1;
 		conf->country[0] = wpa_s->conf->country[0];
@@ -633,6 +634,13 @@ static void wpas_ap_configured_cb(void *ctx)
 {
 	struct wpa_supplicant *wpa_s = ctx;
 
+	wpa_printf(MSG_DEBUG, "AP interface setup completed - state %s",
+		   hostapd_state_text(wpa_s->ap_iface->state));
+	if (wpa_s->ap_iface->state == HAPD_IFACE_DISABLED) {
+		wpa_supplicant_ap_deinit(wpa_s);
+		return;
+	}
+
 #ifdef CONFIG_ACS
 	if (wpa_s->current_ssid && wpa_s->current_ssid->acs) {
 		wpa_s->assoc_freq = wpa_s->ap_iface->freq;
@@ -712,7 +720,8 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 	else
 		params.uapsd = -1;
 
-	if (ieee80211_is_dfs(params.freq.freq))
+	if (ieee80211_is_dfs(params.freq.freq, wpa_s->hw.modes,
+			     wpa_s->hw.num_modes))
 		params.freq.freq = 0; /* set channel after CAC */
 
 	if (params.p2p)
@@ -1528,8 +1537,8 @@ int wpas_ap_pmksa_cache_add_external(struct wpa_supplicant *wpa_s, char *cmd)
 
 
 #ifdef NEED_AP_MLME
-void wpas_event_dfs_radar_detected(struct wpa_supplicant *wpa_s,
-				   struct dfs_event *radar)
+void wpas_ap_event_dfs_radar_detected(struct wpa_supplicant *wpa_s,
+				      struct dfs_event *radar)
 {
 	if (!wpa_s->ap_iface || !wpa_s->ap_iface->bss[0])
 		return;
@@ -1541,8 +1550,8 @@ void wpas_event_dfs_radar_detected(struct wpa_supplicant *wpa_s,
 }
 
 
-void wpas_event_dfs_cac_started(struct wpa_supplicant *wpa_s,
-				struct dfs_event *radar)
+void wpas_ap_event_dfs_cac_started(struct wpa_supplicant *wpa_s,
+				   struct dfs_event *radar)
 {
 	if (!wpa_s->ap_iface || !wpa_s->ap_iface->bss[0])
 		return;
@@ -1553,8 +1562,8 @@ void wpas_event_dfs_cac_started(struct wpa_supplicant *wpa_s,
 }
 
 
-void wpas_event_dfs_cac_finished(struct wpa_supplicant *wpa_s,
-				 struct dfs_event *radar)
+void wpas_ap_event_dfs_cac_finished(struct wpa_supplicant *wpa_s,
+				    struct dfs_event *radar)
 {
 	if (!wpa_s->ap_iface || !wpa_s->ap_iface->bss[0])
 		return;
@@ -1565,8 +1574,8 @@ void wpas_event_dfs_cac_finished(struct wpa_supplicant *wpa_s,
 }
 
 
-void wpas_event_dfs_cac_aborted(struct wpa_supplicant *wpa_s,
-				struct dfs_event *radar)
+void wpas_ap_event_dfs_cac_aborted(struct wpa_supplicant *wpa_s,
+				   struct dfs_event *radar)
 {
 	if (!wpa_s->ap_iface || !wpa_s->ap_iface->bss[0])
 		return;
@@ -1577,8 +1586,8 @@ void wpas_event_dfs_cac_aborted(struct wpa_supplicant *wpa_s,
 }
 
 
-void wpas_event_dfs_cac_nop_finished(struct wpa_supplicant *wpa_s,
-				     struct dfs_event *radar)
+void wpas_ap_event_dfs_cac_nop_finished(struct wpa_supplicant *wpa_s,
+					struct dfs_event *radar)
 {
 	if (!wpa_s->ap_iface || !wpa_s->ap_iface->bss[0])
 		return;

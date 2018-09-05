@@ -368,7 +368,7 @@ int WpaGui::openCtrlConnection(const char *ifname)
 		return -1;
 	snprintf(cfile, flen, "%s", ctrl_iface);
 #endif /* CONFIG_CTRL_IFACE_UNIX */
-	debug("ctrl_iface='%s'", ctrl_iface);
+	// debug("ctrl_iface='%s'", ctrl_iface);
 
 	if (ctrl_conn) {
 		wpa_ctrl_close(ctrl_conn);
@@ -1364,7 +1364,7 @@ void WpaGui::createTrayIcon(bool trayOnly)
 	QApplication::setQuitOnLastWindowClosed(false);
 
 	tray_icon = new QSystemTrayIcon(this);
-	tray_icon->setToolTip(qAppName() + tr(" - wpa_supplicant user interface"));
+	tray_icon->setToolTip(qAppName() + tr(" - wpa_supplicant user interface"));		 // 201804xx AB tray needs additional code on OS/2 it seems
 	if (QImageReader::supportedImageFormats().contains(QByteArray("svg")))
 		tray_icon->setIcon(QIcon(":/icons/wpa_gui.svg"));
 	else

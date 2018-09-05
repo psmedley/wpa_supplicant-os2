@@ -2222,6 +2222,11 @@ static int hostapd_ctrl_iface_chan_switch(struct hostapd_iface *iface,
 		return ret;
 
 	for (i = 0; i < iface->num_bss; i++) {
+
+		/* Save CHAN_SWITCH VHT config */
+		hostapd_chan_switch_vht_config(
+			iface->bss[i], settings.freq_params.vht_enabled);
+
 		ret = hostapd_switch_channel(iface->bss[i], &settings);
 		if (ret) {
 			/* FIX: What do we do if CSA fails in the middle of
@@ -2788,6 +2793,8 @@ static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 	} else if (os_strncmp(buf, "RELOG", 5) == 0) {
 		if (wpa_debug_reopen_file() < 0)
 			reply_len = -1;
+	} else if (os_strncmp(buf, "NOTE ", 5) == 0) {
+		wpa_printf(MSG_INFO, "NOTE: %s", buf + 5);
 	} else if (os_strcmp(buf, "STATUS") == 0) {
 		reply_len = hostapd_ctrl_iface_status(hapd, reply,
 						      reply_size);

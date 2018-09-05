@@ -225,6 +225,10 @@ void wpa_printf(int level, const char *fmt, ...)
 #endif /* CONFIG_DEBUG_FILE */
 		vprintf(fmt, ap);
 		printf("\n");
+#ifdef CONFIG_PMPRINTF
+		PmPrintfVa( (char *) fmt, ap);
+//		PmPrintf("\n");
+#endif /* CONFIG_PMPRINTF */
 #ifdef CONFIG_DEBUG_FILE
 		}
 #endif /* CONFIG_DEBUG_FILE */

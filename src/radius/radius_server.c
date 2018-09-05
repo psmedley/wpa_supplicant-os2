@@ -80,6 +80,7 @@ struct radius_session {
 	struct eap_eapol_interface *eap_if;
 	char *username; /* from User-Name attribute */
 	char *nas_ip;
+	u8 mac_addr[ETH_ALEN]; /* from Calling-Station-Id attribute */
 
 	struct radius_msg *last_msg;
 	char *last_from_addr;
@@ -92,8 +93,11 @@ struct radius_session {
 
 	unsigned int remediation:1;
 	unsigned int macacl:1;
+	unsigned int t_c_filtering:1;
 
 	struct hostapd_radius_attr *accept_attr;
+
+	u32 t_c_timestamp; /* Last read T&C timestamp from user DB */
 };
 
 /**
@@ -628,8 +632,8 @@ radius_server_get_new_session(struct radius_server_data *data,
 			      struct radius_client *client,
 			      struct radius_msg *msg, const char *from_addr)
 {
-	u8 *user;
-	size_t user_len;
+	u8 *user, *id;
+	size_t user_len, id_len;
 	int res;
 	struct radius_session *sess;
 	struct eap_config eap_conf;
@@ -675,6 +679,21 @@ radius_server_get_new_session(struct radius_server_data *data,
 		return NULL;
 	}
 
+	if (radius_msg_get_attr_ptr(msg, RADIUS_ATTR_CALLING_STATION_ID, &id,
+				    &id_len, NULL) == 0) {
+		char buf[3 * ETH_ALEN];
+
+		os_memset(buf, 0, sizeof(buf));
+		if (id_len >= sizeof(buf))
+			id_len = sizeof(buf) - 1;
+		os_memcpy(buf, id, id_len);
+		if (hwaddr_aton2(buf, sess->mac_addr) < 0)
+			os_memset(sess->mac_addr, 0, ETH_ALEN);
+		else
+			RADIUS_DEBUG("Calling-Station-Id: " MACSTR,
+				     MAC2STR(sess->mac_addr));
+	}
+
 	srv_log(sess, "New session created");
 
 	os_memset(&eap_conf, 0, sizeof(eap_conf));
@@ -716,6 +735,47 @@ radius_server_get_new_session(struct radius_server_data *data,
 
 	return sess;
 }
+
+
+#ifdef CONFIG_HS20
+static void radius_srv_hs20_t_c_pending(struct radius_session *sess)
+{
+#ifdef CONFIG_SQLITE
+	char *sql;
+	char addr[3 * ETH_ALEN], *id_str;
+	const u8 *id;
+	size_t id_len;
+
+	if (!sess->server->db || !sess->eap ||
+	    is_zero_ether_addr(sess->mac_addr))
+		return;
+
+	os_snprintf(addr, sizeof(addr), MACSTR, MAC2STR(sess->mac_addr));
+
+	id = eap_get_identity(sess->eap, &id_len);
+	if (!id)
+		return;
+	id_str = os_malloc(id_len + 1);
+	if (!id_str)
+		return;
+	os_memcpy(id_str, id, id_len);
+	id_str[id_len] = '\0';
+
+	sql = sqlite3_mprintf("INSERT OR REPLACE INTO pending_tc (mac_addr,identity) VALUES (%Q,%Q)",
+			      addr, id_str);
+	os_free(id_str);
+	if (!sql)
+		return;
+
+	if (sqlite3_exec(sess->server->db, sql, NULL, NULL, NULL) !=
+	    SQLITE_OK) {
+		RADIUS_ERROR("Failed to add pending_tc entry into sqlite database: %s",
+			     sqlite3_errmsg(sess->server->db));
+	}
+	sqlite3_free(sql);
+#endif /* CONFIG_SQLITE */
+}
+#endif /* CONFIG_HS20 */
 
 
 static struct radius_msg *
@@ -820,6 +880,17 @@ radius_server_encapsulate_eap(struct radius_server_data *data,
 			    buf, 0)) {
 			RADIUS_DEBUG("Failed to add WFA-HS20-SubscrRem");
 		}
+	}
+
+	if (code == RADIUS_CODE_ACCESS_ACCEPT && sess->t_c_filtering) {
+		u8 buf[4] = { 0x01, 0x00, 0x00, 0x00 }; /* E=1 */
+
+		if (!radius_msg_add_wfa(
+			    msg, RADIUS_VENDOR_ATTR_WFA_HS20_T_C_FILTERING,
+			    buf, sizeof(buf))) {
+			RADIUS_DEBUG("Failed to add WFA-HS20-T-C-Filtering");
+		}
+		radius_srv_hs20_t_c_pending(sess);
 	}
 #endif /* CONFIG_HS20 */
 
@@ -1003,6 +1074,51 @@ static int radius_server_reject(struct radius_server_data *data,
 }
 
 
+static void radius_server_hs20_t_c_check(struct radius_session *sess,
+					 struct radius_msg *msg)
+{
+#ifdef CONFIG_HS20
+	u8 *buf, *pos, *end, type, sublen, *timestamp = NULL;
+	size_t len;
+
+	buf = NULL;
+	for (;;) {
+		if (radius_msg_get_attr_ptr(msg, RADIUS_ATTR_VENDOR_SPECIFIC,
+					    &buf, &len, buf) < 0)
+			break;
+		if (len < 6)
+			continue;
+		pos = buf;
+		end = buf + len;
+		if (WPA_GET_BE32(pos) != RADIUS_VENDOR_ID_WFA)
+			continue;
+		pos += 4;
+
+		type = *pos++;
+		sublen = *pos++;
+		if (sublen < 2)
+			continue; /* invalid length */
+		sublen -= 2; /* skip header */
+		if (pos + sublen > end)
+			continue; /* invalid WFA VSA */
+
+		if (type == RADIUS_VENDOR_ATTR_WFA_HS20_TIMESTAMP && len >= 4) {
+			timestamp = pos;
+			break;
+		}
+	}
+
+	if (!timestamp)
+		return;
+	RADIUS_DEBUG("HS20-Timestamp: %u", WPA_GET_BE32(timestamp));
+	if (sess->t_c_timestamp != WPA_GET_BE32(timestamp)) {
+		RADIUS_DEBUG("Last read T&C timestamp does not match HS20-Timestamp --> require filtering");
+		sess->t_c_filtering = 1;
+	}
+#endif /* CONFIG_HS20 */
+}
+
+
 static int radius_server_request(struct radius_server_data *data,
 				 struct radius_msg *msg,
 				 struct sockaddr *from, socklen_t fromlen,
@@ -1137,6 +1253,9 @@ static int radius_server_request(struct radius_server_data *data,
 		srv_log(sess, "EAP authentication failed");
 	else if (sess->eap_if->eapSuccess)
 		srv_log(sess, "EAP authentication succeeded");
+
+	if (sess->eap_if->eapSuccess)
+		radius_server_hs20_t_c_check(sess, msg);
 
 	reply = radius_server_encapsulate_eap(data, client, sess, msg);
 
@@ -2059,6 +2178,7 @@ static int radius_server_get_eap_user(void *ctx, const u8 *identity,
 		sess->accept_attr = user->accept_attr;
 		sess->remediation = user->remediation;
 		sess->macacl = user->macacl;
+		sess->t_c_timestamp = user->t_c_timestamp;
 	}
 
 	if (ret) {

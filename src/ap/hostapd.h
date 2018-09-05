@@ -564,6 +564,7 @@ void hostapd_channel_list_updated(struct hostapd_iface *iface, int initiator);
 void hostapd_set_state(struct hostapd_iface *iface, enum hostapd_iface_state s);
 const char * hostapd_state_text(enum hostapd_iface_state s);
 int hostapd_csa_in_progress(struct hostapd_iface *iface);
+void hostapd_chan_switch_vht_config(struct hostapd_data *hapd, int vht_enabled);
 int hostapd_switch_channel(struct hostapd_data *hapd,
 			   struct csa_settings *settings);
 void
@@ -608,6 +609,9 @@ hostapd_get_eap_user(struct hostapd_data *hapd, const u8 *identity,
 
 struct hostapd_data * hostapd_get_iface(struct hapd_interfaces *interfaces,
 					const char *ifname);
+void hostapd_event_sta_opmode_changed(struct hostapd_data *hapd, const u8 *addr,
+				      enum smps_mode smps_mode,
+				      enum chan_width chan_width, u8 rx_nss);
 
 #ifdef CONFIG_FST
 void fst_hostapd_fill_iface_obj(struct hostapd_data *hapd,

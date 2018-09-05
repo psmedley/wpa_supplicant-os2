@@ -248,6 +248,13 @@ int wpa_write_rsn_ie(struct wpa_auth_config *conf, u8 *buf, size_t len,
 		num_suites++;
 	}
 #endif /* CONFIG_DPP */
+#ifdef CONFIG_HS20
+	if (conf->wpa_key_mgmt & WPA_KEY_MGMT_OSEN) {
+		RSN_SELECTOR_PUT(pos, RSN_AUTH_KEY_MGMT_OSEN);
+		pos += RSN_SELECTOR_LEN;
+		num_suites++;
+	}
+#endif /* CONFIG_HS20 */
 
 #ifdef CONFIG_RSN_TESTING
 	if (rsn_testing) {
@@ -588,6 +595,10 @@ int wpa_validate_wpa_ie(struct wpa_authenticator *wpa_auth,
 		else if (data.key_mgmt & WPA_KEY_MGMT_DPP)
 			selector = RSN_AUTH_KEY_MGMT_DPP;
 #endif /* CONFIG_DPP */
+#ifdef CONFIG_HS20
+		else if (data.key_mgmt & WPA_KEY_MGMT_OSEN)
+			selector = RSN_AUTH_KEY_MGMT_OSEN;
+#endif /* CONFIG_HS20 */
 		wpa_auth->dot11RSNAAuthenticationSuiteSelected = selector;
 
 		selector = wpa_cipher_to_suite(WPA_PROTO_RSN,
@@ -688,6 +699,10 @@ int wpa_validate_wpa_ie(struct wpa_authenticator *wpa_auth,
 	else if (key_mgmt & WPA_KEY_MGMT_DPP)
 		sm->wpa_key_mgmt = WPA_KEY_MGMT_DPP;
 #endif /* CONFIG_DPP */
+#ifdef CONFIG_HS20
+	else if (key_mgmt & WPA_KEY_MGMT_OSEN)
+		sm->wpa_key_mgmt = WPA_KEY_MGMT_OSEN;
+#endif /* CONFIG_HS20 */
 	else
 		sm->wpa_key_mgmt = WPA_KEY_MGMT_PSK;
 
@@ -1042,7 +1057,7 @@ u8 * wpa_auth_write_assoc_resp_owe(struct wpa_state_machine *sm,
 #ifdef CONFIG_TESTING_OPTIONS
 	if (conf->own_ie_override_len) {
 		if (max_len < conf->own_ie_override_len)
-			return 0;
+			return NULL;
 		wpa_hexdump(MSG_DEBUG, "WPA: Forced own IE(s) for testing",
 			    conf->own_ie_override, conf->own_ie_override_len);
 		os_memcpy(pos, conf->own_ie_override,

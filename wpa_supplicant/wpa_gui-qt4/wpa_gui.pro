@@ -25,6 +25,11 @@ win32 {
   SOURCES += ../../src/utils/os_win32.c
   RESOURCES += icons_png.qrc
 } else:os2 {
+   # 20180521 TEST ToDo remove .def files and test if I like this define the vendor part
+   DEF_FILE_VENDOR = Andreas Buchinger
+   DEF_FILE_VERSION = $$APPLICATION_VERSION
+   DEF_FILE_DESCRIPTION = WPA supplicant package for OS/2 - XWLAN Project 2003-2018
+
    DEFINES += CONFIG_CTRL_IFACE_UDP
    SOURCES += ../../src/utils/os_os2.c
    DEF_FILE += ..\\..\\wpa_supplicant\\bldlvl.def

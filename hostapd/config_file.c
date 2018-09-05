@@ -217,8 +217,10 @@ static int hostapd_config_read_maclist(const char *fname,
 		if (*pos != '\0')
 			vlan_id = atoi(pos);
 
-		if (hostapd_add_acl_maclist(acl, num, vlan_id, addr) < 0)
+		if (hostapd_add_acl_maclist(acl, num, vlan_id, addr) < 0) {
+			fclose(f);
 			return -1;
+		}
 	}
 
 	fclose(f);
@@ -231,6 +233,62 @@ static int hostapd_config_read_maclist(const char *fname,
 
 
 #ifdef EAP_SERVER
+
+static int hostapd_config_eap_user_salted(struct hostapd_eap_user *user,
+					  const char *hash, size_t len,
+					  char **pos, int line,
+					  const char *fname)
+{
+	char *pos2 = *pos;
+
+	while (*pos2 != '\0' && *pos2 != ' ' && *pos2 != '\t' && *pos2 != '#')
+		pos2++;
+
+	if (pos2 - *pos < (int) (2 * (len + 1))) { /* at least 1 byte of salt */
+		wpa_printf(MSG_ERROR,
+			   "Invalid salted %s hash on line %d in '%s'",
+			   hash, line, fname);
+		return -1;
+	}
+
+	user->password = os_malloc(len);
+	if (!user->password) {
+		wpa_printf(MSG_ERROR,
+			   "Failed to allocate memory for salted %s hash",
+			   hash);
+		return -1;
+	}
+
+	if (hexstr2bin(*pos, user->password, len) < 0) {
+		wpa_printf(MSG_ERROR,
+			   "Invalid salted password on line %d in '%s'",
+			   line, fname);
+		return -1;
+	}
+	user->password_len = len;
+	*pos += 2 * len;
+
+	user->salt_len = (pos2 - *pos) / 2;
+	user->salt = os_malloc(user->salt_len);
+	if (!user->salt) {
+		wpa_printf(MSG_ERROR,
+			   "Failed to allocate memory for salted %s hash",
+			   hash);
+		return -1;
+	}
+
+	if (hexstr2bin(*pos, user->salt, user->salt_len) < 0) {
+		wpa_printf(MSG_ERROR,
+			   "Invalid salt for password on line %d in '%s'",
+			   line, fname);
+		return -1;
+	}
+
+	*pos = pos2;
+	return 0;
+}
+
+
 static int hostapd_config_read_eap_user(const char *fname,
 					struct hostapd_bss_config *conf)
 {
@@ -482,6 +540,24 @@ static int hostapd_config_read_eap_user(const char *fname,
 			user->password_len = 16;
 			user->password_hash = 1;
 			pos = pos2;
+		} else if (os_strncmp(pos, "ssha1:", 6) == 0) {
+			pos += 6;
+			if (hostapd_config_eap_user_salted(user, "sha1", 20,
+							   &pos,
+							   line, fname) < 0)
+				goto failed;
+		} else if (os_strncmp(pos, "ssha256:", 8) == 0) {
+			pos += 8;
+			if (hostapd_config_eap_user_salted(user, "sha256", 32,
+							   &pos,
+							   line, fname) < 0)
+				goto failed;
+		} else if (os_strncmp(pos, "ssha512:", 8) == 0) {
+			pos += 8;
+			if (hostapd_config_eap_user_salted(user, "sha512", 64,
+							   &pos,
+							   line, fname) < 0)
+				goto failed;
 		} else {
 			pos2 = pos;
 			while (*pos2 != '\0' && *pos2 != ' ' &&
@@ -541,6 +617,7 @@ static int hostapd_config_read_eap_user(const char *fname,
 
 	return ret;
 }
+
 #endif /* EAP_SERVER */
 
 
@@ -736,6 +813,10 @@ static int hostapd_config_parse_key_mgmt(int line, const char *value)
 		else if (os_strcmp(start, "DPP") == 0)
 			val |= WPA_KEY_MGMT_DPP;
 #endif /* CONFIG_DPP */
+#ifdef CONFIG_HS20
+		else if (os_strcmp(start, "OSEN") == 0)
+			val |= WPA_KEY_MGMT_OSEN;
+#endif /* CONFIG_HS20 */
 		else {
 			wpa_printf(MSG_ERROR, "Line %d: invalid key_mgmt '%s'",
 				   line, start);
@@ -1374,6 +1455,44 @@ static int parse_venue_name(struct hostapd_bss_config *bss, char *pos,
 }
 
 
+static int parse_venue_url(struct hostapd_bss_config *bss, char *pos,
+			    int line)
+{
+	char *sep;
+	size_t nlen;
+	struct hostapd_venue_url *url;
+	int ret = -1;
+
+	sep = os_strchr(pos, ':');
+	if (!sep)
+		goto fail;
+	*sep++ = '\0';
+
+	nlen = os_strlen(sep);
+	if (nlen > 254)
+		goto fail;
+
+	url = os_realloc_array(bss->venue_url, bss->venue_url_count + 1,
+			       sizeof(struct hostapd_venue_url));
+	if (!url)
+		goto fail;
+
+	bss->venue_url = url;
+	url = &bss->venue_url[bss->venue_url_count++];
+
+	url->venue_number = atoi(pos);
+	url->url_len = nlen;
+	os_memcpy(url->url, sep, nlen);
+
+	ret = 0;
+fail:
+	if (ret)
+		wpa_printf(MSG_ERROR, "Line %d: Invalid venue_url '%s'",
+			   line, pos);
+	return ret;
+}
+
+
 static int parse_3gpp_cell_net(struct hostapd_bss_config *bss, char *buf,
 			       int line)
 {
@@ -1983,6 +2102,25 @@ static int hs20_parse_osu_service_desc(struct hostapd_bss_config *bss,
 	return 0;
 }
 
+
+static int hs20_parse_operator_icon(struct hostapd_bss_config *bss, char *pos,
+				    int line)
+{
+	char **n;
+
+	n = os_realloc_array(bss->hs20_operator_icon,
+			     bss->hs20_operator_icon_count + 1, sizeof(char *));
+	if (!n)
+		return -1;
+	bss->hs20_operator_icon = n;
+	bss->hs20_operator_icon[bss->hs20_operator_icon_count] = os_strdup(pos);
+	if (!bss->hs20_operator_icon[bss->hs20_operator_icon_count])
+		return -1;
+	bss->hs20_operator_icon_count++;
+
+	return 0;
+}
+
 #endif /* CONFIG_HS20 */
 
 
@@ -2081,6 +2219,11 @@ static unsigned int parse_tls_flags(const char *val)
 {
 	unsigned int flags = 0;
 
+	/* Disable TLS v1.3 by default for now to avoid interoperability issue.
+	 * This can be enabled by default once the implementation has been fully
+	 * completed and tested with other implementations. */
+	flags |= TLS_CONN_DISABLE_TLSv1_3;
+
 	if (os_strstr(val, "[ALLOW-SIGN-RSA-MD5]"))
 		flags |= TLS_CONN_ALLOW_SIGN_RSA_MD5;
 	if (os_strstr(val, "[DISABLE-TIME-CHECKS]"))
@@ -2091,6 +2234,10 @@ static unsigned int parse_tls_flags(const char *val)
 		flags |= TLS_CONN_DISABLE_TLSv1_1;
 	if (os_strstr(val, "[DISABLE-TLSv1.2]"))
 		flags |= TLS_CONN_DISABLE_TLSv1_2;
+	if (os_strstr(val, "[DISABLE-TLSv1.3]"))
+		flags |= TLS_CONN_DISABLE_TLSv1_3;
+	if (os_strstr(val, "[ENABLE-TLSv1.3]"))
+		flags &= ~TLS_CONN_DISABLE_TLSv1_3;
 	if (os_strstr(val, "[SUITEB]"))
 		flags |= TLS_CONN_SUITEB;
 	if (os_strstr(val, "[SUITEB-NO-ECDH]"))
@@ -2099,6 +2246,61 @@ static unsigned int parse_tls_flags(const char *val)
 	return flags;
 }
 #endif /* EAP_SERVER */
+
+
+#ifdef CONFIG_SAE
+static int parse_sae_password(struct hostapd_bss_config *bss, const char *val)
+{
+	struct sae_password_entry *pw;
+	const char *pos = val, *pos2, *end = NULL;
+
+	pw = os_zalloc(sizeof(*pw));
+	if (!pw)
+		return -1;
+	os_memset(pw->peer_addr, 0xff, ETH_ALEN); /* default to wildcard */
+
+	pos2 = os_strstr(pos, "|mac=");
+	if (pos2) {
+		end = pos2;
+		pos2 += 5;
+		if (hwaddr_aton(pos2, pw->peer_addr) < 0)
+			goto fail;
+		pos = pos2 + ETH_ALEN * 3 - 1;
+	}
+
+	pos2 = os_strstr(pos, "|id=");
+	if (pos2) {
+		if (!end)
+			end = pos2;
+		pos2 += 4;
+		pw->identifier = os_strdup(pos2);
+		if (!pw->identifier)
+			goto fail;
+	}
+
+	if (!end) {
+		pw->password = os_strdup(val);
+		if (!pw->password)
+			goto fail;
+	} else {
+		pw->password = os_malloc(end - val + 1);
+		if (!pw->password)
+			goto fail;
+		os_memcpy(pw->password, val, end - val);
+		pw->password[end - val] = '\0';
+	}
+
+	pw->next = bss->sae_passwords;
+	bss->sae_passwords = pw;
+
+	return 0;
+fail:
+	str_clear_free(pw->password);
+	os_free(pw->identifier);
+	os_free(pw);
+	return -1;
+}
+#endif /* CONFIG_SAE */
 
 
 static int hostapd_config_fill(struct hostapd_config *conf,
@@ -2704,7 +2906,12 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 			return 1;
 		}
 	} else if (os_strcmp(buf, "r0_key_lifetime") == 0) {
+		/* DEPRECATED: Use ft_r0_key_lifetime instead. */
+		bss->r0_key_lifetime = atoi(pos) * 60;
+	} else if (os_strcmp(buf, "ft_r0_key_lifetime") == 0) {
 		bss->r0_key_lifetime = atoi(pos);
+	} else if (os_strcmp(buf, "r1_max_key_lifetime") == 0) {
+		bss->r1_max_key_lifetime = atoi(pos);
 	} else if (os_strcmp(buf, "reassociation_deadline") == 0) {
 		bss->reassociation_deadline = atoi(pos);
 	} else if (os_strcmp(buf, "rkh_pos_timeout") == 0) {
@@ -3378,6 +3585,9 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 	} else if (os_strcmp(buf, "venue_name") == 0) {
 		if (parse_venue_name(bss, pos, line) < 0)
 			return 1;
+	} else if (os_strcmp(buf, "venue_url") == 0) {
+		if (parse_venue_url(bss, pos, line) < 0)
+			return 1;
 	} else if (os_strcmp(buf, "network_auth_type") == 0) {
 		u8 auth_type;
 		u16 redirect_url_len;
@@ -3554,11 +3764,22 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 	} else if (os_strcmp(buf, "osu_service_desc") == 0) {
 		if (hs20_parse_osu_service_desc(bss, pos, line) < 0)
 			return 1;
+	} else if (os_strcmp(buf, "operator_icon") == 0) {
+		if (hs20_parse_operator_icon(bss, pos, line) < 0)
+			return 1;
 	} else if (os_strcmp(buf, "subscr_remediation_url") == 0) {
 		os_free(bss->subscr_remediation_url);
 		bss->subscr_remediation_url = os_strdup(pos);
 	} else if (os_strcmp(buf, "subscr_remediation_method") == 0) {
 		bss->subscr_remediation_method = atoi(pos);
+	} else if (os_strcmp(buf, "hs20_t_c_filename") == 0) {
+		os_free(bss->t_c_filename);
+		bss->t_c_filename = os_strdup(pos);
+	} else if (os_strcmp(buf, "hs20_t_c_timestamp") == 0) {
+		bss->t_c_timestamp = strtol(pos, NULL, 0);
+	} else if (os_strcmp(buf, "hs20_t_c_server_url") == 0) {
+		os_free(bss->t_c_server_url);
+		bss->t_c_server_url = os_strdup(pos);
 #endif /* CONFIG_HS20 */
 #ifdef CONFIG_MBO
 	} else if (os_strcmp(buf, "mbo") == 0) {
@@ -3640,9 +3861,14 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 	} else if (os_strcmp(buf, "sae_commit_override") == 0) {
 		wpabuf_free(bss->sae_commit_override);
 		bss->sae_commit_override = wpabuf_parse_bin(pos);
+#ifdef CONFIG_SAE
 	} else if (os_strcmp(buf, "sae_password") == 0) {
-		os_free(bss->sae_password);
-		bss->sae_password = os_strdup(pos);
+		if (parse_sae_password(bss, pos) < 0) {
+			wpa_printf(MSG_ERROR, "Line %d: Invalid sae_password",
+				   line);
+			return 1;
+		}
+#endif /* CONFIG_SAE */
 #endif /* CONFIG_TESTING_OPTIONS */
 	} else if (os_strcmp(buf, "vendor_elements") == 0) {
 		if (parse_wpabuf_hex(line, buf, &bss->vendor_elements, pos))

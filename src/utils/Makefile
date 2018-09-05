@@ -10,7 +10,9 @@ install:
 include ../lib.rules
 
 #CFLAGS += -DWPA_TRACE
+ifdef CONFIG_IPV6
 CFLAGS += -DCONFIG_IPV6
+endif
 CFLAGS += -DCONFIG_DEBUG_FILE
 
 LIB_OBJS= \

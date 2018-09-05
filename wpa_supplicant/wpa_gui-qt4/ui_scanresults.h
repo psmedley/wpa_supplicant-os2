@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'scanresults.ui'
 **
-** Created: Fri Mar 9 15:56:21 2018
+** Created: Fri Aug 17 15:10:15 2018
 **      by: Qt User Interface Compiler version 4.7.3
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!

@@ -235,6 +235,14 @@ int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 						 elems.hs20_len - 4);
 	} else
 		sta->hs20_ie = NULL;
+
+	wpabuf_free(sta->roaming_consortium);
+	if (elems.roaming_cons_sel)
+		sta->roaming_consortium = wpabuf_alloc_copy(
+			elems.roaming_cons_sel + 4,
+			elems.roaming_cons_sel_len - 4);
+	else
+		sta->roaming_consortium = NULL;
 #endif /* CONFIG_HS20 */
 
 #ifdef CONFIG_FST
@@ -642,7 +650,7 @@ void hostapd_event_sta_low_ack(struct hostapd_data *hapd, const u8 *addr)
 {
 	struct sta_info *sta = ap_get_sta(hapd, addr);
 
-	if (!sta || !hapd->conf->disassoc_low_ack)
+	if (!sta || !hapd->conf->disassoc_low_ack || sta->agreed_to_steer)
 		return;
 
 	hostapd_logger(hapd, addr, HOSTAPD_MODULE_IEEE80211,
@@ -650,6 +658,73 @@ void hostapd_event_sta_low_ack(struct hostapd_data *hapd, const u8 *addr)
 		       "disconnected due to excessive missing ACKs");
 	hostapd_drv_sta_disassoc(hapd, addr, WLAN_REASON_DISASSOC_LOW_ACK);
 	ap_sta_disassociate(hapd, sta, WLAN_REASON_DISASSOC_LOW_ACK);
+}
+
+
+void hostapd_event_sta_opmode_changed(struct hostapd_data *hapd, const u8 *addr,
+				      enum smps_mode smps_mode,
+				      enum chan_width chan_width, u8 rx_nss)
+{
+	struct sta_info *sta = ap_get_sta(hapd, addr);
+	const char *txt;
+
+	if (!sta)
+		return;
+
+	switch (smps_mode) {
+	case SMPS_AUTOMATIC:
+		txt = "automatic";
+		break;
+	case SMPS_OFF:
+		txt = "off";
+		break;
+	case SMPS_DYNAMIC:
+		txt = "dynamic";
+		break;
+	case SMPS_STATIC:
+		txt = "static";
+		break;
+	default:
+		txt = NULL;
+		break;
+	}
+	if (txt) {
+		wpa_msg(hapd->msg_ctx, MSG_INFO, STA_OPMODE_SMPS_MODE_CHANGED
+			MACSTR " %s", MAC2STR(addr), txt);
+	}
+
+	switch (chan_width) {
+	case CHAN_WIDTH_20_NOHT:
+		txt = "20(no-HT)";
+		break;
+	case CHAN_WIDTH_20:
+		txt = "20";
+		break;
+	case CHAN_WIDTH_40:
+		txt = "40";
+		break;
+	case CHAN_WIDTH_80:
+		txt = "80";
+		break;
+	case CHAN_WIDTH_80P80:
+		txt = "80+80";
+		break;
+	case CHAN_WIDTH_160:
+		txt = "160";
+		break;
+	default:
+		txt = NULL;
+		break;
+	}
+	if (txt) {
+		wpa_msg(hapd->msg_ctx, MSG_INFO, STA_OPMODE_MAX_BW_CHANGED
+			MACSTR " %s", MAC2STR(addr), txt);
+	}
+
+	if (rx_nss != 0xff) {
+		wpa_msg(hapd->msg_ctx, MSG_INFO, STA_OPMODE_N_SS_CHANGED
+			MACSTR " %d", MAC2STR(addr), rx_nss);
+	}
 }
 
 
@@ -662,9 +737,9 @@ void hostapd_event_ch_switch(struct hostapd_data *hapd, int freq, int ht,
 
 	hostapd_logger(hapd, NULL, HOSTAPD_MODULE_IEEE80211,
 		       HOSTAPD_LEVEL_INFO,
-		       "driver had channel switch: freq=%d, ht=%d, offset=%d, width=%d (%s), cf1=%d, cf2=%d",
-		       freq, ht, offset, width, channel_width_to_string(width),
-		       cf1, cf2);
+		       "driver had channel switch: freq=%d, ht=%d, vht_ch=0x%x, offset=%d, width=%d (%s), cf1=%d, cf2=%d",
+		       freq, ht, hapd->iconf->ch_switch_vht_config, offset,
+		       width, channel_width_to_string(width), cf1, cf2);
 
 	hapd->iface->freq = freq;
 
@@ -709,14 +784,26 @@ void hostapd_event_ch_switch(struct hostapd_data *hapd, int freq, int ht,
 
 	hapd->iconf->channel = channel;
 	hapd->iconf->ieee80211n = ht;
-	if (!ht)
+	if (!ht) {
 		hapd->iconf->ieee80211ac = 0;
+	} else if (hapd->iconf->ch_switch_vht_config) {
+		/* CHAN_SWITCH VHT config */
+		if (hapd->iconf->ch_switch_vht_config &
+		    CH_SWITCH_VHT_ENABLED)
+			hapd->iconf->ieee80211ac = 1;
+		else if (hapd->iconf->ch_switch_vht_config &
+			 CH_SWITCH_VHT_DISABLED)
+			hapd->iconf->ieee80211ac = 0;
+	}
+	hapd->iconf->ch_switch_vht_config = 0;
+
 	hapd->iconf->secondary_channel = offset;
 	hapd->iconf->vht_oper_chwidth = chwidth;
 	hapd->iconf->vht_oper_centr_freq_seg0_idx = seg0_idx;
 	hapd->iconf->vht_oper_centr_freq_seg1_idx = seg1_idx;
 
-	is_dfs = ieee80211_is_dfs(freq);
+	is_dfs = ieee80211_is_dfs(freq, hapd->iface->hw_features,
+				  hapd->iface->num_hw_features);
 
 	if (hapd->csa_in_progress &&
 	    freq == hapd->cs_freq_params.freq) {
@@ -1406,6 +1493,28 @@ static void hostapd_event_dfs_cac_started(struct hostapd_data *hapd,
 #endif /* NEED_AP_MLME */
 
 
+static void hostapd_event_wds_sta_interface_status(struct hostapd_data *hapd,
+						   int istatus,
+						   const char *ifname,
+						   const u8 *addr)
+{
+	struct sta_info *sta = ap_get_sta(hapd, addr);
+
+	if (sta) {
+		os_free(sta->ifname_wds);
+		if (istatus == INTERFACE_ADDED)
+			sta->ifname_wds = os_strdup(ifname);
+		else
+			sta->ifname_wds = NULL;
+	}
+
+	wpa_msg(hapd->msg_ctx, MSG_INFO, "%sifname=%s sta_addr=" MACSTR,
+		istatus == INTERFACE_ADDED ?
+		WDS_STA_INTERFACE_ADDED : WDS_STA_INTERFACE_REMOVED,
+		ifname, MAC2STR(addr));
+}
+
+
 void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			  union wpa_event_data *data)
 {
@@ -1614,6 +1723,18 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 					     &data->acs_selected_channels);
 		break;
 #endif /* CONFIG_ACS */
+	case EVENT_STATION_OPMODE_CHANGED:
+		hostapd_event_sta_opmode_changed(hapd, data->sta_opmode.addr,
+						 data->sta_opmode.smps_mode,
+						 data->sta_opmode.chan_width,
+						 data->sta_opmode.rx_nss);
+		break;
+	case EVENT_WDS_STA_INTERFACE_STATUS:
+		hostapd_event_wds_sta_interface_status(
+			hapd, data->wds_sta_interface.istatus,
+			data->wds_sta_interface.ifname,
+			data->wds_sta_interface.sta_addr);
+		break;
 	default:
 		wpa_printf(MSG_DEBUG, "Unknown event %d", event);
 		break;

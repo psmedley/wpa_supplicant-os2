@@ -98,7 +98,7 @@ def check_sp_type(dev, sp_type):
     if type is None:
         raise Exception("sp_type not available")
     if type != sp_type:
-        raise Exception("sp_type did not indicate home network")
+        raise Exception("sp_type did not indicate %s network" % sp_type)
 
 def hlr_auc_gw_available():
     if not os.path.exists("/tmp/hlr_auc_gw.sock"):
@@ -1004,6 +1004,37 @@ def test_ap_hs20_roaming_consortium(dev, apdev):
         interworking_select(dev[0], bssid, "home", freq="2412")
         interworking_connect(dev[0], bssid, "PEAP")
         check_sp_type(dev[0], "home")
+        dev[0].request("INTERWORKING_SELECT auto freq=2412")
+        ev = dev[0].wait_event(["INTERWORKING-ALREADY-CONNECTED"], timeout=15)
+        if ev is None:
+            raise Exception("Timeout on already-connected event")
+        dev[0].remove_cred(id)
+
+def test_ap_hs20_roaming_consortiums_match(dev, apdev):
+    """Hotspot 2.0 connection based on roaming_consortiums match"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    hostapd.add_ap(apdev[0], params)
+
+    dev[0].hs20_enable()
+    tests = [ ("112233", "112233"),
+              ("ffffff,1020304050,eeeeee", "1020304050") ]
+    for consortium,selected in tests:
+        id = dev[0].add_cred_values({ 'username': "user",
+                                      'password': "password",
+                                      'domain': "my.home.example.com",
+                                      'ca_cert': "auth_serv/ca.pem",
+                                      'roaming_consortiums': consortium,
+                                      'eap': "PEAP" })
+        interworking_select(dev[0], bssid, "roaming", freq="2412")
+        interworking_connect(dev[0], bssid, "PEAP")
+        check_sp_type(dev[0], "roaming")
+        network_id = dev[0].get_status_field("id")
+        sel = dev[0].get_network(network_id, "roaming_consortium_selection")
+        if sel != selected:
+            raise Exception("Unexpected roaming_consortium_selection value: " +
+                            sel)
         dev[0].request("INTERWORKING_SELECT auto freq=2412")
         ev = dev[0].wait_event(["INTERWORKING-ALREADY-CONNECTED"], timeout=15)
         if ev is None:
@@ -2626,6 +2657,39 @@ def test_ap_hs20_osen(dev, apdev):
                  scan_freq="2412")
     wpas.request("DISCONNECT")
 
+def test_ap_hs20_osen_single_ssid(dev, apdev):
+    """Hotspot 2.0 OSEN-single-SSID connection"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['wpa_key_mgmt'] = "WPA-EAP OSEN"
+    params['hessid'] = bssid
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    # RSN-OSEN (for OSU)
+    dev[0].connect("test-hs20", proto="OSEN", key_mgmt="OSEN", pairwise="CCMP",
+                   eap="WFA-UNAUTH-TLS", identity="osen@example.com",
+                   ca_cert="auth_serv/ca.pem", ieee80211w='2',
+                   scan_freq="2412")
+    # RSN-EAP (for data connection)
+    dev[1].connect("test-hs20", key_mgmt="WPA-EAP", eap="TTLS",
+                   identity="hs20-test", password="password",
+                   ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                   ieee80211w='2', scan_freq="2412")
+
+    res = dev[0].get_bss(apdev[0]['bssid'])['flags']
+    if "[WPA2-EAP+OSEN-CCMP]" not in res:
+        raise Exception("OSEN not reported in BSS")
+    if "[WEP]" in res:
+        raise Exception("WEP reported in BSS")
+    res = dev[0].request("SCAN_RESULTS")
+    if "[WPA2-EAP+OSEN-CCMP]" not in res:
+        raise Exception("OSEN not reported in SCAN_RESULTS")
+
+    hwsim_utils.test_connectivity(dev[1], hapd)
+    hwsim_utils.test_connectivity(dev[0], hapd, broadcast=False)
+    hwsim_utils.test_connectivity(dev[0], hapd, timeout=1,
+                                  success_expected=False)
+
 def test_ap_hs20_network_preference(dev, apdev):
     """Hotspot 2.0 network selection with preferred home network"""
     check_eap_capa(dev[0], "MSCHAPV2")
@@ -3063,7 +3127,9 @@ def test_ap_hs20_req_hs20_icon(dev, apdev):
     hostapd.add_ap(apdev[0], params)
 
     dev[0].scan_for_bss(bssid, freq="2412")
+    run_req_hs20_icon(dev, bssid)
 
+def run_req_hs20_icon(dev, bssid):
     # First, fetch two icons from the AP to wpa_supplicant
 
     if "OK" not in dev[0].request("REQ_HS20_ICON " + bssid + " w1fi_logo"):
@@ -3099,6 +3165,56 @@ def test_ap_hs20_req_hs20_icon(dev, apdev):
         raise Exception("DEL_HS20_ICON failed")
     if "OK" not in dev[0].request("DEL_HS20_ICON " + bssid + " test_logo"):
         raise Exception("DEL_HS20_ICON failed")
+
+def test_ap_hs20_req_operator_icon(dev, apdev):
+    """Hotspot 2.0 operator icons"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hs20_icon'] = [ "128:80:zxx:image/png:w1fi_logo:w1fi_logo.png",
+                            "500:300:fi:image/png:test_logo:auth_serv/sha512-server.pem" ]
+    params['operator_icon'] = [ "w1fi_logo", "unknown_logo", "test_logo" ]
+    hostapd.add_ap(apdev[0], params)
+
+    value = struct.pack('<HH', 128, 80) + "zxx"
+    value += struct.pack('B', 9) + "image/png"
+    value += struct.pack('B', 9) + "w1fi_logo"
+
+    value += struct.pack('<HH', 500, 300) + "fi\0"
+    value += struct.pack('B', 9) + "image/png"
+    value += struct.pack('B', 9) + "test_logo"
+
+    dev[0].scan_for_bss(bssid, freq="2412")
+
+    if "OK" not in dev[0].request("ANQP_GET " + bssid + " hs20:12"):
+        raise Exception("ANQP_GET command failed")
+
+    ev = dev[0].wait_event(["GAS-QUERY-START"], timeout=5)
+    if ev is None:
+        raise Exception("GAS query start timed out")
+
+    ev = dev[0].wait_event(["GAS-QUERY-DONE"], timeout=10)
+    if ev is None:
+        raise Exception("GAS query timed out")
+
+    ev = dev[0].wait_event(["RX-HS20-ANQP"], timeout=1)
+    if ev is None or "Operator Icon Metadata" not in ev:
+        raise Exception("Did not receive Operator Icon Metadata")
+
+    ev = dev[0].wait_event(["ANQP-QUERY-DONE"], timeout=10)
+    if ev is None:
+        raise Exception("ANQP-QUERY-DONE event not seen")
+    if "result=SUCCESS" not in ev:
+        raise Exception("Unexpected result: " + ev)
+
+    bss = dev[0].get_bss(bssid)
+    if "hs20_operator_icon_metadata" not in bss:
+        raise Exception("hs20_operator_icon_metadata missing from BSS entry")
+    if bss["hs20_operator_icon_metadata"] != binascii.hexlify(value):
+        print binascii.hexlify(value)
+        raise Exception("Unexpected hs20_operator_icon_metadata value: " +
+                        bss["hs20_operator_icon_metadata"])
+
+    run_req_hs20_icon(dev, bssid)
 
 def test_ap_hs20_req_hs20_icon_oom(dev, apdev):
     """Hotspot 2.0 icon fetch OOM with REQ_HS20_ICON"""
@@ -3607,9 +3723,14 @@ def test_ap_hs20_external_selection(dev, apdev):
     dev[0].connect("test-hs20", proto="RSN", key_mgmt="WPA-EAP", eap="TTLS",
                    identity="hs20-test", password="password",
                    ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
-                   scan_freq="2412", update_identifier="54321")
+                   scan_freq="2412", update_identifier="54321",
+                   roaming_consortium_selection="1020304050")
     if dev[0].get_status_field("hs20") != "2":
         raise Exception("Unexpected hs20 indication")
+    network_id = dev[0].get_status_field("id")
+    sel = dev[0].get_network(network_id, "roaming_consortium_selection")
+    if sel != "1020304050":
+        raise Exception("Unexpected roaming_consortium_selection value: " + sel)
 
 def test_ap_hs20_random_mac_addr(dev, apdev):
     """Hotspot 2.0 connection with random MAC address"""
@@ -5634,3 +5755,239 @@ def test_ap_interworking_element_update(dev, apdev):
     logger.info("After update: " + str(bss))
     if '6b09f20208020000000300' not in bss['ie']:
         raise Exception("Expected Interworking element not seen after update")
+
+def test_ap_hs20_terms_and_conditions(dev, apdev):
+    """Hotspot 2.0 Terms and Conditions signaling"""
+    check_eap_capa(dev[0], "MSCHAPV2")
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    params['hs20_t_c_filename'] = 'terms-and-conditions'
+    params['hs20_t_c_timestamp'] = '123456789'
+    params['hs20_t_c_server_url'] = 'https://example.com/t_and_c?addr=@1@&ap=123'
+    hostapd.add_ap(apdev[0], params)
+
+    dev[0].hs20_enable()
+    dev[0].connect("test-hs20", proto="RSN", key_mgmt="WPA-EAP", eap="TTLS",
+                   identity="hs20-t-c-test", password="password",
+                   ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                   ieee80211w='2', scan_freq="2412")
+    ev = dev[0].wait_event(["HS20-T-C-ACCEPTANCE"], timeout=5)
+    if ev is None:
+        raise Exception("Terms and Conditions Acceptance notification not received")
+    url = "https://example.com/t_and_c?addr=%s&ap=123" % dev[0].own_addr()
+    if url not in ev:
+        raise Exception("Unexpected URL: " + ev)
+
+def test_ap_hs20_terms_and_conditions_coa(dev, apdev):
+    """Hotspot 2.0 Terms and Conditions signaling - CoA"""
+    try:
+        import pyrad.client
+        import pyrad.packet
+        import pyrad.dictionary
+        import radius_das
+    except ImportError:
+        raise HwsimSkip("No pyrad modules available")
+
+    check_eap_capa(dev[0], "MSCHAPV2")
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    params['hs20_t_c_filename'] = 'terms-and-conditions'
+    params['hs20_t_c_timestamp'] = '123456789'
+    params['hs20_t_c_server_url'] = 'https://example.com/t_and_c?addr=@1@&ap=123'
+    params['own_ip_addr'] = "127.0.0.1"
+    params['radius_das_port'] = "3799"
+    params['radius_das_client'] = "127.0.0.1 secret"
+    params['radius_das_require_event_timestamp'] = "1"
+    hapd = hostapd.add_ap(apdev[0], params)
+
+    dev[0].hs20_enable()
+    dev[0].connect("test-hs20", proto="RSN", key_mgmt="WPA-EAP", eap="TTLS",
+                   identity="hs20-t-c-test", password="password",
+                   ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                   ieee80211w='2', scan_freq="2412")
+
+    ev = hapd.wait_event(["HS20-T-C-FILTERING-ADD"], timeout=5)
+    if ev is None:
+        raise Exception("Terms and Conditions filtering not enabled")
+    if ev.split(' ')[1] != dev[0].own_addr():
+        raise Exception("Unexpected STA address for filtering: " + ev)
+
+    ev = dev[0].wait_event(["HS20-T-C-ACCEPTANCE"], timeout=5)
+    if ev is None:
+        raise Exception("Terms and Conditions Acceptance notification not received")
+    url = "https://example.com/t_and_c?addr=%s&ap=123" % dev[0].own_addr()
+    if url not in ev:
+        raise Exception("Unexpected URL: " + ev)
+
+    dict = pyrad.dictionary.Dictionary("dictionary.radius")
+
+    srv = pyrad.client.Client(server="127.0.0.1", acctport=3799,
+                              secret="secret", dict=dict)
+    srv.retries = 1
+    srv.timeout = 1
+
+    sta = hapd.get_sta(dev[0].own_addr())
+    multi_sess_id = sta['authMultiSessionId']
+
+    logger.info("CoA-Request with matching Acct-Session-Id")
+    vsa = binascii.unhexlify('00009f68090600000000')
+    req = radius_das.CoAPacket(dict=dict, secret="secret",
+                               NAS_IP_Address="127.0.0.1",
+                               Acct_Multi_Session_Id=multi_sess_id,
+                               Chargeable_User_Identity="hs20-cui",
+                               Event_Timestamp=int(time.time()),
+                               Vendor_Specific=vsa)
+    reply = srv.SendPacket(req)
+    logger.debug("RADIUS response from hostapd")
+    for i in reply.keys():
+        logger.debug("%s: %s" % (i, reply[i]))
+    if reply.code != pyrad.packet.CoAACK:
+        raise Exception("CoA-Request failed")
+
+    ev = hapd.wait_event(["HS20-T-C-FILTERING-REMOVE"], timeout=5)
+    if ev is None:
+        raise Exception("Terms and Conditions filtering not disabled")
+    if ev.split(' ')[1] != dev[0].own_addr():
+        raise Exception("Unexpected STA address for filtering: " + ev)
+
+def test_ap_hs20_terms_and_conditions_sql(dev, apdev, params):
+    """Hotspot 2.0 Terms and Conditions using SQLite for user DB"""
+    check_eap_capa(dev[0], "MSCHAPV2")
+    try:
+        import sqlite3
+    except ImportError:
+        raise HwsimSkip("No sqlite3 module available")
+    dbfile = os.path.join(params['logdir'], "eap-user.db")
+    try:
+        os.remove(dbfile)
+    except:
+        pass
+    con = sqlite3.connect(dbfile)
+    with con:
+        cur = con.cursor()
+        cur.execute("CREATE TABLE users(identity TEXT PRIMARY KEY, methods TEXT, password TEXT, remediation TEXT, phase2 INTEGER, t_c_timestamp INTEGER)")
+        cur.execute("CREATE TABLE wildcards(identity TEXT PRIMARY KEY, methods TEXT)")
+        cur.execute("INSERT INTO users(identity,methods,password,phase2) VALUES ('user-mschapv2','TTLS-MSCHAPV2','password',1)")
+        cur.execute("INSERT INTO wildcards(identity,methods) VALUES ('','TTLS,TLS')")
+        cur.execute("CREATE TABLE authlog(timestamp TEXT, session TEXT, nas_ip TEXT, username TEXT, note TEXT)")
+        cur.execute("CREATE TABLE pending_tc(mac_addr TEXT PRIMARY KEY, identity TEXT)")
+
+    try:
+        params = { "ssid": "as", "beacon_int": "2000",
+                   "radius_server_clients": "auth_serv/radius_clients.conf",
+                   "radius_server_auth_port": '18128',
+                   "eap_server": "1",
+                   "eap_user_file": "sqlite:" + dbfile,
+                   "ca_cert": "auth_serv/ca.pem",
+                   "server_cert": "auth_serv/server.pem",
+                   "private_key": "auth_serv/server.key" }
+        hostapd.add_ap(apdev[1], params)
+
+        bssid = apdev[0]['bssid']
+        params = hs20_ap_params()
+        params['auth_server_port'] = "18128"
+        params['hs20_t_c_filename'] = 'terms-and-conditions'
+        params['hs20_t_c_timestamp'] = '123456789'
+        params['hs20_t_c_server_url'] = 'https://example.com/t_and_c?addr=@1@&ap=123'
+        params['own_ip_addr'] = "127.0.0.1"
+        params['radius_das_port'] = "3799"
+        params['radius_das_client'] = "127.0.0.1 secret"
+        params['radius_das_require_event_timestamp'] = "1"
+        params['disable_pmksa_caching'] = '1'
+        hapd = hostapd.add_ap(apdev[0], params)
+
+        dev[0].request("SET pmf 1")
+        dev[0].hs20_enable()
+        id = dev[0].add_cred_values({ 'realm': "example.com",
+                                      'username': "user-mschapv2",
+                                      'password': "password",
+                                      'ca_cert': "auth_serv/ca.pem" })
+        interworking_select(dev[0], bssid, freq="2412")
+        interworking_connect(dev[0], bssid, "TTLS")
+
+        ev = hapd.wait_event(["HS20-T-C-FILTERING-ADD"], timeout=5)
+        if ev is None:
+            raise Exception("Terms and Conditions filtering not enabled")
+        hapd.dump_monitor()
+
+        ev = dev[0].wait_event(["HS20-T-C-ACCEPTANCE"], timeout=5)
+        if ev is None:
+            raise Exception("Terms and Conditions Acceptance notification not received")
+        dev[0].dump_monitor()
+
+        dev[0].request("DISCONNECT")
+        dev[0].wait_disconnected()
+        dev[0].dump_monitor()
+
+        # Simulate T&C server operation on user reading the updated version
+        with con:
+            cur = con.cursor()
+            cur.execute("SELECT identity FROM pending_tc WHERE mac_addr='" +
+                        dev[0].own_addr() + "'")
+            rows = cur.fetchall()
+            if len(rows) != 1:
+                raise Exception("No pending_tc entry found")
+            if rows[0][0] != 'user-mschapv2':
+                raise Exception("Unexpected pending_tc identity value")
+
+            cur.execute("UPDATE users SET t_c_timestamp=123456789 WHERE identity='user-mschapv2'")
+
+        dev[0].request("RECONNECT")
+        dev[0].wait_connected()
+
+        ev = hapd.wait_event(["HS20-T-C-FILTERING-ADD"], timeout=0.1)
+        if ev is not None:
+            raise Exception("Terms and Conditions filtering enabled unexpectedly")
+        hapd.dump_monitor()
+
+        ev = dev[0].wait_event(["HS20-T-C-ACCEPTANCE"], timeout=0.1)
+        if ev is not None:
+            raise Exception("Unexpected Terms and Conditions Acceptance notification")
+        dev[0].dump_monitor()
+
+        dev[0].request("DISCONNECT")
+        dev[0].wait_disconnected()
+        dev[0].dump_monitor()
+
+        # New T&C available
+        hapd.set('hs20_t_c_timestamp', '123456790')
+
+        dev[0].request("RECONNECT")
+        dev[0].wait_connected()
+
+        ev = hapd.wait_event(["HS20-T-C-FILTERING-ADD"], timeout=5)
+        if ev is None:
+            raise Exception("Terms and Conditions filtering not enabled")
+        hapd.dump_monitor()
+
+        ev = dev[0].wait_event(["HS20-T-C-ACCEPTANCE"], timeout=5)
+        if ev is None:
+            raise Exception("Terms and Conditions Acceptance notification not received (2)")
+        dev[0].dump_monitor()
+
+        dev[0].request("DISCONNECT")
+        dev[0].wait_disconnected()
+        dev[0].dump_monitor()
+
+        # Simulate T&C server operation on user reading the updated version
+        with con:
+            cur = con.cursor()
+            cur.execute("UPDATE users SET t_c_timestamp=123456790 WHERE identity='user-mschapv2'")
+
+        dev[0].request("RECONNECT")
+        dev[0].wait_connected()
+
+        ev = hapd.wait_event(["HS20-T-C-FILTERING-ADD"], timeout=0.1)
+        if ev is not None:
+            raise Exception("Terms and Conditions filtering enabled unexpectedly")
+        hapd.dump_monitor()
+
+        ev = dev[0].wait_event(["HS20-T-C-ACCEPTANCE"], timeout=0.1)
+        if ev is not None:
+            raise Exception("Unexpected Terms and Conditions Acceptance notification (2)")
+        dev[0].dump_monitor()
+    finally:
+        os.remove(dbfile)
+        dev[0].request("SET pmf 0")

@@ -2,7 +2,7 @@
 MACRO=\n
 FILTEREXPANSION=1 1 1 1 1
 compile=concur|capture|:Compile:&Compile,wmake %n.obj
-make=concur|capture|clear|:Build:&Build,vs_make.cmd
+make=concur|capture|clear|:Build:&Build,%rpvs_make.cmd
 rebuild=concur|capture|:Rebuild:&Rebuild,wmake /A
 debug=:Debug:&Debug,wdw wpa_supplicant.exe
 execute=:Execute:E&xecute,wpa_supplicant.exe
@@ -17,7 +17,137 @@ reffile=
 E:\_work\ports\wpa_supplicant\trunk\hostap\.gitignore
 E:\_work\ports\wpa_supplicant\trunk\hostap\README
 E:\_work\ports\wpa_supplicant\trunk\hostap\README.md
+E:\_work\ports\wpa_supplicant\trunk\hostap\eap_example\eap_example.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\eap_example\eap_example_peer.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\eap_example\eap_example_server.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\hostapd\config_file.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\hostapd\config_file.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\hostapd\ctrl_iface.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\hostapd\ctrl_iface.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\hostapd\eap_register.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\hostapd\eap_register.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\hostapd\eap_testing.txt
+E:\_work\ports\wpa_supplicant\trunk\hostap\hostapd\hapd_module_tests.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\hostapd\hlr_auc_gw.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\hostapd\hlr_auc_gw.txt
+E:\_work\ports\wpa_supplicant\trunk\hostap\hostapd\hostapd_cli.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\hostapd\main.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\hostapd\nt_password_hash.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\hs20\client\est.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\hs20\client\oma_dm_client.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\hs20\client\osu_client.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\hs20\client\osu_client.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\hs20\client\spp_client.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\hs20\server\hs20-osu-server.txt
+E:\_work\ports\wpa_supplicant\trunk\hostap\hs20\server\hs20_spp_server.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\hs20\server\spp_server.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\hs20\server\spp_server.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\hs20\server\sql-example.txt
+E:\_work\ports\wpa_supplicant\trunk\hostap\hs20\server\sql.txt
+E:\_work\ports\wpa_supplicant\trunk\hostap\mac80211_hwsim\tools\hwsim_test.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\radius_example\radius_example.c
 E:\_work\ports\wpa_supplicant\trunk\hostap\src\Makefile
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\accounting.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\accounting.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\acs.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\acs.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\ap_config.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\ap_config.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\ap_drv_ops.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\ap_drv_ops.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\ap_list.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\ap_list.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\ap_mlme.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\ap_mlme.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\authsrv.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\authsrv.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\beacon.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\beacon.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\bss_load.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\bss_load.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\ctrl_iface_ap.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\ctrl_iface_ap.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\dfs.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\dfs.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\dhcp_snoop.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\dhcp_snoop.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\dpp_hostapd.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\dpp_hostapd.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\drv_callbacks.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\eap_user_db.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\eth_p_oui.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\eth_p_oui.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\fils_hlp.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\fils_hlp.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\gas_query_ap.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\gas_query_ap.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\gas_serv.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\gas_serv.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\hostapd.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\hostapd.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\hs20.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\hs20.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\hw_features.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\hw_features.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\iapp.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\iapp.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\ieee802_11.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\ieee802_11.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\ieee802_11_auth.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\ieee802_11_auth.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\ieee802_11_he.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\ieee802_11_ht.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\ieee802_11_shared.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\ieee802_11_vht.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\ieee802_1x.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\ieee802_1x.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\mbo_ap.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\mbo_ap.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\ndisc_snoop.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\ndisc_snoop.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\neighbor_db.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\neighbor_db.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\p2p_hostapd.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\p2p_hostapd.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\pmksa_cache_auth.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\pmksa_cache_auth.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\preauth_auth.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\preauth_auth.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\rrm.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\rrm.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\sta_info.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\sta_info.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\taxonomy.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\taxonomy.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\tkip_countermeasures.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\tkip_countermeasures.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\utils.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\vlan.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\vlan.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\vlan_full.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\vlan_ifconfig.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\vlan_init.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\vlan_init.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\vlan_ioctl.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\vlan_util.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\vlan_util.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\wmm.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\wmm.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\wnm_ap.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\wnm_ap.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\wpa_auth.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\wpa_auth.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\wpa_auth_ft.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\wpa_auth_glue.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\wpa_auth_glue.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\wpa_auth_i.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\wpa_auth_ie.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\wpa_auth_ie.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\wps_hostapd.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\wps_hostapd.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\x_snoop.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\x_snoop.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\common\_sockaddr_storage.h
 E:\_work\ports\wpa_supplicant\trunk\hostap\src\common\cli.c
 E:\_work\ports\wpa_supplicant\trunk\hostap\src\common\cli.h
 E:\_work\ports\wpa_supplicant\trunk\hostap\src\common\common_module_tests.c
@@ -54,20 +184,343 @@ E:\_work\ports\wpa_supplicant\trunk\hostap\src\common\wpa_ctrl.c
 E:\_work\ports\wpa_supplicant\trunk\hostap\src\common\wpa_ctrl.h
 E:\_work\ports\wpa_supplicant\trunk\hostap\src\common\wpa_helpers.c
 E:\_work\ports\wpa_supplicant\trunk\hostap\src\common\wpa_helpers.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\aes-cbc.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\aes-ccm.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\aes-ctr.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\aes-eax.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\aes-encblock.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\aes-gcm.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\aes-internal-dec.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\aes-internal-enc.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\aes-internal.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\aes-omac1.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\aes-siv.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\aes-unwrap.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\aes-wrap.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\aes.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\aes_i.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\aes_siv.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\aes_wrap.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\crypto.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\crypto_gnutls.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\crypto_internal-cipher.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\crypto_internal-modexp.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\crypto_internal-rsa.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\crypto_internal.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\crypto_libtomcrypt.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\crypto_linux.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\crypto_module_tests.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\crypto_nettle.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\crypto_none.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\crypto_openssl.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\crypto_wolfssl.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\des-internal.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\des_i.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\dh_group5.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\dh_group5.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\dh_groups.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\dh_groups.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\fips_prf_internal.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\fips_prf_openssl.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\fips_prf_wolfssl.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\md4-internal.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\md5-internal.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\md5.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\md5.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\md5_i.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\milenage.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\milenage.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\ms_funcs.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\ms_funcs.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\random.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\random.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\rc4.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\sha1-internal.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\sha1-pbkdf2.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\sha1-prf.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\sha1-tlsprf.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\sha1-tprf.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\sha1.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\sha1.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\sha1_i.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\sha256-internal.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\sha256-kdf.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\sha256-prf.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\sha256-tlsprf.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\sha256.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\sha256.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\sha256_i.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\sha384-internal.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\sha384-kdf.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\sha384-prf.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\sha384.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\sha384.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\sha384_i.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\sha512-internal.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\sha512-kdf.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\sha512-prf.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\sha512.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\sha512_i.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\tls.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\tls_gnutls.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\tls_internal.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\tls_none.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\tls_openssl.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\tls_openssl.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\tls_openssl_ocsp.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\crypto\tls_wolfssl.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\android_drv.h
 E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\driver.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\driver_atheros.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\driver_bsd.c
 E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\driver_common.c
 E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\driver_genmac.c
 E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\driver_hostap.c
 E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\driver_hostap.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\driver_macsec_linux.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\driver_macsec_qca.c
 E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\driver_ndis.c
 E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\driver_ndis.h
 E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\driver_ndis_.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\driver_nl80211.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\driver_nl80211.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\driver_nl80211_android.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\driver_nl80211_capa.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\driver_nl80211_event.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\driver_nl80211_monitor.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\driver_nl80211_scan.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\driver_none.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\driver_openbsd.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\driver_privsep.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\driver_roboswitch.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\driver_wext.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\driver_wext.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\driver_wired.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\driver_wired_common.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\driver_wired_common.h
 E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\drivers.c
 E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\drivers.mak
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\linux_defines.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\linux_ioctl.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\linux_ioctl.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\linux_wext.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\ndis_events.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\netlink.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\netlink.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\nl80211_copy.h
 E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\packet32.c
 E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\packet32.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\priv_netlink.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\rfkill.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\rfkill.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_common\chap.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_common\chap.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_common\eap_common.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_common\eap_common.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_common\eap_defs.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_common\eap_eke_common.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_common\eap_eke_common.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_common\eap_fast_common.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_common\eap_fast_common.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_common\eap_gpsk_common.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_common\eap_gpsk_common.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_common\eap_ikev2_common.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_common\eap_ikev2_common.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_common\eap_pax_common.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_common\eap_pax_common.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_common\eap_peap_common.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_common\eap_peap_common.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_common\eap_psk_common.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_common\eap_psk_common.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_common\eap_pwd_common.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_common\eap_pwd_common.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_common\eap_sake_common.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_common\eap_sake_common.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_common\eap_sim_common.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_common\eap_sim_common.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_common\eap_tlv_common.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_common\eap_ttls.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_common\eap_wsc_common.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_common\eap_wsc_common.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_common\ikev2_common.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_common\ikev2_common.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_peer\eap.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_peer\eap.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_peer\eap_aka.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_peer\eap_config.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_peer\eap_eke.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_peer\eap_fast.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_peer\eap_fast_pac.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_peer\eap_fast_pac.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_peer\eap_gpsk.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_peer\eap_gtc.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_peer\eap_i.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_peer\eap_ikev2.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_peer\eap_leap.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_peer\eap_md5.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_peer\eap_methods.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_peer\eap_methods.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_peer\eap_mschapv2.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_peer\eap_otp.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_peer\eap_pax.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_peer\eap_peap.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_peer\eap_proxy.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_peer\eap_proxy_dummy.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_peer\eap_psk.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_peer\eap_pwd.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_peer\eap_sake.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_peer\eap_sim.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_peer\eap_tls.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_peer\eap_tls_common.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_peer\eap_tls_common.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_peer\eap_tnc.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_peer\eap_ttls.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_peer\eap_vendor_test.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_peer\eap_wsc.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_peer\ikev2.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_peer\ikev2.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_peer\mschapv2.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_peer\mschapv2.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_peer\tncc.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_peer\tncc.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_server\eap.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_server\eap_i.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_server\eap_methods.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_server\eap_server.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_server\eap_server_aka.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_server\eap_server_eke.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_server\eap_server_fast.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_server\eap_server_gpsk.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_server\eap_server_gtc.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_server\eap_server_identity.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_server\eap_server_ikev2.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_server\eap_server_md5.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_server\eap_server_methods.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_server\eap_server_mschapv2.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_server\eap_server_pax.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_server\eap_server_peap.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_server\eap_server_psk.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_server\eap_server_pwd.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_server\eap_server_sake.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_server\eap_server_sim.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_server\eap_server_tls.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_server\eap_server_tls_common.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_server\eap_server_tnc.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_server\eap_server_ttls.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_server\eap_server_vendor_test.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_server\eap_server_wsc.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_server\eap_sim_db.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_server\eap_sim_db.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_server\eap_tls_common.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_server\ikev2.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_server\ikev2.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_server\tncs.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eap_server\tncs.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eapol_auth\eapol_auth_dump.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eapol_auth\eapol_auth_sm.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eapol_auth\eapol_auth_sm.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eapol_auth\eapol_auth_sm_i.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eapol_supp\eapol_supp_sm.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\eapol_supp\eapol_supp_sm.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\fst\fst.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\fst\fst.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\fst\fst_ctrl_aux.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\fst\fst_ctrl_aux.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\fst\fst_ctrl_defs.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\fst\fst_ctrl_iface.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\fst\fst_ctrl_iface.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\fst\fst_defs.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\fst\fst_group.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\fst\fst_group.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\fst\fst_iface.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\fst\fst_iface.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\fst\fst_internal.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\fst\fst_session.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\fst\fst_session.h
 E:\_work\ports\wpa_supplicant\trunk\hostap\src\l2_packet\l2_packet.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\l2_packet\l2_packet_freebsd.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\l2_packet\l2_packet_freebsd_old2.2.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\l2_packet\l2_packet_linux.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\l2_packet\l2_packet_ndis.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\l2_packet\l2_packet_none.c
 E:\_work\ports\wpa_supplicant\trunk\hostap\src\l2_packet\l2_packet_os2.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\l2_packet\l2_packet_os2_old2.3.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\l2_packet\l2_packet_pcap.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\l2_packet\l2_packet_privsep.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\l2_packet\l2_packet_winpcap.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\netpacket\packet.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\p2p\p2p.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\p2p\p2p.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\p2p\p2p_build.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\p2p\p2p_dev_disc.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\p2p\p2p_go_neg.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\p2p\p2p_group.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\p2p\p2p_i.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\p2p\p2p_invitation.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\p2p\p2p_parse.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\p2p\p2p_pd.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\p2p\p2p_sd.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\p2p\p2p_utils.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\pae\ieee802_1x_cp.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\pae\ieee802_1x_cp.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\pae\ieee802_1x_kay.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\pae\ieee802_1x_kay.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\pae\ieee802_1x_kay_i.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\pae\ieee802_1x_key.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\pae\ieee802_1x_key.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\pae\ieee802_1x_secy_ops.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\pae\ieee802_1x_secy_ops.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\radius\radius.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\radius\radius.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\radius\radius_client.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\radius\radius_client.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\radius\radius_das.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\radius\radius_das.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\radius\radius_server.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\radius\radius_server.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\rsn_supp\pmksa_cache.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\rsn_supp\pmksa_cache.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\rsn_supp\preauth.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\rsn_supp\preauth.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\rsn_supp\tdls.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\rsn_supp\wpa.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\rsn_supp\wpa.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\rsn_supp\wpa_ft.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\rsn_supp\wpa_i.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\rsn_supp\wpa_ie.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\rsn_supp\wpa_ie.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\tls\asn1.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\tls\asn1.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\tls\bignum.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\tls\bignum.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\tls\libtommath.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\tls\pkcs1.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\tls\pkcs1.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\tls\pkcs5.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\tls\pkcs5.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\tls\pkcs8.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\tls\pkcs8.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\tls\rsa.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\tls\rsa.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\tls\tlsv1_client.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\tls\tlsv1_client.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\tls\tlsv1_client_i.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\tls\tlsv1_client_ocsp.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\tls\tlsv1_client_read.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\tls\tlsv1_client_write.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\tls\tlsv1_common.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\tls\tlsv1_common.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\tls\tlsv1_cred.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\tls\tlsv1_cred.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\tls\tlsv1_record.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\tls\tlsv1_record.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\tls\tlsv1_server.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\tls\tlsv1_server.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\tls\tlsv1_server_i.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\tls\tlsv1_server_read.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\tls\tlsv1_server_write.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\tls\x509v3.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\tls\x509v3.h
 E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\base64.c
 E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\base64.h
 E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\bitfield.c
@@ -81,6 +534,7 @@ E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\build_config.h
 E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\common.c
 E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\common.h
 E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\crc32.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\crc32.h
 E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\edit.c
 E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\edit.h
 E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\edit_readline.c
@@ -98,7 +552,9 @@ E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\includes.h
 E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\ip_addr.c
 E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\ip_addr.h
 E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\json.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\json.h
 E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\list.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\module_tests.h
 E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\os.h
 E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\os_internal.c
 E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\os_none.c
@@ -108,6 +564,7 @@ E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\os_win32.c
 E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\pcsc_funcs.c
 E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\pcsc_funcs.h
 E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\platform.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\PMPRINTF.H
 E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\radiotap.c
 E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\radiotap.h
 E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\radiotap_iter.h
@@ -124,6 +581,96 @@ E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\wpabuf.h
 E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\xml-utils.c
 E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\xml-utils.h
 E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\xml_libxml2.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\wps\http.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\wps\http_client.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\wps\http_client.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\wps\http_server.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\wps\http_server.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\wps\httpread.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\wps\httpread.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\wps\ndef.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\wps\upnp_xml.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\wps\upnp_xml.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\wps\wps.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\wps\wps.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\wps\wps_attr_build.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\wps\wps_attr_parse.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\wps\wps_attr_parse.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\wps\wps_attr_process.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\wps\wps_common.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\wps\wps_defs.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\wps\wps_dev_attr.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\wps\wps_dev_attr.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\wps\wps_enrollee.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\wps\wps_er.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\wps\wps_er.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\wps\wps_er_ssdp.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\wps\wps_i.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\wps\wps_module_tests.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\wps\wps_registrar.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\wps\wps_upnp.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\wps\wps_upnp.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\wps\wps_upnp_ap.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\wps\wps_upnp_event.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\wps\wps_upnp_i.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\wps\wps_upnp_ssdp.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\wps\wps_upnp_web.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\wps\wps_validate.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\tests\cipher-and-key-mgmt-testing.txt
+E:\_work\ports\wpa_supplicant\trunk\hostap\tests\test-aes.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\tests\test-asn1.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\tests\test-base64.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\tests\test-https.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\tests\test-list.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\tests\test-md4.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\tests\test-milenage.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\tests\test-rc4.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\tests\test-rsa-sig-ver.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\tests\test-sha1.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\tests\test-sha256.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\tests\test-x509.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\tests\test-x509v3.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\tests\ap-mgmt-fuzzer\ap-mgmt-fuzzer.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\tests\eapol-fuzzer\eapol-fuzzer.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\tests\hwsim\example-setup.txt
+E:\_work\ports\wpa_supplicant\trunk\hostap\tests\hwsim\auth_serv\index-revoked.txt
+E:\_work\ports\wpa_supplicant\trunk\hostap\tests\hwsim\auth_serv\index-unknown.txt
+E:\_work\ports\wpa_supplicant\trunk\hostap\tests\hwsim\auth_serv\index.txt
+E:\_work\ports\wpa_supplicant\trunk\hostap\tests\hwsim\auth_serv\iCA-server\index.txt
+E:\_work\ports\wpa_supplicant\trunk\hostap\tests\hwsim\auth_serv\iCA-user\index.txt
+E:\_work\ports\wpa_supplicant\trunk\hostap\tests\hwsim\auth_serv\rootCA\index.txt
+E:\_work\ports\wpa_supplicant\trunk\hostap\tests\hwsim\auth_serv\test-ca\index.txt
+E:\_work\ports\wpa_supplicant\trunk\hostap\tests\hwsim\tnc\hostap2_imc.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\tests\hwsim\tnc\hostap2_imv.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\tests\hwsim\tnc\hostap_imc.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\tests\hwsim\tnc\hostap_imv.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\tests\hwsim\vm\example-vm-setup.txt
+E:\_work\ports\wpa_supplicant\trunk\hostap\tests\p2p-fuzzer\p2p-fuzzer.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\tests\wnm-fuzzer\wnm-fuzzer.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\wlantest\bip.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\wlantest\bss.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\wlantest\ccmp.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\wlantest\ctrl.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\wlantest\gcmp.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\wlantest\inject.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\wlantest\monitor.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\wlantest\process.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\wlantest\readpcap.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\wlantest\rx_data.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\wlantest\rx_eapol.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\wlantest\rx_ip.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\wlantest\rx_mgmt.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\wlantest\rx_tdls.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\wlantest\sta.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\wlantest\test_vectors.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\wlantest\tkip.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\wlantest\wep.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\wlantest\wired.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\wlantest\wlantest.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\wlantest\wlantest.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\wlantest\wlantest_cli.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\wlantest\wlantest_ctrl.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\wlantest\writepcap.c
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\.config
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\ap.c
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\ap.h
@@ -156,6 +703,7 @@ E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\dpp_supplicant.c
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\dpp_supplicant.h
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\driver_i.h
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\eap_register.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\eap_testing.txt
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\eapol_test.c
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\events.c
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\gas_query.c
@@ -182,6 +730,7 @@ E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\mesh_mpm.c
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\mesh_mpm.h
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\mesh_rsn.c
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\mesh_rsn.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\mtest.cmd
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\nfc_pw_token.c
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\nmake.mak
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\notify.c
@@ -194,6 +743,7 @@ E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\p2p_supplicant.h
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\p2p_supplicant_sd.c
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\preauth_test.c
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\README
+E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\README-Windows.txt
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\README.OS2
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\rrm.c
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\scan.c
@@ -201,6 +751,7 @@ E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\scan.h
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\sme.c
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\sme.h
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\template.def
+E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\todo.txt
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\vs_make.cmd
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wifi_display.c
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wifi_display.h
@@ -209,6 +760,7 @@ E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wmm_ac.c
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wmm_ac.h
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wnm_sta.c
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wnm_sta.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wp.cmd
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_cli.c
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_passphrase.c
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_priv.c
@@ -216,6 +768,7 @@ E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_supplicant.c
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_supplicant.conf
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_supplicant_conf.sh
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_supplicant_i.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpaout.txt
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpas_glue.c
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpas_glue.h
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpas_kay.c
@@ -223,6 +776,17 @@ E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpas_kay.h
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpas_module_tests.c
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wps_supplicant.c
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wps_supplicant.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\binder\binder.cpp
+E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\binder\binder.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\binder\binder_constants.cpp
+E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\binder\binder_constants.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\binder\binder_i.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\binder\binder_manager.cpp
+E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\binder\binder_manager.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\binder\iface.cpp
+E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\binder\iface.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\binder\supplicant.cpp
+E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\binder\supplicant.h
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\dbus\dbus_common.c
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\dbus\dbus_common.h
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\dbus\dbus_common_i.h
@@ -247,137 +811,338 @@ E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\addinterfa
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\addinterface.h
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\eventhistory.cpp
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\eventhistory.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\log.txt
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\main.cpp
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\Makefile
+E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\mg.cmd
+E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\moc_addinterface.cpp
+E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\moc_eventhistory.cpp
+E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\moc_networkconfig.cpp
+E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\moc_peers.cpp
+E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\moc_scanresults.cpp
+E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\moc_signalbar.cpp
+E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\moc_stringquery.cpp
+E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\moc_userdatarequest.cpp
+E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\moc_wpagui.cpp
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\networkconfig.cpp
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\networkconfig.h
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\peers.cpp
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\peers.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\qrc_icons.cpp
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\scanresults.cpp
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\scanresults.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\scanresultsitem.cpp
+E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\scanresultsitem.h
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\signalbar.cpp
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\signalbar.h
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\stringquery.cpp
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\stringquery.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\ui_eventhistory.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\ui_networkconfig.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\ui_peers.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\ui_scanresults.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\ui_userdatarequest.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\ui_wpagui.h
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\userdatarequest.cpp
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\userdatarequest.h
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\wpa_gui.pro
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\wpagui.cpp
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\wpagui.h
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\wpamsg.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\wpadebug\res\raw\shell_commands.txt
+E:\_work\ports\wpa_supplicant\trunk\hostap\wpadebug\res\raw\wpa_commands.txt
+E:\_work\ports\wpa_supplicant\trunk\hostap\wpaspy\wpaspy.c
 [ASSOCIATION]
 [STATE]
-SCREEN: 3840 1200 21 26 1879 1137 0 0 N 0 0 0 0 1590 1052
-CWD: E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant
+SCREEN: 3840 1200 23 27 1879 1140 0 0 N 0 0 0 0 1590 1055
+CWD: E:\_work\ports\wpa_supplicant\trunk
 BUFFER: BN="P:\Util\VisualSlickEdit40\os2\vrestore.slk"
 BI: MA=1 254 1  TABS=1 9  WWS=3 IWT=0 ST=0 IN=0 BW=0 US=0 RO=0 SE=0 SN=0 BIN=0 MN=Fundamental	HM=0 MF=1
-VIEW: LN=.0 CL=1 LE=0 CX=1 CY=1 WI=5 BI=39 HT=0 HN=0 HF=0 HC=4
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\wpa_gui.pro"
-BI: MA=1 74 1  TABS=1 4  WWS=1 IWT=0 ST=0 IN=2 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=PV-WAVE	HM=0 MF=8
-VIEW: LN=.939 CL=50 LE=0 CX=50 CY=30 WI=5 BI=18 HT=0 HN=0 HF=0 HC=4
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_supplicant.c"
-BI: MA=1 74 1  TABS=1 4  WWS=1 IWT=0 ST=0 IN=2 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=8
-VIEW: LN=.851 CL=20 LE=0 CX=20 CY=7 WI=5 BI=19 HT=0 HN=0 HF=0 HC=4
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\.config"
-BI: MA=1 120 1  TABS=1 5  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=Fundamental	HM=0 MF=8
-VIEW: LN=.6301 CL=3 LE=0 CX=3 CY=35 WI=5 BI=20 HT=0 HN=0 HF=0 HC=4
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\ctrl_iface_unix.c"
-BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=8
-VIEW: LN=.4822 CL=17 LE=0 CX=17 CY=22 WI=5 BI=21 HT=0 HN=0 HF=0 HC=4
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\wpa_debug.c"
-BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=8
-VIEW: LN=.11724 CL=28 LE=0 CX=28 CY=22 WI=5 BI=22 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.0 CL=1 LE=0 CX=1 CY=1 WI=5 BI=66 HT=128 HN=0 HF=0 HC=4
+BUFFER: BN="P:\Util\VisualSlickEdit40\os2\vrestore.slk"
+BI: MA=1 254 1  TABS=1 9  WWS=3 IWT=0 ST=0 IN=0 BW=0 US=0 RO=0 SE=1 SN=0 BIN=0 MN=Fundamental	HM=0 MF=8
+VIEW: LN=.0 CL=1 LE=0 CX=1 CY=1 WI=5 BI=17 HT=128 HN=0 HF=0 HC=4
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\priv_netlink.h"
 BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=8
-VIEW: LN=.2437 CL=3 LE=0 CX=3 CY=22 WI=5 BI=23 HT=0 HN=0 HF=0 HC=4
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\vs_make.cmd"
-BI: MA=1 74 1  TABS=1 3  WWS=0 IWT=0 ST=0 IN=2 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=Rexx	HM=0 MF=8
-VIEW: LN=.134 CL=7 LE=0 CX=7 CY=5 WI=5 BI=24 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.2437 CL=3 LE=0 CX=3 CY=22 WI=5 BI=20 HT=128 HN=0 HF=0 HC=4
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\os_unix.c"
 BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=8
-VIEW: LN=.13520 CL=17 LE=0 CX=17 CY=30 WI=5 BI=25 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.13520 CL=17 LE=0 CX=17 CY=30 WI=5 BI=21 HT=128 HN=0 HF=0 HC=4
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\os_win32.c"
 BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=8
-VIEW: LN=.0 CL=1 LE=0 CX=1 CY=1 WI=5 BI=26 HT=0 HN=0 HF=0 HC=4
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\os_os2.c"
+VIEW: LN=.0 CL=1 LE=0 CX=1 CY=1 WI=5 BI=22 HT=128 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_supplicant.c"
 BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=8
-VIEW: LN=.0 CL=1 LE=0 CX=1 CY=1 WI=5 BI=27 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.851 CL=20 LE=0 CX=20 CY=7 WI=5 BI=23 HT=128 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\wpa_debug.c"
+BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=888
+VIEW: LN=.4089 CL=15 LE=0 CX=15 CY=21 WI=5 BI=58 HT=128 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpaout.txt"
+BI: MA=1 120 1  TABS=1 3  WWS=3 IWT=0 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=txt	HM=0 MF=536
+VIEW: LN=.0 CL=1 LE=0 CX=1 CY=1 WI=5 BI=19 HT=128 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\main.c"
+BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=888
+VIEW: LN=.8895 CL=15 LE=0 CX=15 CY=22 WI=5 BI=64 HT=128 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_supplicant.map"
+BI: MA=1 120 1  TABS=1 5  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=Fundamental	HM=0 MF=536
+VIEW: LN=.9863 CL=110 LE=0 CX=110 CY=13 WI=5 BI=63 HT=128 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\README.OS2"
+BI: MA=1 80 1  TABS=1 3  WWS=3 IWT=0 ST=0 IN=2 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=os2	HM=0 MF=8
+VIEW: LN=.1721 CL=26 LE=0 CX=26 CY=0 WI=5 BI=43 HT=128 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\bldlvl.cmd"
+BI: MA=1 74 1  TABS=1 3  WWS=0 IWT=0 ST=0 IN=2 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=Rexx	HM=0 MF=8
+VIEW: LN=.1586 CL=14 LE=0 CX=14 CY=0 WI=5 BI=42 HT=128 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\common.h"
+BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=8
+VIEW: LN=.521 CL=1 LE=0 CX=1 CY=22 WI=5 BI=41 HT=128 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\l2_packet\l2_packet_freebsd_old2.2.c"
+BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=8
+VIEW: LN=.1229 CL=1 LE=0 CX=1 CY=17 WI=5 BI=60 HT=128 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\l2_packet\l2_packet_freebsd.c"
+BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=8
+VIEW: LN=.5686 CL=8 LE=0 CX=8 CY=31 WI=5 BI=50 HT=128 HN=0 HF=0 HC=4
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\mtest.cmd"
 BI: MA=1 74 1  TABS=1 3  WWS=0 IWT=0 ST=0 IN=2 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=Rexx	HM=0 MF=8
-VIEW: LN=.179 CL=1 LE=0 CX=1 CY=5 WI=5 BI=36 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.179 CL=1 LE=0 CX=1 CY=5 WI=5 BI=40 HT=128 HN=0 HF=0 HC=4
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\make_ship.cmd"
 BI: MA=1 74 1  TABS=1 3  WWS=0 IWT=0 ST=0 IN=2 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=Rexx	HM=0 MF=8
-VIEW: LN=.658 CL=82 LE=0 CX=82 CY=19 WI=5 BI=34 HT=0 HN=0 HF=0 HC=4
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_supplicant.conf"
-BI: MA=1 120 1  TABS=1 5  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=Fundamental	HM=0 MF=8
-VIEW: LN=.15261 CL=3 LE=0 CX=3 CY=22 WI=5 BI=33 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.658 CL=82 LE=0 CX=82 CY=19 WI=5 BI=39 HT=128 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\current_from_w1.fi\hostap\src\l2_packet\l2_packet.h"
+BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=8
+VIEW: LN=.0 CL=1 LE=0 CX=1 CY=1 WI=5 BI=38 HT=128 HN=0 HF=0 HC=4
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\Makefile.ok_AB"
 BI: MA=1 120 1  TABS=1 5  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=Fundamental	HM=0 MF=8
-VIEW: LN=.0 CL=1 LE=0 CX=1 CY=1 WI=5 BI=32 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.0 CL=1 LE=0 CX=1 CY=1 WI=5 BI=37 HT=128 HN=0 HF=0 HC=4
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\Makefile.evNOK"
 BI: MA=1 120 1  TABS=1 5  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=Fundamental	HM=0 MF=8
-VIEW: LN=.0 CL=1 LE=0 CX=1 CY=1 WI=5 BI=31 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.0 CL=1 LE=0 CX=1 CY=1 WI=5 BI=36 HT=128 HN=0 HF=0 HC=4
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\Makefile.ABok"
 BI: MA=1 120 1  TABS=1 5  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=Fundamental	HM=0 MF=8
-VIEW: LN=.0 CL=1 LE=0 CX=1 CY=1 WI=5 BI=30 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.0 CL=1 LE=0 CX=1 CY=1 WI=5 BI=35 HT=128 HN=0 HF=0 HC=4
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\Makefile"
 BI: MA=1 250 1  TABS=1 5  WWS=3 IWT=0 ST=0 IN=2 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=mak	HM=0 MF=8
-VIEW: LN=.13422 CL=25 LE=0 CX=25 CY=32 WI=5 BI=29 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.3555 CL=50 LE=0 CX=50 CY=37 WI=5 BI=34 HT=128 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\wpa_debug.h"
+BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=8
+VIEW: LN=.326 CL=22 LE=0 CX=22 CY=15 WI=5 BI=54 HT=128 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\packet32.h"
+BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=8
+VIEW: LN=.0 CL=1 LE=0 CX=1 CY=0 WI=5 BI=32 HT=128 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\netpacket\packet.h"
+BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=8
+VIEW: LN=.844 CL=3 LE=0 CX=3 CY=19 WI=5 BI=31 HT=128 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\.config"
+BI: MA=1 120 1  TABS=1 5  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=Fundamental	HM=0 MF=8
+VIEW: LN=.14676 CL=28 LE=0 CX=28 CY=22 WI=5 BI=30 HT=128 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\wpa_gui.pro"
+BI: MA=1 74 1  TABS=1 4  WWS=1 IWT=0 ST=0 IN=2 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=PV-WAVE	HM=0 MF=8
+VIEW: LN=.813 CL=1 LE=0 CX=1 CY=28 WI=5 BI=29 HT=128 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\common\qca-vendor.h"
+BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=8
+VIEW: LN=.208679 CL=14 LE=0 CX=14 CY=22 WI=5 BI=28 HT=128 HN=0 HF=0 HC=4
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\common\wpa_ctrl.c"
 BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=8
-VIEW: LN=.10182 CL=164 LE=22 CX=142 CY=7 WI=5 BI=28 HT=0 HN=0 HF=0 HC=4
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\bldlvl.cmd"
+VIEW: LN=.676 CL=32 LE=0 CX=32 CY=29 WI=5 BI=27 HT=128 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\driver.h"
+BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=8
+VIEW: LN=.32897 CL=46 LE=0 CX=46 CY=28 WI=5 BI=26 HT=128 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\ip_addr.c"
+BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=8
+VIEW: LN=.530 CL=17 LE=0 CX=17 CY=25 WI=5 BI=25 HT=128 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\drivers.c"
+BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=8
+VIEW: LN=.1354 CL=23 LE=0 CX=23 CY=49 WI=5 BI=24 HT=128 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\packet32.c"
+BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=8
+VIEW: LN=.8923 CL=67 LE=0 CX=67 CY=28 WI=5 BI=62 HT=128 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\l2_packet\l2_packet_os2.c"
+BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=11
+VIEW: LN=.8513 CL=13 LE=0 CX=13 CY=19 WI=5 BI=49 HT=128 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\current_from_w1.fi\hostap\src\l2_packet\l2_packet_linux.c"
+BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=8
+VIEW: LN=.12804 CL=2 LE=0 CX=2 CY=0 WI=5 BI=51 HT=128 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\l2_packet\l2_packet_os2_old2.3.c"
+BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=824
+VIEW: LN=.1371 CL=1 LE=0 CX=1 CY=46 WI=5 BI=61 HT=128 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\l2_packet\l2_packet.h"
+BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=8
+VIEW: LN=.1125 CL=23 LE=0 CX=23 CY=34 WI=5 BI=59 HT=128 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\l2_packet\l2_packet_pcap.c"
+BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=8
+VIEW: LN=.1423 CL=13 LE=0 CX=13 CY=22 WI=5 BI=57 HT=128 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\os_os2.c"
+BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=8
+VIEW: LN=.8182 CL=1 LE=0 CX=1 CY=22 WI=5 BI=56 HT=128 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\wmm.c"
+BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=8
+VIEW: LN=.0 CL=1 LE=0 CX=1 CY=1 WI=5 BI=4 HT=128 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\driver_genmac.c"
+BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=8
+VIEW: LN=.512 CL=27 LE=0 CX=27 CY=17 WI=5 BI=48 HT=128 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\ctrl_iface_unix.c"
+BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=8
+VIEW: LN=.4812 CL=7 LE=0 CX=7 CY=23 WI=5 BI=52 HT=128 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\vs_make.cmd"
 BI: MA=1 74 1  TABS=1 3  WWS=0 IWT=0 ST=0 IN=2 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=Rexx	HM=0 MF=8
-VIEW: LN=.1585 CL=13 LE=0 CX=13 CY=20 WI=5 BI=38 HT=0 HN=0 HF=0 HC=4
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\common.h"
+VIEW: LN=.101 CL=2 LE=0 CX=2 CY=3 WI=5 BI=53 HT=128 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\m.cmd"
+BI: MA=1 74 1  TABS=1 3  WWS=0 IWT=0 ST=0 IN=2 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=Rexx	HM=0 MF=8
+VIEW: LN=.317 CL=20 LE=0 CX=20 CY=13 WI=5 BI=47 HT=128 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_supplicant.conf"
+BI: MA=1 120 1  TABS=1 5  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=Fundamental	HM=0 MF=8
+VIEW: LN=.12325 CL=2 LE=0 CX=2 CY=23 WI=5 BI=46 HT=128 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\l2_packet\l2_packet_linux.c"
 BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=8
-VIEW: LN=.479 CL=42 LE=0 CX=42 CY=21 WI=5 BI=35 HT=0 HN=0 HF=0 HC=4
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\README.OS2"
-BI: MA=1 80 1  TABS=1 3  WWS=3 IWT=0 ST=0 IN=2 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=os2	HM=0 MF=528
-VIEW: LN=.872 CL=1 LE=0 CX=1 CY=16 WI=5 BI=37 HT=0 HN=0 HF=0 HC=4
-WINDOW: 96 100 1073 710 -1 -1 N  WF=0 WT=12 "System VIO,6,0,1"
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\common.h"
-VIEW: LN=.479 CL=42 LE=0 CX=48 CY=21 WI=90 BI=35 HT=0 HN=0 HF=0 HC=4
-WINDOW: 448 185 917 719 -1 -1 N  WF=0 WT=10 "System VIO,6,0,1"
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\bldlvl.cmd"
-VIEW: LN=.1585 CL=13 LE=0 CX=19 CY=20 WI=89 BI=38 HT=0 HN=0 HF=0 HC=4
-WINDOW: 120 125 1071 851 -1 -1 N  WF=0 WT=7 "System VIO,6,0,1"
+VIEW: LN=.2219 CL=1 LE=0 CX=1 CY=57 WI=5 BI=45 HT=128 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\ToDo.txt"
+BI: MA=1 120 1  TABS=1 3  WWS=3 IWT=0 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=txt	HM=0 MF=8
+VIEW: LN=.125 CL=66 LE=0 CX=66 CY=3 WI=5 BI=44 HT=128 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\Makefile"
+BI: MA=1 250 1  TABS=1 5  WWS=3 IWT=0 ST=0 IN=2 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=mak	HM=0 MF=536
+VIEW: LN=.35490 CL=19 LE=0 CX=19 CY=28 WI=5 BI=33 HT=128 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\PMPRINTF.H"
+BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=632
+VIEW: LN=.4666 CL=9 LE=0 CX=9 CY=19 WI=5 BI=55 HT=128 HN=0 HF=0 HC=4
+WINDOW: 809 195 627 889 676 835 I  WF=0 WT=15 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\current_from_w1.fi\hostap\src\l2_packet\l2_packet_linux.c"
+VIEW: LN=.12804 CL=2 LE=0 CX=8168817 CY=0 WI=106 BI=51 HT=0 HN=0 HF=0 HC=4
+WINDOW: 559 67 711 676 -1 -1 N  WF=0 WT=31 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\wpa_debug.c"
+VIEW: LN=.4089 CL=15 LE=0 CX=21 CY=21 WI=86 BI=58 HT=0 HN=0 HF=0 HC=4
+WINDOW: 862 136 722 896 -1 -1 N  WF=0 WT=12 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\packet32.c"
+VIEW: LN=.6694 CL=25 LE=0 CX=31 CY=43 WI=104 BI=62 HT=0 HN=0 HF=0 HC=4
+WINDOW: 618 51 813 887 -1 -1 N  WF=0 WT=14 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\drivers.c"
+VIEW: LN=.1354 CL=23 LE=0 CX=29 CY=49 WI=103 BI=24 HT=0 HN=0 HF=0 HC=4
+WINDOW: 48 50 1073 710 -1 -1 N  WF=0 WT=26 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\ip_addr.c"
+VIEW: LN=.530 CL=17 LE=0 CX=23 CY=25 WI=102 BI=25 HT=0 HN=0 HF=0 HC=4
+WINDOW: 72 75 871 898 -1 -1 N  WF=0 WT=13 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\driver.h"
+VIEW: LN=.32897 CL=46 LE=0 CX=52 CY=28 WI=101 BI=26 HT=0 HN=0 HF=0 HC=4
+WINDOW: 117 18 1092 1002 -1 -1 N  WF=0 WT=7 "System VIO,6,0,1"
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\common\wpa_ctrl.c"
-VIEW: LN=.10182 CL=164 LE=22 CX=148 CY=7 WI=88 BI=28 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.676 CL=32 LE=0 CX=38 CY=29 WI=100 BI=27 HT=0 HN=0 HF=0 HC=4
+WINDOW: 24 25 1073 710 -1 -1 N  WF=0 WT=25 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\common\qca-vendor.h"
+VIEW: LN=.208679 CL=14 LE=0 CX=20 CY=22 WI=99 BI=28 HT=0 HN=0 HF=0 HC=4
+WINDOW: 516 31 939 950 -1 -1 N  WF=0 WT=16 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\wpa_gui.pro"
+VIEW: LN=.813 CL=1 LE=0 CX=1 CY=28 WI=98 BI=29 HT=0 HN=0 HF=0 HC=4
+WINDOW: 0 0 1073 710 -1 -1 N  WF=0 WT=24 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\.config"
+VIEW: LN=.14676 CL=28 LE=0 CX=34 CY=22 WI=97 BI=30 HT=0 HN=0 HF=0 HC=4
+WINDOW: 72 75 1073 710 -1 -1 N  WF=0 WT=30 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\netpacket\packet.h"
+VIEW: LN=.844 CL=3 LE=0 CX=9 CY=19 WI=96 BI=31 HT=0 HN=0 HF=0 HC=4
+WINDOW: 374 56 1073 710 -1 -1 N  WF=0 WT=28 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\packet32.h"
+VIEW: LN=.0 CL=1 LE=0 CX=7 CY=0 WI=95 BI=32 HT=0 HN=0 HF=0 HC=4
+WINDOW: 216 225 1073 710 -1 -1 N  WF=0 WT=39 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\wpa_debug.h"
+VIEW: LN=.326 CL=22 LE=0 CX=28 CY=15 WI=94 BI=54 HT=0 HN=0 HF=0 HC=4
 WINDOW: 0 0 964 1032 -1 -1 N  WF=0 WT=1 "System VIO,6,0,1"
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\Makefile"
-VIEW: LN=.13422 CL=25 LE=0 CX=31 CY=32 WI=87 BI=29 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.3555 CL=50 LE=0 CX=56 CY=37 WI=93 BI=34 HT=0 HN=0 HF=0 HC=4
 WINDOW: 48 50 1071 710 -1 -1 N  WF=0 WT=4 "System VIO,6,0,1"
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\Makefile.ABok"
-VIEW: LN=.0 CL=1 LE=0 CX=7 CY=1 WI=86 BI=30 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.0 CL=1 LE=0 CX=7 CY=1 WI=92 BI=35 HT=0 HN=0 HF=0 HC=4
 WINDOW: 72 75 1071 710 -1 -1 N  WF=0 WT=5 "System VIO,6,0,1"
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\Makefile.evNOK"
-VIEW: LN=.0 CL=1 LE=0 CX=7 CY=1 WI=85 BI=31 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.0 CL=1 LE=0 CX=7 CY=1 WI=91 BI=36 HT=0 HN=0 HF=0 HC=4
 WINDOW: 272 150 1071 710 -1 -1 N  WF=0 WT=2 "System VIO,6,0,1"
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\Makefile.ok_AB"
-VIEW: LN=.0 CL=1 LE=0 CX=7 CY=1 WI=84 BI=32 HT=0 HN=0 HF=0 HC=4
-WINDOW: 210 190 1071 710 -1 -1 N  WF=0 WT=6 "System VIO,6,0,1"
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_supplicant.conf"
-VIEW: LN=.15261 CL=3 LE=0 CX=9 CY=22 WI=83 BI=33 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.0 CL=1 LE=0 CX=7 CY=1 WI=90 BI=37 HT=0 HN=0 HF=0 HC=4
+WINDOW: 384 34 1008 820 -1 -1 N  WF=0 WT=19 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\current_from_w1.fi\hostap\src\l2_packet\l2_packet.h"
+VIEW: LN=.0 CL=1 LE=0 CX=7 CY=1 WI=89 BI=38 HT=0 HN=0 HF=0 HC=4
 WINDOW: 0 0 1071 710 -1 -1 N  WF=0 WT=8 "System VIO,6,0,1"
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\make_ship.cmd"
-VIEW: LN=.658 CL=82 LE=0 CX=88 CY=19 WI=82 BI=34 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.658 CL=82 LE=0 CX=88 CY=19 WI=88 BI=39 HT=0 HN=0 HF=0 HC=4
 WINDOW: 72 75 1071 710 -1 -1 N  WF=0 WT=11 "System VIO,6,0,1"
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\mtest.cmd"
-VIEW: LN=.179 CL=1 LE=0 CX=7 CY=5 WI=81 BI=36 HT=0 HN=0 HF=0 HC=4
-WINDOW: 486 40 1071 710 -1 -1 N  WF=0 WT=9 "System VIO,6,0,1"
+VIEW: LN=.179 CL=1 LE=0 CX=7 CY=5 WI=87 BI=40 HT=0 HN=0 HF=0 HC=4
+WINDOW: 829 21 707 1001 -1 -1 N  WF=0 WT=32 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\l2_packet\l2_packet_freebsd.c"
+VIEW: LN=.5686 CL=8 LE=0 CX=14 CY=31 WI=81 BI=50 HT=0 HN=0 HF=0 HC=4
+WINDOW: 1073 2 513 569 -1 -1 N  WF=0 WT=34 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\l2_packet\l2_packet_freebsd_old2.2.c"
+VIEW: LN=.1229 CL=1 LE=0 CX=7 CY=17 WI=82 BI=60 HT=0 HN=0 HF=0 HC=4
+WINDOW: 271 275 1073 717 -1 -1 N  WF=0 WT=33 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\common.h"
+VIEW: LN=.521 CL=1 LE=0 CX=7 CY=22 WI=83 BI=41 HT=0 HN=0 HF=0 HC=4
+WINDOW: 448 286 917 719 82 1032 I  WF=0 WT=10 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\bldlvl.cmd"
+VIEW: LN=.1586 CL=14 LE=0 CX=8168769 CY=0 WI=84 BI=42 HT=0 HN=0 HF=0 HC=4
+WINDOW: 486 141 1071 710 280 1032 I  WF=0 WT=9 "System VIO,6,0,1"
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\README.OS2"
-VIEW: LN=.1470 CL=84 LE=0 CX=90 CY=31 WI=91 BI=37 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.1721 CL=26 LE=0 CX=8168817 CY=0 WI=85 BI=43 HT=0 HN=0 HF=0 HC=4
+WINDOW: 48 50 1073 712 -1 -1 N  WF=0 WT=43 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpaout.txt"
+VIEW: LN=.0 CL=1 LE=0 CX=7 CY=1 WI=124 BI=19 HT=0 HN=0 HF=0 HC=4
+WINDOW: 72 75 1073 712 -1 -1 N  WF=0 WT=44 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\main.c"
+VIEW: LN=.8895 CL=15 LE=0 CX=21 CY=22 WI=135 BI=64 HT=0 HN=0 HF=0 HC=4
+WINDOW: 573 30 938 750 -1 -1 N  WF=0 WT=27 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\Makefile"
+VIEW: LN=.35490 CL=19 LE=0 CX=25 CY=28 WI=119 BI=33 HT=0 HN=0 HF=0 HC=4
+WINDOW: 255 63 1073 712 -1 -1 N  WF=0 WT=42 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_supplicant.map"
+VIEW: LN=.9863 CL=110 LE=0 CX=116 CY=13 WI=121 BI=63 HT=0 HN=0 HF=0 HC=4
+WINDOW: 684 30 785 952 -1 -1 N  WF=0 WT=40 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\PMPRINTF.H"
+VIEW: LN=.4666 CL=9 LE=0 CX=15 CY=19 WI=120 BI=55 HT=0 HN=0 HF=0 HC=4
+WINDOW: 868 882 723 172 -1 -1 N  WF=0 WT=3 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\ToDo.txt"
+VIEW: LN=.125 CL=66 LE=0 CX=72 CY=3 WI=118 BI=44 HT=0 HN=0 HF=0 HC=4
+WINDOW: 894 3 677 1012 -1 -1 N  WF=0 WT=18 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\l2_packet\l2_packet_linux.c"
+VIEW: LN=.2219 CL=1 LE=0 CX=7 CY=57 WI=117 BI=45 HT=0 HN=0 HF=0 HC=4
+WINDOW: 210 190 1071 710 -1 -1 N  WF=0 WT=6 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_supplicant.conf"
+VIEW: LN=.12325 CL=2 LE=0 CX=8 CY=23 WI=116 BI=46 HT=0 HN=0 HF=0 HC=4
+WINDOW: 48 50 1073 710 -1 -1 N  WF=0 WT=29 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\m.cmd"
+VIEW: LN=.317 CL=20 LE=0 CX=26 CY=13 WI=115 BI=47 HT=0 HN=0 HF=0 HC=4
+WINDOW: 742 141 667 752 478 1065 N  WF=0 WT=21 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\vs_make.cmd"
+VIEW: LN=.101 CL=2 LE=0 CX=8 CY=3 WI=114 BI=53 HT=0 HN=0 HF=0 HC=4
+WINDOW: 24 25 1073 710 -1 -1 N  WF=0 WT=22 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\ctrl_iface_unix.c"
+VIEW: LN=.4812 CL=7 LE=0 CX=13 CY=23 WI=113 BI=52 HT=0 HN=0 HF=0 HC=4
+WINDOW: 159 52 1073 710 -1 -1 N  WF=0 WT=23 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\driver_genmac.c"
+VIEW: LN=.512 CL=27 LE=0 CX=33 CY=17 WI=112 BI=48 HT=0 HN=0 HF=0 HC=4
+WINDOW: 612 44 871 762 -1 -1 N  WF=0 WT=41 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\wmm.c"
+VIEW: LN=.0 CL=1 LE=0 CX=7 CY=1 WI=111 BI=4 HT=0 HN=0 HF=0 HC=4
+WINDOW: 192 200 1073 710 -1 -1 N  WF=0 WT=38 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\os_os2.c"
+VIEW: LN=.8182 CL=1 LE=0 CX=7 CY=22 WI=110 BI=56 HT=0 HN=0 HF=0 HC=4
+WINDOW: 168 175 1073 710 -1 -1 N  WF=0 WT=37 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\l2_packet\l2_packet_pcap.c"
+VIEW: LN=.1423 CL=13 LE=0 CX=19 CY=22 WI=109 BI=57 HT=0 HN=0 HF=0 HC=4
+WINDOW: 328 79 1073 710 -1 -1 N  WF=0 WT=35 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\l2_packet\l2_packet.h"
+VIEW: LN=.1125 CL=23 LE=0 CX=29 CY=34 WI=108 BI=59 HT=0 HN=0 HF=0 HC=4
+WINDOW: 627 -4 650 1012 -1 -1 N  WF=0 WT=17 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\l2_packet\l2_packet_os2_old2.3.c"
+VIEW: LN=.1371 CL=1 LE=0 CX=7 CY=46 WI=107 BI=61 HT=0 HN=0 HF=0 HC=4
+WINDOW: 5 -1 623 1013 -1 -1 N  WF=0 WT=20 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\l2_packet\l2_packet_os2.c"
+VIEW: LN=.9014 CL=5 LE=0 CX=11 CY=35 WI=105 BI=49 HT=0 HN=0 HF=0 HC=4
 FILEHIST: 9
-E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\Makefile.evNOK
-E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\Makefile.ok_AB
-E:\_work\ports\wpa_supplicant\trunk\hostap\src\common\wpa_ctrl.c
-E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_supplicant.conf
-E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\make_ship.cmd
-E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\README.OS2
-E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\bldlvl.cmd
-E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\mtest.cmd
-E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\common.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\wpa_debug.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\hostapd\main.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\wmm.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\os_os2.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\PMPRINTF.H
+E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_supplicant.map
+E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpaout.txt
+E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\main.c
+E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\wpa_debug.c
 PRINTER: 2
 PRINTER: 2
-PRINTER: 2
+HPPSLase,
+AUTOSAVE: 0

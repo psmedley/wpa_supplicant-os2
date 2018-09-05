@@ -268,7 +268,7 @@ static int wpa_supplicant_get_pmk(struct wpa_sm *sm,
 		 * event before receiving this 1/4 message, so try to find a
 		 * matching PMKSA cache entry here. */
 		sm->cur_pmksa = pmksa_cache_get(sm->pmksa, src_addr, pmkid,
-						NULL);
+						NULL, 0);
 		if (sm->cur_pmksa) {
 			wpa_dbg(sm->ctx->msg_ctx, MSG_DEBUG,
 				"RSN: found matching PMKID from PMKSA cache");
@@ -288,6 +288,18 @@ static int wpa_supplicant_get_pmk(struct wpa_sm *sm,
 		eapol_sm_notify_cached(sm->eapol);
 #ifdef CONFIG_IEEE80211R
 		sm->xxkey_len = 0;
+#ifdef CONFIG_SAE
+		if (sm->key_mgmt == WPA_KEY_MGMT_FT_SAE &&
+		    sm->pmk_len == PMK_LEN) {
+			/* Need to allow FT key derivation to proceed with
+			 * PMK from SAE being used as the XXKey in cases where
+			 * the PMKID in msg 1/4 matches the PMKSA entry that was
+			 * just added based on SAE authentication for the
+			 * initial mobility domain association. */
+			os_memcpy(sm->xxkey, sm->pmk, sm->pmk_len);
+			sm->xxkey_len = sm->pmk_len;
+		}
+#endif /* CONFIG_SAE */
 #endif /* CONFIG_IEEE80211R */
 	} else if (wpa_key_mgmt_wpa_ieee8021x(sm->key_mgmt) && sm->eapol) {
 		int res, pmk_len;
@@ -342,8 +354,8 @@ static int wpa_supplicant_get_pmk(struct wpa_sm *sm,
 						     fils_cache_id);
 			}
 			if (!sm->cur_pmksa && pmkid &&
-			    pmksa_cache_get(sm->pmksa, src_addr, pmkid, NULL))
-			{
+			    pmksa_cache_get(sm->pmksa, src_addr, pmkid, NULL,
+				    0)) {
 				wpa_dbg(sm->ctx->msg_ctx, MSG_DEBUG,
 					"RSN: the new PMK matches with the "
 					"PMKID");
@@ -2404,6 +2416,7 @@ static void wpa_sm_pmksa_free_cb(struct rsn_pmksa_cache_entry *entry,
 	}
 
 	if (deauth) {
+		sm->pmk_len = 0;
 		os_memset(sm->pmk, 0, sizeof(sm->pmk));
 		wpa_sm_deauthenticate(sm, WLAN_REASON_UNSPECIFIED);
 	}
@@ -3117,7 +3130,7 @@ void wpa_sm_pmksa_cache_add(struct wpa_sm *sm, const u8 *pmk, size_t pmk_len,
 int wpa_sm_pmksa_exists(struct wpa_sm *sm, const u8 *bssid,
 			const void *network_ctx)
 {
-	return pmksa_cache_get(sm->pmksa, bssid, NULL, network_ctx) != NULL;
+	return pmksa_cache_get(sm->pmksa, bssid, NULL, network_ctx, 0) != NULL;
 }
 
 
@@ -3126,6 +3139,7 @@ void wpa_sm_drop_sa(struct wpa_sm *sm)
 	wpa_dbg(sm->ctx->msg_ctx, MSG_DEBUG, "WPA: Clear old PMK and PTK");
 	sm->ptk_set = 0;
 	sm->tptk_set = 0;
+	sm->pmk_len = 0;
 	os_memset(sm->pmk, 0, sizeof(sm->pmk));
 	os_memset(&sm->ptk, 0, sizeof(sm->ptk));
 	os_memset(&sm->tptk, 0, sizeof(sm->tptk));
@@ -3281,6 +3295,12 @@ const u8 * wpa_sm_get_anonce(struct wpa_sm *sm)
 }
 
 #endif /* CONFIG_TESTING_OPTIONS */
+
+
+unsigned int wpa_sm_get_key_mgmt(struct wpa_sm *sm)
+{
+	return sm->key_mgmt;
+}
 
 
 #ifdef CONFIG_FILS
@@ -3508,6 +3528,7 @@ int fils_process_auth(struct wpa_sm *sm, const u8 *bssid, const u8 *data,
 	os_memcpy(sm->fils_anonce, elems.fils_nonce, FILS_NONCE_LEN);
 	wpa_hexdump(MSG_DEBUG, "FILS: ANonce", sm->fils_anonce, FILS_NONCE_LEN);
 
+#ifdef CONFIG_IEEE80211R
 	if (wpa_key_mgmt_ft(sm->key_mgmt)) {
 		struct wpa_ft_ies parse;
 
@@ -3555,6 +3576,7 @@ int fils_process_auth(struct wpa_sm *sm, const u8 *bssid, const u8 *data,
 		wpabuf_free(sm->fils_ft_ies);
 		sm->fils_ft_ies = NULL;
 	}
+#endif /* CONFIG_IEEE80211R */
 
 	/* PMKID List */
 	if (rsn.pmkid && rsn.num_pmkid > 0) {
@@ -4355,8 +4377,10 @@ int owe_process_assoc_resp(struct wpa_sm *sm, const u8 *bssid,
 		res = hmac_sha512_kdf(prk, hash_len, NULL, (const u8 *) info,
 				      os_strlen(info), sm->pmk, hash_len);
 	os_memset(prk, 0, SHA512_MAC_LEN);
-	if (res < 0)
+	if (res < 0) {
+		sm->pmk_len = 0;
 		return -1;
+	}
 	sm->pmk_len = hash_len;
 
 	wpa_hexdump_key(MSG_DEBUG, "OWE: PMK", sm->pmk, sm->pmk_len);

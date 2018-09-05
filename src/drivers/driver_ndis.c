@@ -17,7 +17,7 @@ int close(int fd);
 #ifdef CONFIG_USE_NDISUIO
 #include <winsock2.h>
 #else /* CONFIG_USE_NDISUIO */
-#include "packet32.h"
+#include "packet32.h"				 // 20180501 AB was "packet... (lower case and ")
 #endif /* CONFIG_USE_NDISUIO */
 #ifdef __MINGW32_VERSION
 #include <ddk/ntddndis.h>

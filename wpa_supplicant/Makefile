@@ -51,6 +51,7 @@ BINALL += wpa_passphrase
 endif
 
 ALL = $(BINALL)
+# // 201804xx AB remed out services below
 #ALL += systemd/wpa_supplicant.service
 #ALL += systemd/wpa_supplicant@.service
 #ALL += systemd/wpa_supplicant-nl80211@.service
@@ -246,10 +247,6 @@ ifdef CONFIG_IEEE80211W
 CFLAGS += -DCONFIG_IEEE80211W
 NEED_SHA256=y
 NEED_AES_OMAC1=y
-endif
-
-ifdef CONFIG_IEEE80211R_AP
-CONFIG_IEEE80211R=y
 endif
 
 ifdef CONFIG_IEEE80211R
@@ -972,10 +969,6 @@ NEED_AES_WRAP=y
 OBJS += ../src/ap/wpa_auth.o
 OBJS += ../src/ap/wpa_auth_ie.o
 OBJS += ../src/ap/pmksa_cache_auth.o
-ifdef CONFIG_IEEE80211R_AP
-CFLAGS += -DCONFIG_IEEE80211R_AP
-OBJS += ../src/ap/wpa_auth_ft.o
-endif
 endif
 
 ifdef CONFIG_ACS
@@ -1069,6 +1062,7 @@ OBJS_p += ../src/crypto/crypto_wolfssl.o
 ifdef NEED_FIPS186_2_PRF
 OBJS += ../src/crypto/fips_prf_wolfssl.o
 endif
+NEED_TLS_PRF_SHA256=y
 LIBS += -lwolfssl -lm
 LIBS_p += -lwolfssl -lm
 endif
@@ -1699,6 +1693,11 @@ endif
 
 ifdef CONFIG_DEBUG_FILE
 CFLAGS += -DCONFIG_DEBUG_FILE
+endif
+
+ifdef CONFIG_PMPRINTF
+CFLAGS += -DCONFIG_PMPRINTF
+LIBS += -lpmprintf
 endif
 
 ifdef CONFIG_DELAYED_MIC_ERROR_REPORT

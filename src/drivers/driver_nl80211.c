@@ -951,7 +951,7 @@ nl80211_find_drv(struct nl80211_global *global, int idx, u8 *buf, size_t len,
 
 
 static void nl80211_refresh_mac(struct wpa_driver_nl80211_data *drv,
-				int ifindex)
+				int ifindex, int notify)
 {
 	struct i802_bss *bss;
 	u8 addr[ETH_ALEN];
@@ -970,6 +970,9 @@ static void nl80211_refresh_mac(struct wpa_driver_nl80211_data *drv,
 			   ifindex, bss->ifname,
 			   MAC2STR(bss->addr), MAC2STR(addr));
 		os_memcpy(bss->addr, addr, ETH_ALEN);
+		if (notify)
+			wpa_supplicant_event(drv->ctx,
+					     EVENT_INTERFACE_MAC_CHANGED, NULL);
 	}
 }
 
@@ -1041,11 +1044,11 @@ static void wpa_driver_nl80211_event_rtm_newlink(void *ctx,
 		namebuf[0] = '\0';
 		if (if_indextoname(ifi->ifi_index, namebuf) &&
 		    linux_iface_up(drv->global->ioctl_sock, namebuf) > 0) {
-			/* Re-read MAC address as it may have changed */
-			nl80211_refresh_mac(drv, ifi->ifi_index);
 			wpa_printf(MSG_DEBUG, "nl80211: Ignore interface down "
 				   "event since interface %s is up", namebuf);
 			drv->ignore_if_down_event = 0;
+			/* Re-read MAC address as it may have changed */
+			nl80211_refresh_mac(drv, ifi->ifi_index, 1);
 			return;
 		}
 		wpa_printf(MSG_DEBUG, "nl80211: Interface down (%s/%s)",
@@ -1091,7 +1094,7 @@ static void wpa_driver_nl80211_event_rtm_newlink(void *ctx,
 				   "removed", drv->first_bss->ifname);
 		} else {
 			/* Re-read MAC address as it may have changed */
-			nl80211_refresh_mac(drv, ifi->ifi_index);
+			nl80211_refresh_mac(drv, ifi->ifi_index, 0);
 
 			wpa_printf(MSG_DEBUG, "nl80211: Interface up");
 			drv->if_disabled = 0;
@@ -3345,11 +3348,11 @@ retry:
 	msg = NULL;
 	if (ret) {
 		wpa_dbg(drv->ctx, MSG_DEBUG,
-			"nl80211: MLME command failed (auth): ret=%d (%s)",
-			ret, strerror(-ret));
+			"nl80211: MLME command failed (auth): count=%d ret=%d (%s)",
+			count, ret, strerror(-ret));
 		count++;
-		if (ret == -EALREADY && count == 1 && params->bssid &&
-		    !params->local_state_change) {
+		if ((ret == -EALREADY || ret == -EEXIST) && count == 1 &&
+		    params->bssid && !params->local_state_change) {
 			/*
 			 * mac80211 does not currently accept new
 			 * authentication if we are already authenticated. As a
@@ -5502,6 +5505,8 @@ static int wpa_driver_nl80211_try_connect(
 		algs++;
 	if (params->auth_alg & WPA_AUTH_ALG_FILS)
 		algs++;
+	if (params->auth_alg & WPA_AUTH_ALG_FT)
+		algs++;
 	if (algs > 1) {
 		wpa_printf(MSG_DEBUG, "  * Leave out Auth Type for automatic "
 			   "selection");
@@ -6049,6 +6054,7 @@ static int get_sta_handler(struct nl_msg *msg, void *arg)
 		[NL80211_STA_INFO_RX_BYTES64] = { .type = NLA_U64 },
 		[NL80211_STA_INFO_TX_BYTES64] = { .type = NLA_U64 },
 		[NL80211_STA_INFO_SIGNAL] = { .type = NLA_U8 },
+		[NL80211_STA_INFO_ACK_SIGNAL] = { .type = NLA_U8 },
 	};
 	struct nlattr *rate[NL80211_RATE_INFO_MAX + 1];
 	static struct nla_policy rate_policy[NL80211_RATE_INFO_MAX + 1] = {
@@ -6111,6 +6117,11 @@ static int get_sta_handler(struct nl_msg *msg, void *arg)
 			nla_get_u32(stats[NL80211_STA_INFO_TX_FAILED]);
 	if (stats[NL80211_STA_INFO_SIGNAL])
 		data->signal = nla_get_u8(stats[NL80211_STA_INFO_SIGNAL]);
+	if (stats[NL80211_STA_INFO_ACK_SIGNAL]) {
+		data->last_ack_rssi =
+			nla_get_u8(stats[NL80211_STA_INFO_ACK_SIGNAL]);
+		data->flags |= STA_DRV_DATA_LAST_ACK_RSSI;
+	}
 
 	if (stats[NL80211_STA_INFO_TX_BITRATE] &&
 	    nla_parse_nested(rate, NL80211_RATE_INFO_MAX,
@@ -6500,6 +6511,7 @@ static int i802_set_wds_sta(void *priv, const u8 *addr, int aid, int val,
 	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	char name[IFNAMSIZ + 1];
+	union wpa_event_data event;
 
 	os_snprintf(name, sizeof(name), "%s.sta%d", bss->ifname, aid);
 	if (ifname_wds)
@@ -6518,6 +6530,14 @@ static int i802_set_wds_sta(void *priv, const u8 *addr, int aid, int val,
 			    linux_br_add_if(drv->global->ioctl_sock,
 					    bridge_ifname, name) < 0)
 				return -1;
+
+			os_memset(&event, 0, sizeof(event));
+			event.wds_sta_interface.sta_addr = addr;
+			event.wds_sta_interface.ifname = name;
+			event.wds_sta_interface.istatus = INTERFACE_ADDED;
+			wpa_supplicant_event(drv->ctx,
+					     EVENT_WDS_STA_INTERFACE_STATUS,
+					     &event);
 		}
 		if (linux_set_iface_flags(drv->global->ioctl_sock, name, 1)) {
 			wpa_printf(MSG_ERROR, "nl80211: Failed to set WDS STA "
@@ -6531,6 +6551,12 @@ static int i802_set_wds_sta(void *priv, const u8 *addr, int aid, int val,
 
 		i802_set_sta_vlan(priv, addr, bss->ifname, 0);
 		nl80211_remove_iface(drv, if_nametoindex(name));
+		os_memset(&event, 0, sizeof(event));
+		event.wds_sta_interface.sta_addr = addr;
+		event.wds_sta_interface.ifname = name;
+		event.wds_sta_interface.istatus = INTERFACE_REMOVED;
+		wpa_supplicant_event(drv->ctx, EVENT_WDS_STA_INTERFACE_STATUS,
+				     &event);
 		return 0;
 	}
 }
@@ -8040,6 +8066,7 @@ static void nl80211_poll_client(void *priv, const u8 *own_addr, const u8 *addr,
 static int nl80211_set_power_save(struct i802_bss *bss, int enabled)
 {
 	struct nl_msg *msg;
+	int ret;
 
 	if (!(msg = nl80211_bss_msg(bss, 0, NL80211_CMD_SET_POWER_SAVE)) ||
 	    nla_put_u32(msg, NL80211_ATTR_PS_STATE,
@@ -8047,7 +8074,15 @@ static int nl80211_set_power_save(struct i802_bss *bss, int enabled)
 		nlmsg_free(msg);
 		return -ENOBUFS;
 	}
-	return send_and_recv_msgs(bss->drv, msg, NULL, NULL);
+
+	ret = send_and_recv_msgs(bss->drv, msg, NULL, NULL);
+	if (ret < 0) {
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: Setting PS state %s failed: %d (%s)",
+			   enabled ? "enabled" : "disabled",
+			   ret, strerror(-ret));
+	}
+	return ret;
 }
 
 
@@ -8649,8 +8684,9 @@ static int nl80211_switch_channel(void *priv, struct csa_settings *settings)
 		return -EOPNOTSUPP;
 	}
 
-	if ((drv->nlmode != NL80211_IFTYPE_AP) &&
-	    (drv->nlmode != NL80211_IFTYPE_P2P_GO))
+	if (drv->nlmode != NL80211_IFTYPE_AP &&
+	    drv->nlmode != NL80211_IFTYPE_P2P_GO &&
+	    drv->nlmode != NL80211_IFTYPE_MESH_POINT)
 		return -EOPNOTSUPP;
 
 	/*

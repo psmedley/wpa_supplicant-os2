@@ -1,3 +1,16 @@
+/*
+ * WPA Supplicant - OS/2 TCP/IP and Genmac packet handling
+ * Copyright (c) - original author unknown, maybe Willibald Meyer.
+ * Copyright (c) 2014-2018, Andreas Buchinger <andi.os2.software@gmx.net>
+ *
+ * This file is free software. Usage subject to BSD license.
+ * ('modified BSD license' or '3-clause BSD').
+ *
+ * See README and COPYING for more details.
+ *
+ * This file sends and receives packets from Genmac driver via IOCtl
+ */
+
 #include "includes.h"
 #include "common.h"
 #include "Packet32.h"

@@ -10,6 +10,13 @@
 #define WPA_DEBUG_H
 
 #include "wpabuf.h"
+#ifdef CONFIG_PMPRINTF
+#ifndef BOOL
+typedef unsigned long	BOOL;
+#endif
+typedef unsigned long	ULONG;
+#include "pmprintf.h"
+#endif /* CONFIG_PMPRINTF */
 
 extern int wpa_debug_level;
 extern int wpa_debug_show_keys;

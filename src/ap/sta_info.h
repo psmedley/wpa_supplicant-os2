@@ -115,6 +115,8 @@ struct sta_info {
 	unsigned int added_unassoc:1;
 	unsigned int pending_wds_enable:1;
 	unsigned int power_capab:1;
+	unsigned int agreed_to_steer:1;
+	unsigned int hs20_t_c_filtering:1;
 
 	u16 auth_alg;
 
@@ -181,6 +183,8 @@ struct sta_info {
 	struct wpabuf *wps_ie; /* WPS IE from (Re)Association Request */
 	struct wpabuf *p2p_ie; /* P2P IE from (Re)Association Request */
 	struct wpabuf *hs20_ie; /* HS 2.0 IE from (Re)Association Request */
+	/* Hotspot 2.0 Roaming Consortium from (Re)Association Request */
+	struct wpabuf *roaming_consortium;
 	u8 remediation_method;
 	char *remediation_url; /* HS 2.0 Subscription Remediation Server URL */
 	struct wpabuf *hs20_deauth_req;
@@ -197,7 +201,8 @@ struct sta_info {
 	unsigned int mesh_sae_pmksa_caching:1;
 #endif /* CONFIG_SAE */
 
-	u32 session_timeout; /* valid only if session_timeout_set == 1 */
+	/* valid only if session_timeout_set == 1 */
+	struct os_reltime session_timeout;
 
 	/* Last Authentication/(Re)Association Request/Action frame sequence
 	 * control */
@@ -253,6 +258,7 @@ struct sta_info {
 #endif /* CONFIG_OWE */
 
 	u8 *ext_capability;
+	char *ifname_wds; /* WDS ifname, if in use */
 
 #ifdef CONFIG_TESTING_OPTIONS
 	enum wpa_alg last_tk_alg;

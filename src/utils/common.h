@@ -11,7 +11,7 @@
 
 #include "os.h"
 
-#ifndef _SOCKLEN_T_DECLARED
+#ifndef _SOCKLEN_T_DECLARED	 		// 20180501 AB probably added by me
   #define _SOCKLEN_T_DECLARED
   #define SOCKLEN_T int
   typedef int socklen_t;
@@ -95,7 +95,7 @@ typedef int socklen_t;
 
 /* Define platform specific integer types */
 
-#ifdef __OS2__
+#ifdef __OS2__	 						// 201804xx AB
 typedef u_int64_t u64;
 typedef u_int32_t u32;
 typedef u_int16_t u16;
