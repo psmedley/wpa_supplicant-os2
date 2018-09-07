@@ -346,7 +346,7 @@ int main(int argc, char *argv[])
 		goto out;
 	} else {
 		wpa_printf(MSG_INFO, "Successfully initialized "
-			   "wpa_supplicant");
+			   "%s", wpa_supplicant_version);
 	}
 
 	if (fst_global_init()) {

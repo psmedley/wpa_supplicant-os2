@@ -368,7 +368,6 @@ int WpaGui::openCtrlConnection(const char *ifname)
 		return -1;
 	snprintf(cfile, flen, "%s", ctrl_iface);
 #endif /* CONFIG_CTRL_IFACE_UNIX */
-	// debug("ctrl_iface='%s'", ctrl_iface);
 
 	if (ctrl_conn) {
 		wpa_ctrl_close(ctrl_conn);
@@ -813,7 +812,6 @@ void WpaGui::ping()
 {
 	char buf[10];
 	size_t len;
-	int rc;
 
 #ifdef CONFIG_CTRL_IFACE_NAMED_PIPE
 	/*
@@ -842,12 +840,11 @@ void WpaGui::ping()
 	}
 
 	len = sizeof(buf) - 1;
-	if ( (rc = ctrlRequest("PING", buf, &len)) < 0) {
-		debug("PING failed (rc=%d) - trying to reconnect", rc);
-		if ( (rc = openCtrlConnection(ctrl_iface)) >= 0) {
+	if (ctrlRequest("PING", buf, &len) < 0) {
+		debug("PING failed - trying to reconnect");
+		if (openCtrlConnection(ctrl_iface) >= 0) {
 			debug("Reconnected successfully");
 			pingsToStatusUpdate = 0;
-			debug("rc=%d", rc);
 		}
 	}
 

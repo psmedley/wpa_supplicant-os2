@@ -2651,7 +2651,7 @@ def test_ap_hs20_osen(dev, apdev):
     wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
     wpas.interface_add("wlan5", drv_params="force_connect_cmd=1")
     wpas.connect("osen", proto="OSEN", key_mgmt="OSEN", pairwise="CCMP",
-                 group="GTK_NOT_USED",
+                 group="GTK_NOT_USED CCMP",
                  eap="WFA-UNAUTH-TLS", identity="osen@example.com",
                  ca_cert="auth_serv/ca.pem",
                  scan_freq="2412")
@@ -2667,6 +2667,7 @@ def test_ap_hs20_osen_single_ssid(dev, apdev):
 
     # RSN-OSEN (for OSU)
     dev[0].connect("test-hs20", proto="OSEN", key_mgmt="OSEN", pairwise="CCMP",
+                   group="CCMP GTK_NOT_USED",
                    eap="WFA-UNAUTH-TLS", identity="osen@example.com",
                    ca_cert="auth_serv/ca.pem", ieee80211w='2',
                    scan_freq="2412")
@@ -2674,6 +2675,7 @@ def test_ap_hs20_osen_single_ssid(dev, apdev):
     dev[1].connect("test-hs20", key_mgmt="WPA-EAP", eap="TTLS",
                    identity="hs20-test", password="password",
                    ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                   pairwise="CCMP", group="CCMP",
                    ieee80211w='2', scan_freq="2412")
 
     res = dev[0].get_bss(apdev[0]['bssid'])['flags']
@@ -3634,7 +3636,7 @@ def test_ap_hs20_ft(dev, apdev):
     params['r1_key_holder'] = "000102030405"
     params["mobility_domain"] = "a1b2"
     params["reassociation_deadline"] = "1000"
-    hostapd.add_ap(apdev[0], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     dev[0].hs20_enable()
     id = dev[0].add_cred_values({ 'realm': "example.com",
@@ -3645,6 +3647,25 @@ def test_ap_hs20_ft(dev, apdev):
                                   'update_identifier': "1234" })
     interworking_select(dev[0], bssid, "home", freq="2412")
     interworking_connect(dev[0], bssid, "TTLS")
+    dev[0].dump_monitor()
+    # speed up testing by avoiding unnecessary scanning of other channels
+    nid = dev[0].get_status_field("id")
+    dev[0].set_network(nid, "scan_freq", "2412")
+
+    params = hs20_ap_params()
+    hapd2 = hostapd.add_ap(apdev[1], params)
+
+    hapd.disable()
+    ev = dev[0].wait_event(["CTRL-EVENT-BEACON-LOSS"], timeout=10)
+    if ev is None:
+        raise Exception("Beacon loss not reported")
+    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=5)
+    if ev is None:
+        raise Exception("Disconnection not reported")
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=5)
+    if ev is None:
+        raise Exception("Connection to AP2 not reported")
+    print dev[0].request("STATUS")
 
 def test_ap_hs20_remediation_sql(dev, apdev, params):
     """Hotspot 2.0 connection and remediation required using SQLite for user DB"""
@@ -5764,7 +5785,7 @@ def test_ap_hs20_terms_and_conditions(dev, apdev):
     params['hessid'] = bssid
     params['hs20_t_c_filename'] = 'terms-and-conditions'
     params['hs20_t_c_timestamp'] = '123456789'
-    params['hs20_t_c_server_url'] = 'https://example.com/t_and_c?addr=@1@&ap=123'
+
     hostapd.add_ap(apdev[0], params)
 
     dev[0].hs20_enable()
@@ -5795,7 +5816,6 @@ def test_ap_hs20_terms_and_conditions_coa(dev, apdev):
     params['hessid'] = bssid
     params['hs20_t_c_filename'] = 'terms-and-conditions'
     params['hs20_t_c_timestamp'] = '123456789'
-    params['hs20_t_c_server_url'] = 'https://example.com/t_and_c?addr=@1@&ap=123'
     params['own_ip_addr'] = "127.0.0.1"
     params['radius_das_port'] = "3799"
     params['radius_das_client'] = "127.0.0.1 secret"
@@ -5854,6 +5874,20 @@ def test_ap_hs20_terms_and_conditions_coa(dev, apdev):
 
 def test_ap_hs20_terms_and_conditions_sql(dev, apdev, params):
     """Hotspot 2.0 Terms and Conditions using SQLite for user DB"""
+    addr = dev[0].own_addr()
+    run_ap_hs20_terms_and_conditions_sql(dev, apdev, params,
+                                         "https://example.com/t_and_c?addr=@1@&ap=123",
+                                         "https://example.com/t_and_c?addr=" + addr + "&ap=123")
+
+def test_ap_hs20_terms_and_conditions_sql2(dev, apdev, params):
+    """Hotspot 2.0 Terms and Conditions using SQLite for user DB"""
+    addr = dev[0].own_addr()
+    run_ap_hs20_terms_and_conditions_sql(dev, apdev, params,
+                                         "https://example.com/t_and_c?addr=@1@",
+                                         "https://example.com/t_and_c?addr=" + addr)
+
+def run_ap_hs20_terms_and_conditions_sql(dev, apdev, params, url_template,
+                                         url_expected):
     check_eap_capa(dev[0], "MSCHAPV2")
     try:
         import sqlite3
@@ -5873,6 +5907,8 @@ def test_ap_hs20_terms_and_conditions_sql(dev, apdev, params):
         cur.execute("INSERT INTO wildcards(identity,methods) VALUES ('','TTLS,TLS')")
         cur.execute("CREATE TABLE authlog(timestamp TEXT, session TEXT, nas_ip TEXT, username TEXT, note TEXT)")
         cur.execute("CREATE TABLE pending_tc(mac_addr TEXT PRIMARY KEY, identity TEXT)")
+        cur.execute("CREATE TABLE current_sessions(mac_addr TEXT PRIMARY KEY, identity TEXT, start_time TEXT, nas TEXT, hs20_t_c_filtering BOOLEAN, waiting_coa_ack BOOLEAN, coa_ack_received BOOLEAN)")
+
 
     try:
         params = { "ssid": "as", "beacon_int": "2000",
@@ -5883,17 +5919,17 @@ def test_ap_hs20_terms_and_conditions_sql(dev, apdev, params):
                    "ca_cert": "auth_serv/ca.pem",
                    "server_cert": "auth_serv/server.pem",
                    "private_key": "auth_serv/server.key" }
-        hostapd.add_ap(apdev[1], params)
+        params['hs20_t_c_server_url'] = url_template
+        authsrv = hostapd.add_ap(apdev[1], params)
 
         bssid = apdev[0]['bssid']
         params = hs20_ap_params()
         params['auth_server_port'] = "18128"
         params['hs20_t_c_filename'] = 'terms-and-conditions'
         params['hs20_t_c_timestamp'] = '123456789'
-        params['hs20_t_c_server_url'] = 'https://example.com/t_and_c?addr=@1@&ap=123'
         params['own_ip_addr'] = "127.0.0.1"
         params['radius_das_port'] = "3799"
-        params['radius_das_client'] = "127.0.0.1 secret"
+        params['radius_das_client'] = "127.0.0.1 radius"
         params['radius_das_require_event_timestamp'] = "1"
         params['disable_pmksa_caching'] = '1'
         hapd = hostapd.add_ap(apdev[0], params)
@@ -5915,7 +5951,38 @@ def test_ap_hs20_terms_and_conditions_sql(dev, apdev, params):
         ev = dev[0].wait_event(["HS20-T-C-ACCEPTANCE"], timeout=5)
         if ev is None:
             raise Exception("Terms and Conditions Acceptance notification not received")
+        url = ev.split(' ')[1]
+        if url != url_expected:
+            raise Exception("Unexpected URL delivered to the client: %s (expected %s)" % (url, url_expected))
         dev[0].dump_monitor()
+
+        with con:
+            cur = con.cursor()
+            cur.execute("SELECT * from current_sessions")
+            rows = cur.fetchall()
+            if len(rows) != 1:
+                raise Exeception("Unexpected number of rows in current_sessions (%d; expected %d)" % (len(rows), 1))
+            logger.info("current_sessions: " + str(rows))
+
+        if "OK" not in authsrv.request("DAC_REQUEST coa %s t_c_clear" % dev[0].own_addr()):
+            raise Exception("DAC_REQUEST failed")
+
+        ev = hapd.wait_event(["HS20-T-C-FILTERING-REMOVE"], timeout=5)
+        if ev is None:
+            raise Exception("Terms and Conditions filtering not disabled")
+        if ev.split(' ')[1] != dev[0].own_addr():
+            raise Exception("Unexpected STA address for filtering: " + ev)
+
+        time.sleep(0.2)
+        with con:
+            cur = con.cursor()
+            cur.execute("SELECT * from current_sessions")
+            rows = cur.fetchall()
+            if len(rows) != 1:
+                raise Exeception("Unexpected number of rows in current_sessions (%d; expected %d)" % (len(rows), 1))
+            logger.info("current_sessions: " + str(rows))
+            if rows[0][4] != 0 or rows[0][5] != 0 or rows[0][6] != 1:
+                raise Exception("Unexpected current_sessions information after CoA-ACK")
 
         dev[0].request("DISCONNECT")
         dev[0].wait_disconnected()

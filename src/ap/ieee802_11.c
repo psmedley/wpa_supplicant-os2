@@ -753,12 +753,24 @@ static int sae_sm_step(struct hostapd_data *hapd, struct sta_info *sta,
 		}
 		break;
 	case SAE_ACCEPTED:
-		if (auth_transaction == 1) {
+		if (auth_transaction == 1 &&
+		    (hapd->conf->mesh & MESH_ENABLED)) {
 			wpa_printf(MSG_DEBUG, "SAE: remove the STA (" MACSTR
 				   ") doing reauthentication",
 				   MAC2STR(sta->addr));
 			ap_free_sta(hapd, sta);
 			wpa_auth_pmksa_remove(hapd->wpa_auth, sta->addr);
+		} else if (auth_transaction == 1) {
+			wpa_printf(MSG_DEBUG, "SAE: Start reauthentication");
+			ret = auth_sae_send_commit(hapd, sta, bssid, 1);
+			if (ret)
+				return ret;
+			sae_set_state(sta, SAE_COMMITTED, "Sent Commit");
+
+			if (sae_process_commit(sta->sae) < 0)
+				return WLAN_STATUS_UNSPECIFIED_FAILURE;
+			sta->sae->sync = 0;
+			sae_set_retransmit_timer(hapd, sta);
 		} else {
 			if (sae_check_big_sync(hapd, sta))
 				return WLAN_STATUS_SUCCESS;
@@ -940,6 +952,20 @@ static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 
 		if (status_code != WLAN_STATUS_SUCCESS)
 			goto remove_sta;
+
+		if (!(hapd->conf->mesh & MESH_ENABLED) &&
+		    sta->sae->state == SAE_COMMITTED) {
+			/* This is needed in the infrastructure BSS case to
+			 * address a sequence where a STA entry may remain in
+			 * hostapd across two attempts to do SAE authentication
+			 * by the same STA. The second attempt may end up trying
+			 * to use a different group and that would not be
+			 * allowed if we remain in Committed state with the
+			 * previously set parameters. */
+			sae_set_state(sta, SAE_NOTHING,
+				      "Clear existing state to allow restart");
+			sae_clear_data(sta->sae);
+		}
 
 		resp = sae_parse_commit(sta->sae, mgmt->u.auth.variable,
 					((const u8 *) mgmt) + len -
@@ -1446,8 +1472,11 @@ prepare_auth_resp_fils(struct hostapd_data *hapd,
 	if (wpa_key_mgmt_ft(wpa_auth_sta_key_mgmt(sta->wpa_sm))) {
 		/* FTE[R1KH-ID,R0KH-ID] when using FILS+FT */
 		int res;
+		int use_sha384 = wpa_key_mgmt_sha384(
+			wpa_auth_sta_key_mgmt(sta->wpa_sm));
 
-		res = wpa_auth_write_fte(hapd->wpa_auth, wpabuf_put(data, 0),
+		res = wpa_auth_write_fte(hapd->wpa_auth, use_sha384,
+					 wpabuf_put(data, 0),
 					 wpabuf_tailroom(data));
 		if (res < 0) {
 			*resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
@@ -1985,6 +2014,7 @@ static void handle_auth(struct hostapd_data *hapd,
 		 * updated. To handle this, station's added_unassoc flag is
 		 * cleared once the station has completed association.
 		 */
+		ap_sta_set_authorized(hapd, sta, 0);
 		hostapd_drv_sta_remove(hapd, sta->addr);
 		sta->flags &= ~(WLAN_STA_ASSOC | WLAN_STA_AUTH |
 				WLAN_STA_AUTHORIZED);
@@ -2876,6 +2906,12 @@ static u16 send_assoc_resp(struct hostapd_data *hapd, struct sta_info *sta,
 		p = wpa_sm_write_assoc_resp_ies(sta->wpa_sm, p,
 						buf + buflen - p,
 						sta->auth_alg, ies, ies_len);
+		if (!p) {
+			wpa_printf(MSG_DEBUG,
+				   "FT: Failed to write AssocResp IEs");
+			res = WLAN_STATUS_UNSPECIFIED_FAILURE;
+			goto done;
+		}
 	}
 #endif /* CONFIG_IEEE80211R_AP */
 

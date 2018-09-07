@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant
- * Copyright (c) 2003-2017, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2018, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -280,6 +280,9 @@ void wpa_supplicant_cancel_auth_timeout(struct wpa_supplicant *wpa_s)
 	wpa_dbg(wpa_s, MSG_DEBUG, "Cancelling authentication timeout");
 	eloop_cancel_timeout(wpa_supplicant_timeout, wpa_s, NULL);
 	wpa_blacklist_del(wpa_s, wpa_s->bssid);
+	os_free(wpa_s->last_con_fail_realm);
+	wpa_s->last_con_fail_realm = NULL;
+	wpa_s->last_con_fail_realm_len = 0;
 }
 
 
@@ -503,6 +506,10 @@ static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 
 	os_free(wpa_s->confanother);
 	wpa_s->confanother = NULL;
+
+	os_free(wpa_s->last_con_fail_realm);
+	wpa_s->last_con_fail_realm = NULL;
+	wpa_s->last_con_fail_realm_len = 0;
 
 	wpa_sm_set_eapol(wpa_s->wpa, NULL);
 	eapol_sm_deinit(wpa_s->eapol);
@@ -1393,6 +1400,19 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 		wpa_dbg(wpa_s, MSG_DEBUG, "WPA: using KEY_MGMT FILS-SHA256");
 #endif /* CONFIG_FILS */
 #ifdef CONFIG_IEEE80211R
+#ifdef CONFIG_SHA384
+	} else if (sel & WPA_KEY_MGMT_FT_IEEE8021X_SHA384) {
+		wpa_s->key_mgmt = WPA_KEY_MGMT_FT_IEEE8021X_SHA384;
+		wpa_dbg(wpa_s, MSG_DEBUG,
+			"WPA: using KEY_MGMT FT/802.1X-SHA384");
+		if (pmksa_cache_get_current(wpa_s->wpa)) {
+			/* PMKSA caching with FT is not fully functional, so
+			 * disable the case for now. */
+			wpa_dbg(wpa_s, MSG_DEBUG,
+				"WPA: Disable PMKSA caching for FT/802.1X connection");
+			pmksa_cache_clear_current(wpa_s->wpa);
+		}
+#endif /* CONFIG_SHA384 */
 	} else if (sel & WPA_KEY_MGMT_FT_IEEE8021X) {
 		wpa_s->key_mgmt = WPA_KEY_MGMT_FT_IEEE8021X;
 		wpa_dbg(wpa_s, MSG_DEBUG, "WPA: using KEY_MGMT FT/802.1X");
@@ -1643,7 +1663,7 @@ static void wpas_ext_capab_byte(struct wpa_supplicant *wpa_s, u8 *pos, int idx)
 		break;
 	case 4: /* Bits 32-39 */
 #ifdef CONFIG_INTERWORKING
-		if (wpa_s->drv_flags / WPA_DRIVER_FLAGS_QOS_MAPPING)
+		if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_QOS_MAPPING)
 			*pos |= 0x01; /* Bit 32 - QoS Map */
 #endif /* CONFIG_INTERWORKING */
 		break;
@@ -2424,6 +2444,9 @@ static u8 * wpas_populate_assoc_ies(
 	size_t max_wpa_ie_len = 500;
 	size_t wpa_ie_len;
 	int algs = WPA_AUTH_ALG_OPEN;
+#ifdef CONFIG_MBO
+	const u8 *mbo_ie;
+#endif
 #ifdef CONFIG_FILS
 	const u8 *realm, *username, *rrk;
 	size_t realm_len, username_len, rrk_len;
@@ -2532,7 +2555,10 @@ static u8 * wpas_populate_assoc_ies(
 	    ssid->eap.erp && wpa_key_mgmt_fils(wpa_s->key_mgmt) &&
 	    eapol_sm_get_erp_info(wpa_s->eapol, &ssid->eap, &username,
 				  &username_len, &realm, &realm_len,
-				  &next_seq_num, &rrk, &rrk_len) == 0) {
+				  &next_seq_num, &rrk, &rrk_len) == 0 &&
+	    (!wpa_s->last_con_fail_realm ||
+	     wpa_s->last_con_fail_realm_len != realm_len ||
+	     os_memcmp(wpa_s->last_con_fail_realm, realm, realm_len) != 0)) {
 		algs = WPA_AUTH_ALG_FILS;
 		params->fils_erp_username = username;
 		params->fils_erp_username_len = username_len;
@@ -2676,11 +2702,14 @@ static u8 * wpas_populate_assoc_ies(
 #endif /* CONFIG_FST */
 
 #ifdef CONFIG_MBO
-	if (bss && wpa_bss_get_vendor_ie(bss, MBO_IE_VENDOR_TYPE)) {
+	mbo_ie = bss ? wpa_bss_get_vendor_ie(bss, MBO_IE_VENDOR_TYPE) : NULL;
+	if (mbo_ie) {
 		int len;
 
 		len = wpas_mbo_ie(wpa_s, wpa_ie + wpa_ie_len,
-				  max_wpa_ie_len - wpa_ie_len);
+				  max_wpa_ie_len - wpa_ie_len,
+				  !!mbo_attr_from_mbo_ie(mbo_ie,
+							 OCE_ATTR_ID_CAPA_IND));
 		if (len >= 0)
 			wpa_ie_len += len;
 	}
@@ -2735,7 +2764,7 @@ static u8 * wpas_populate_assoc_ies(
 	 * Add MDIE under these conditions: the network profile allows FT,
 	 * the AP supports FT, and the mobility domain ID matches.
 	 */
-	if (wpa_key_mgmt_ft(wpa_sm_get_key_mgmt(wpa_s->wpa))) {
+	if (bss && wpa_key_mgmt_ft(wpa_sm_get_key_mgmt(wpa_s->wpa))) {
 		const u8 *mdie = wpa_bss_get_ie(bss, WLAN_EID_MOBILITY_DOMAIN);
 
 		if (mdie && mdie[1] >= MOBILITY_DOMAIN_ID_LEN) {
@@ -6489,6 +6518,35 @@ void wpas_connection_failed(struct wpa_supplicant *wpa_s, const u8 *bssid)
 	wpa_supplicant_req_scan(wpa_s, timeout / 1000,
 				1000 * (timeout % 1000));
 }
+
+
+#ifdef CONFIG_FILS
+void fils_connection_failure(struct wpa_supplicant *wpa_s)
+{
+	struct wpa_ssid *ssid = wpa_s->current_ssid;
+	const u8 *realm, *username, *rrk;
+	size_t realm_len, username_len, rrk_len;
+	u16 next_seq_num;
+
+	if (!ssid || !ssid->eap.erp || !wpa_key_mgmt_fils(ssid->key_mgmt) ||
+	    eapol_sm_get_erp_info(wpa_s->eapol, &ssid->eap,
+				  &username, &username_len,
+				  &realm, &realm_len, &next_seq_num,
+				  &rrk, &rrk_len) != 0 ||
+	    !realm)
+		return;
+
+	wpa_hexdump_ascii(MSG_DEBUG,
+			  "FILS: Store last connection failure realm",
+			  realm, realm_len);
+	os_free(wpa_s->last_con_fail_realm);
+	wpa_s->last_con_fail_realm = os_malloc(realm_len);
+	if (wpa_s->last_con_fail_realm) {
+		wpa_s->last_con_fail_realm_len = realm_len;
+		os_memcpy(wpa_s->last_con_fail_realm, realm, realm_len);
+	}
+}
+#endif /* CONFIG_FILS */
 
 
 int wpas_driver_bss_selection(struct wpa_supplicant *wpa_s)

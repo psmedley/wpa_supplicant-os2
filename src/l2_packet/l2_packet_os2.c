@@ -289,8 +289,10 @@ static int eth_get(const char *device, u8 ea[ETH_ALEN])
 	size_t len;
 	int mib[] = { CTL_NET, AF_ROUTE, 0, AF_LINK, NET_RT_IFLIST, 0 };
 
-	if (sysctl(mib, 6, NULL, &len, NULL, 0) < 0)
+	if (sysctl(mib, 6, NULL, &len, NULL, 0) < 0) {
+		wpa_printf(MSG_ERROR, "eth_get sysctl returns < 0");
 		return -1;
+	}
 	if ((buf = os_malloc(len)) == NULL)
 		return -1;
 	if (sysctl(mib, 6, buf, &len, NULL, 0) < 0) {
@@ -300,6 +302,7 @@ static int eth_get(const char *device, u8 ea[ETH_ALEN])
 	for (p = buf; p < buf + len; p += ifm->ifm_msglen) {
 		ifm = (struct if_msghdr *)p;
 		sdl = (struct sockaddr_dl *)(ifm + 1);
+		wpa_printf(MSG_ERROR, "test buf=%-40s", buf);
 		if (ifm->ifm_type != RTM_IFINFO ||
 		    (ifm->ifm_addrs & RTA_IFP) == 0)
 			continue;
@@ -339,12 +342,13 @@ struct l2_packet_data * l2_packet_init(
 	l2->l2_hdr = l2_hdr;
 
 	// 20180817 AB ToDo: next lines remove? does it work with OS/2
-	/*if (eth_get(l2->ifname, l2->own_addr) < 0) {
+	if (eth_get(l2->ifname, l2->own_addr) < 0) {
 		fprintf(stderr, "Failed to get link-level address for "
 			"interface '%s'.\n", l2->ifname);
-		os_free(l2);
-		return NULL;
-	}	*/
+		wpa_printf(MSG_ERROR, "Failed to get link-level address for " "interface '%s'.", l2->ifname);
+//		os_free(l2);
+//		return NULL;
+	}	
 
 /*	if (l2_packet_init_libpcap(l2, protocol)) {
 		os_free(l2);

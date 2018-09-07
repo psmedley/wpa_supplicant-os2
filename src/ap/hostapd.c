@@ -78,6 +78,16 @@ int hostapd_for_each_interface(struct hapd_interfaces *interfaces,
 }
 
 
+void hostapd_reconfig_encryption(struct hostapd_data *hapd)
+{
+	if (hapd->wpa_auth)
+		return;
+
+	hostapd_set_privacy(hapd, 0);
+	hostapd_setup_encryption(hapd->conf->iface, hapd);
+}
+
+
 static void hostapd_reload_bss(struct hostapd_data *hapd)
 {
 	struct hostapd_ssid *ssid;
@@ -2235,12 +2245,6 @@ void hostapd_interface_deinit(struct hostapd_iface *iface)
 
 	hostapd_set_state(iface, HAPD_IFACE_DISABLED);
 
-#ifdef CONFIG_IEEE80211N
-#ifdef NEED_AP_MLME
-	hostapd_stop_setup_timers(iface);
-	eloop_cancel_timeout(ap_ht2040_timeout, iface, NULL);
-#endif /* NEED_AP_MLME */
-#endif /* CONFIG_IEEE80211N */
 	eloop_cancel_timeout(channel_list_update_timeout, iface, NULL);
 	iface->wait_channel_update = 0;
 
@@ -2256,6 +2260,13 @@ void hostapd_interface_deinit(struct hostapd_iface *iface)
 			break;
 		hostapd_bss_deinit(iface->bss[j]);
 	}
+
+#ifdef CONFIG_IEEE80211N
+#ifdef NEED_AP_MLME
+	hostapd_stop_setup_timers(iface);
+	eloop_cancel_timeout(ap_ht2040_timeout, iface, NULL);
+#endif /* NEED_AP_MLME */
+#endif /* CONFIG_IEEE80211N */
 }
 
 

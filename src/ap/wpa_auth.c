@@ -1,6 +1,6 @@
 /*
  * IEEE 802.11 RSN / WPA Authenticator
- * Copyright (c) 2004-2015, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2018, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -1949,8 +1949,13 @@ SM_STATE(WPA_PTK, INITPMK)
 		sm->pmk_len = pmk_len;
 #ifdef CONFIG_IEEE80211R_AP
 		if (len >= 2 * PMK_LEN) {
-			os_memcpy(sm->xxkey, msk + PMK_LEN, PMK_LEN);
-			sm->xxkey_len = PMK_LEN;
+			if (wpa_key_mgmt_sha384(sm->wpa_key_mgmt)) {
+				os_memcpy(sm->xxkey, msk, SHA384_MAC_LEN);
+				sm->xxkey_len = SHA384_MAC_LEN;
+			} else {
+				os_memcpy(sm->xxkey, msk + PMK_LEN, PMK_LEN);
+				sm->xxkey_len = PMK_LEN;
+			}
 		}
 #endif /* CONFIG_IEEE80211R_AP */
 	} else {
@@ -2021,8 +2026,18 @@ SM_STATE(WPA_PTK, PTKSTART)
 	wpa_auth_logger(sm->wpa_auth, sm->addr, LOGGER_DEBUG,
 			"sending 1/4 msg of 4-Way Handshake");
 	/*
-	 * TODO: Could add PMKID even with WPA2-PSK, but only if there is only
-	 * one possible PSK for this STA.
+	 * For infrastructure BSS cases, it is better for the AP not to include
+	 * the PMKID KDE in EAPOL-Key msg 1/4 since it could be used to initiate
+	 * offline search for the passphrase/PSK without having to be able to
+	 * capture a 4-way handshake from a STA that has access to the network.
+	 *
+	 * For IBSS cases, addition of PMKID KDE could be considered even with
+	 * WPA2-PSK cases that use multiple PSKs, but only if there is a single
+	 * possible PSK for this STA. However, this should not be done unless
+	 * there is support for using that information on the supplicant side.
+	 * The concern about exposing PMKID unnecessarily in infrastructure BSS
+	 * cases would also apply here, but at least in the IBSS case, this
+	 * would cover a potential real use case.
 	 */
 	if (sm->wpa == WPA_VERSION_WPA2 &&
 	    (wpa_key_mgmt_wpa_ieee8021x(sm->wpa_key_mgmt) ||
@@ -2121,17 +2136,21 @@ int fils_auth_pmk_to_ptk(struct wpa_state_machine *sm, const u8 *pmk,
 	if (fils_ft_len) {
 		struct wpa_authenticator *wpa_auth = sm->wpa_auth;
 		struct wpa_auth_config *conf = &wpa_auth->conf;
-		u8 pmk_r0[PMK_LEN], pmk_r0_name[WPA_PMK_NAME_LEN];
+		u8 pmk_r0[PMK_LEN_MAX], pmk_r0_name[WPA_PMK_NAME_LEN];
+		int use_sha384 = wpa_key_mgmt_sha384(sm->wpa_key_mgmt);
+		size_t pmk_r0_len = use_sha384 ? SHA384_MAC_LEN : PMK_LEN;
 
 		if (wpa_derive_pmk_r0(fils_ft, fils_ft_len,
 				      conf->ssid, conf->ssid_len,
 				      conf->mobility_domain,
 				      conf->r0_key_holder,
 				      conf->r0_key_holder_len,
-				      sm->addr, pmk_r0, pmk_r0_name) < 0)
+				      sm->addr, pmk_r0, pmk_r0_name,
+				      use_sha384) < 0)
 			return -1;
 
-		wpa_hexdump_key(MSG_DEBUG, "FILS+FT: PMK-R0", pmk_r0, PMK_LEN);
+		wpa_hexdump_key(MSG_DEBUG, "FILS+FT: PMK-R0",
+				pmk_r0, pmk_r0_len);
 		wpa_hexdump(MSG_DEBUG, "FILS+FT: PMKR0Name",
 			    pmk_r0_name, WPA_PMK_NAME_LEN);
 		wpa_ft_store_pmk_fils(sm, pmk_r0, pmk_r0_name);
@@ -3005,7 +3024,10 @@ SM_STATE(WPA_PTK, PTKINITNEGOTIATING)
 				  2 + sm->assoc_resp_ftie[1]);
 			res = 2 + sm->assoc_resp_ftie[1];
 		} else {
-			res = wpa_write_ftie(conf, conf->r0_key_holder,
+			int use_sha384 = wpa_key_mgmt_sha384(sm->wpa_key_mgmt);
+
+			res = wpa_write_ftie(conf, use_sha384,
+					     conf->r0_key_holder,
 					     conf->r0_key_holder_len,
 					     NULL, NULL, pos,
 					     kde + kde_len - pos,
@@ -4531,11 +4553,12 @@ wpa_auth_pmksa_get_fils_cache_id(struct wpa_authenticator *wpa_auth,
 
 
 #ifdef CONFIG_IEEE80211R_AP
-int wpa_auth_write_fte(struct wpa_authenticator *wpa_auth, u8 *buf, size_t len)
+int wpa_auth_write_fte(struct wpa_authenticator *wpa_auth, int use_sha384,
+		       u8 *buf, size_t len)
 {
 	struct wpa_auth_config *conf = &wpa_auth->conf;
 
-	return wpa_write_ftie(conf, conf->r0_key_holder,
+	return wpa_write_ftie(conf, use_sha384, conf->r0_key_holder,
 			      conf->r0_key_holder_len,
 			      NULL, NULL, buf, len, NULL, 0);
 }
@@ -4705,7 +4728,10 @@ int wpa_auth_resend_m3(struct wpa_state_machine *sm,
 				  2 + sm->assoc_resp_ftie[1]);
 			res = 2 + sm->assoc_resp_ftie[1];
 		} else {
-			res = wpa_write_ftie(conf, conf->r0_key_holder,
+			int use_sha384 = wpa_key_mgmt_sha384(sm->wpa_key_mgmt);
+
+			res = wpa_write_ftie(conf, use_sha384,
+					     conf->r0_key_holder,
 					     conf->r0_key_holder_len,
 					     NULL, NULL, pos,
 					     kde + kde_len - pos,

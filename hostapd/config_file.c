@@ -1,6 +1,6 @@
 /*
  * hostapd / Configuration file parser
- * Copyright (c) 2003-2015, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2018, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -772,6 +772,10 @@ static int hostapd_config_parse_key_mgmt(int line, const char *value)
 			val |= WPA_KEY_MGMT_FT_PSK;
 		else if (os_strcmp(start, "FT-EAP") == 0)
 			val |= WPA_KEY_MGMT_FT_IEEE8021X;
+#ifdef CONFIG_SHA384
+		else if (os_strcmp(start, "FT-EAP-SHA384") == 0)
+			val |= WPA_KEY_MGMT_FT_IEEE8021X_SHA384;
+#endif /* CONFIG_SHA384 */
 #endif /* CONFIG_IEEE80211R_AP */
 #ifdef CONFIG_IEEE80211W
 		else if (os_strcmp(start, "WPA-PSK-SHA256") == 0)
@@ -1233,6 +1237,8 @@ static int hostapd_config_ht_capab(struct hostapd_config *conf,
 		conf->ht_capab |= HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET;
 		conf->ht40_plus_minus_allowed = 1;
 	}
+	if (!os_strstr(capab, "[HT40+]") && !os_strstr(capab, "[HT40-]"))
+		conf->secondary_channel = 0;
 	if (os_strstr(capab, "[SMPS-STATIC]")) {
 		conf->ht_capab &= ~HT_CAP_INFO_SMPS_MASK;
 		conf->ht_capab |= HT_CAP_INFO_SMPS_STATIC;
@@ -3861,6 +3867,7 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 	} else if (os_strcmp(buf, "sae_commit_override") == 0) {
 		wpabuf_free(bss->sae_commit_override);
 		bss->sae_commit_override = wpabuf_parse_bin(pos);
+#endif /* CONFIG_TESTING_OPTIONS */
 #ifdef CONFIG_SAE
 	} else if (os_strcmp(buf, "sae_password") == 0) {
 		if (parse_sae_password(bss, pos) < 0) {
@@ -3869,7 +3876,6 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 			return 1;
 		}
 #endif /* CONFIG_SAE */
-#endif /* CONFIG_TESTING_OPTIONS */
 	} else if (os_strcmp(buf, "vendor_elements") == 0) {
 		if (parse_wpabuf_hex(line, buf, &bss->vendor_elements, pos))
 			return 1;

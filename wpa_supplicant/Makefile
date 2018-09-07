@@ -1698,6 +1698,7 @@ endif
 ifdef CONFIG_PMPRINTF
 CFLAGS += -DCONFIG_PMPRINTF
 LIBS += -lpmprintf
+LIBS_c += -lpmprintf
 endif
 
 ifdef CONFIG_DELAYED_MIC_ERROR_REPORT

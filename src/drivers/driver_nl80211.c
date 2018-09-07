@@ -1079,11 +1079,20 @@ static void wpa_driver_nl80211_event_rtm_newlink(void *ctx,
 	}
 
 	if (drv->if_disabled && (ifi->ifi_flags & IFF_UP)) {
+		namebuf[0] = '\0';
 		if (if_indextoname(ifi->ifi_index, namebuf) &&
 		    linux_iface_up(drv->global->ioctl_sock, namebuf) == 0) {
 			wpa_printf(MSG_DEBUG, "nl80211: Ignore interface up "
 				   "event since interface %s is down",
 				   namebuf);
+			return;
+		}
+		wpa_printf(MSG_DEBUG, "nl80211: Interface up (%s/%s)",
+			   namebuf, ifname);
+		if (os_strcmp(drv->first_bss->ifname, ifname) != 0) {
+			wpa_printf(MSG_DEBUG,
+				   "nl80211: Not the main interface (%s) - do not indicate interface up",
+				   drv->first_bss->ifname);
 		} else if (if_nametoindex(drv->first_bss->ifname) == 0) {
 			wpa_printf(MSG_DEBUG, "nl80211: Ignore interface up "
 				   "event since interface %s does not exist",
@@ -1096,7 +1105,6 @@ static void wpa_driver_nl80211_event_rtm_newlink(void *ctx,
 			/* Re-read MAC address as it may have changed */
 			nl80211_refresh_mac(drv, ifi->ifi_index, 0);
 
-			wpa_printf(MSG_DEBUG, "nl80211: Interface up");
 			drv->if_disabled = 0;
 			wpa_supplicant_event(drv->ctx, EVENT_INTERFACE_ENABLED,
 					     NULL);
@@ -2603,9 +2611,11 @@ static void wpa_driver_nl80211_deinit(struct i802_bss *bss)
 			wpa_printf(MSG_INFO, "nl80211: Failed to remove "
 				   "interface %s from bridge %s: %s",
 				   bss->ifname, bss->brname, strerror(errno));
-		if (drv->rtnl_sk)
-			nl80211_handle_destroy(drv->rtnl_sk);
 	}
+
+	if (drv->rtnl_sk)
+		nl80211_handle_destroy(drv->rtnl_sk);
+
 	if (bss->added_bridge) {
 		if (linux_set_iface_flags(drv->global->ioctl_sock, bss->brname,
 					  0) < 0)
@@ -3123,6 +3133,7 @@ static int wpa_driver_nl80211_disconnect(struct wpa_driver_nl80211_data *drv,
 					 int reason_code)
 {
 	int ret;
+	int drv_associated = drv->associated;
 
 	wpa_printf(MSG_DEBUG, "%s(reason_code=%d)", __func__, reason_code);
 	nl80211_mark_disconnected(drv);
@@ -3133,7 +3144,7 @@ static int wpa_driver_nl80211_disconnect(struct wpa_driver_nl80211_data *drv,
 	 * For locally generated disconnect, supplicant already generates a
 	 * DEAUTH event, so ignore the event from NL80211.
 	 */
-	drv->ignore_next_local_disconnect = ret == 0;
+	drv->ignore_next_local_disconnect = drv_associated && (ret == 0);
 
 	return ret;
 }
@@ -3144,6 +3155,7 @@ static int wpa_driver_nl80211_deauthenticate(struct i802_bss *bss,
 {
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	int ret;
+	int drv_associated = drv->associated;
 
 	if (drv->nlmode == NL80211_IFTYPE_ADHOC) {
 		nl80211_mark_disconnected(drv);
@@ -3160,7 +3172,8 @@ static int wpa_driver_nl80211_deauthenticate(struct i802_bss *bss,
 	 * For locally generated deauthenticate, supplicant already generates a
 	 * DEAUTH event, so ignore the event from NL80211.
 	 */
-	drv->ignore_next_local_deauth = ret == 0;
+	drv->ignore_next_local_deauth = drv_associated && (ret == 0);
+
 	return ret;
 }
 
@@ -6535,7 +6548,7 @@ static int i802_set_wds_sta(void *priv, const u8 *addr, int aid, int val,
 			event.wds_sta_interface.sta_addr = addr;
 			event.wds_sta_interface.ifname = name;
 			event.wds_sta_interface.istatus = INTERFACE_ADDED;
-			wpa_supplicant_event(drv->ctx,
+			wpa_supplicant_event(bss->ctx,
 					     EVENT_WDS_STA_INTERFACE_STATUS,
 					     &event);
 		}
@@ -6555,7 +6568,7 @@ static int i802_set_wds_sta(void *priv, const u8 *addr, int aid, int val,
 		event.wds_sta_interface.sta_addr = addr;
 		event.wds_sta_interface.ifname = name;
 		event.wds_sta_interface.istatus = INTERFACE_REMOVED;
-		wpa_supplicant_event(drv->ctx, EVENT_WDS_STA_INTERFACE_STATUS,
+		wpa_supplicant_event(bss->ctx, EVENT_WDS_STA_INTERFACE_STATUS,
 				     &event);
 		return 0;
 	}
@@ -6610,8 +6623,10 @@ static int i802_check_bridge(struct wpa_driver_nl80211_data *drv,
 	bss->br_ifindex = br_ifindex;
 
 	if (linux_br_get(in_br, ifname) == 0) {
-		if (os_strcmp(in_br, brname) == 0)
+		if (os_strcmp(in_br, brname) == 0) {
+			bss->already_in_bridge = 1;
 			return 0; /* already in the bridge */
+		}
 
 		wpa_printf(MSG_DEBUG, "nl80211: Removing interface %s from "
 			   "bridge %s", ifname, in_br);
@@ -6708,7 +6723,7 @@ static void *i802_init(struct hostapd_data *hapd,
 		add_ifidx(drv, br_ifindex, drv->ifindex);
 
 #ifdef CONFIG_LIBNL3_ROUTE
-	if (bss->added_if_into_bridge) {
+	if (bss->added_if_into_bridge || bss->already_in_bridge) {
 		drv->rtnl_sk = nl_socket_alloc();
 		if (drv->rtnl_sk == NULL) {
 			wpa_printf(MSG_ERROR, "nl80211: Failed to allocate nl_sock");
@@ -8500,7 +8515,7 @@ static int wpa_driver_nl80211_status(void *priv, char *buf, size_t buflen)
 			  "brname=%s\n"
 			  "addr=" MACSTR "\n"
 			  "freq=%d\n"
-			  "%s%s%s%s%s",
+			  "%s%s%s%s%s%s",
 			  bss->ifindex,
 			  bss->ifname,
 			  bss->brname,
@@ -8509,6 +8524,7 @@ static int wpa_driver_nl80211_status(void *priv, char *buf, size_t buflen)
 			  bss->beacon_set ? "beacon_set=1\n" : "",
 			  bss->added_if_into_bridge ?
 			  "added_if_into_bridge=1\n" : "",
+			  bss->already_in_bridge ? "already_in_bridge=1\n" : "",
 			  bss->added_bridge ? "added_bridge=1\n" : "",
 			  bss->in_deinit ? "in_deinit=1\n" : "",
 			  bss->if_dynamic ? "if_dynamic=1\n" : "");

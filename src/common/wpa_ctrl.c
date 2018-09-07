@@ -115,7 +115,6 @@ struct wpa_ctrl * wpa_ctrl_open2(const char *ctrl_path,
 	ctrl->local.sun_family = AF_UNIX;
 	counter++;
 try_again:
-//	printf("##### cli_path='%s'", cli_path);
 	if (cli_path && cli_path[0] == '/') {
 		ret = os_snprintf(ctrl->local.sun_path,
 				  sizeof(ctrl->local.sun_path),
@@ -411,13 +410,15 @@ struct wpa_ctrl * wpa_ctrl_open(const char *ctrl_path)
 		    sizeof(ctrl->dest)) < 0) {
 #ifdef CONFIG_CTRL_IFACE_UDP_IPV6
 		char addr[INET6_ADDRSTRLEN];
-		printf(/*MSG_ERROR,*/ "connect(%s:%d) failed: %s",			 			// 20180501 AB maybe not reachable, use printf
+		wpa_printf(MSG_ERROR, "connect(%s:%d) failed: %s",						// ToDo:AB
+//		printf(/*MSG_ERROR,*/ "connect(%s:%d) failed: %s",			 			// 20180501 AB maybe not reachable, use printf
 			   inet_ntop(AF_INET6, &ctrl->dest.sin6_addr, addr,
 				     sizeof(ctrl->dest)),
 			   ntohs(ctrl->dest.sin6_port),
 			   strerror(errno));
 #else /* CONFIG_CTRL_IFACE_UDP_IPV6 */
-		printf(/*MSG_ERROR,*/ "connect(%s:%d) failed: %s",					 // 20180501 AB maybe not reachable, use printf
+		wpa_printf(MSG_ERROR, "connect(%s:%d) failed: %s",           // ToDo:AB
+//		printf(/*MSG_ERROR,*/ "connect(%s:%d) failed: %s",					 // 20180501 AB maybe not reachable, use printf
 			   inet_ntoa(ctrl->dest.sin_addr),
 			   ntohs(ctrl->dest.sin_port),
 			   strerror(errno));
