@@ -62,6 +62,78 @@ static FILE *out_file = NULL;
 #endif /* CONFIG_DEBUG_FILE */
 
 
+#ifdef CONFIG_PMPRINTF
+/*
+	20090609 Andreas Buchinger, check if pmprintf.dll is available on this system
+	and if yes use it to output debug messages.
+*/
+#define INCL_DOSERRORS    /* DOS error values */
+#define INCL_DOSMODULEMGR
+
+#include <os2.h>
+#include <errno.h>
+
+static int x_PmPrintfChecked 	= FALSE;
+static int x_PmPrintfAvail 		= FALSE;
+
+static ULONG _System (* APIENTRY _PmPrintfVa)( char *Format, va_list args );
+
+static ULONG x_PmPrintfVa( char *Format, va_list args)
+	{
+	HMODULE hPmprintf;																			/* Module handle                     */
+	APIRET  rc              = ERROR_INVALID_FUNCTION;				/* Return code                       */
+
+	// check for pmprintf.dll only once
+	if ( !x_PmPrintfChecked )
+		{
+		PSZ      ModuleName     = "PMPRINTF.DLL";  	/* Name of module   */
+		UCHAR    LoadError[256] = "";          			/* Area for Load failure information */
+ 		
+		x_PmPrintfChecked = TRUE;
+		if ( DosQueryModuleHandle("PMPRINTF", &hPmprintf) != NO_ERROR ) {
+			// printf("no PMPRINTF.DLL\n");
+			}
+		else
+			{
+			rc = DosLoadModule(LoadError,        			/* Failure information buffer */
+									sizeof(LoadError),       			/* Size of buffer             */
+									ModuleName,              			/* Module to load             */
+									&hPmprintf);          				/* Module handle returned     */
+			if (rc != NO_ERROR) /* printf("DosLoadModule error: return code = %ld\n", rc) */;
+			else
+				{
+				// printf("Module %s loaded.\n", ModuleName);
+	
+				rc = DosQueryProcAddr(hPmprintf,								// Handle to module
+															10,												// ProcName specified
+															NULL,											// ProcName (not specified)
+															(PFN *)&_PmPrintfVa);			// Address returned
+	
+				// printf("rc=%ld, hPmprintf=%ld\n", rc, hPmprintf);
+				if ( rc == NO_ERROR )
+					{	// pmprintf.dll found
+					x_PmPrintfAvail = TRUE;
+					// TRACE("");
+					}
+				else
+					{	// no pmprintf.dll
+					x_PmPrintfAvail = FALSE;
+					// TRACE("");
+					}
+				}
+			}
+		}
+	
+	// now printf via pmprintf.dll if possible
+	if ( x_PmPrintfAvail == TRUE)
+		{
+		rc = _PmPrintfVa(Format, args );
+		}
+	return rc;
+	}
+#endif /* CONFIG_PMPRINTF */
+
+
 void wpa_debug_print_timestamp(void)
 {
 #ifndef CONFIG_ANDROID_LOG
@@ -226,8 +298,7 @@ void wpa_printf(int level, const char *fmt, ...)
 		vprintf(fmt, ap);
 		printf("\n");
 #ifdef CONFIG_PMPRINTF
-		PmPrintfVa( (char *) fmt, ap);
-//		PmPrintf("\n");
+		x_PmPrintfVa( (char *) fmt, ap);
 #endif /* CONFIG_PMPRINTF */
 #ifdef CONFIG_DEBUG_FILE
 		}
