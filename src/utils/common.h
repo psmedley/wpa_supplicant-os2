@@ -18,7 +18,7 @@
 #endif /* _SOCKLEN_T_DECLARED */
 
 #if defined(__OS2__)
-	#define VERSION_STR_POSTFIX " (OS/2-RC3, "__DATE__" "__TIME__")"
+	#define VERSION_STR_POSTFIX " (OS/2-RC4, "__DATE__" "__TIME__")"
 #endif /* __OS2__ */
 
 #if defined(__linux__) || defined(__GLIBC__)

@@ -28,7 +28,7 @@ Description = 'WPA supplicant package for OS/2 - XWLAN Project'
 ver_years = '2003-2018'
 ver_rev =   ''          /* leave empty as it's taken from version.h */
 ver_build = ''          /* empty (default) or numeric value */
-ver_min ='rc2'        /* use f.i. beta or leave empty */
+ver_min ='rc4'        /* use f.i. beta or leave empty */
 
 outfile  = 'bldlvl.def'
 

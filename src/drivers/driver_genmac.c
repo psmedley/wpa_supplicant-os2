@@ -2,6 +2,7 @@
  * WPA Supplicant - OS/2 Genmac driver interface
  *  Heavily based on the Windows/NDIS driver interface
  * Copyright (c) 2004-2007, Jouni Malinen <jkmaline@cc.hut.fi>
+ * Copyright (c) 2018, Andreas Buchinger
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -14,6 +15,7 @@
 #include "driver.h"
 #include "eloop.h"
 #include "common/ieee802_11_defs.h"
+#include "common/ieee802_11_common.h"
 #include "driver_ndis.h"
 
 /* include these here rather than include ntddndis.h */
@@ -28,6 +30,9 @@ void wpa_driver_ndis_event_pipe_cb(void *eloop_data, void *user_data);
 static void wpa_driver_ndis_deinit(void *priv);
 static void wpa_driver_ndis_poll(void *drv);
 static void wpa_driver_ndis_poll_timeout(void *eloop_ctx, void *timeout_ctx);
+static int wpa_driver_ndis_adapter_init(struct wpa_driver_ndis_data *drv);
+static int wpa_driver_ndis_adapter_open(struct wpa_driver_ndis_data *drv);
+static void wpa_driver_ndis_adapter_close(struct wpa_driver_ndis_data *drv);
 
 
 static const u8 pae_group_addr[ETH_ALEN] =
@@ -518,7 +523,7 @@ static int wpa_driver_ndis_get_ssid(void *priv, u8 *ssid)
 	int res;
 
 	res = ndis_get_oid(drv, OID_802_11_SSID, (char *) &buf, sizeof(buf));
-	printf("  ndis_get_oid res=%d\n", res);
+	wpa_printf(MSG_DEBUG, "  ndis_get_oid res=%d\n", res);
 	if (res < 4) {
 		wpa_printf(MSG_DEBUG, "NDIS: Failed to get SSID");
 		if (drv->wired) {
@@ -563,11 +568,11 @@ static int wpa_driver_ndis_radio_off(struct wpa_driver_ndis_data *drv)
 /* Disconnect by setting SSID to random (i.e., likely not used). */
 static int wpa_driver_ndis_disconnect(struct wpa_driver_ndis_data *drv)
 {
-	char ssid[32];
+	char ssid[SSID_MAX_LEN];
 	int i;
-	for (i = 0; i < 32; i++)
+	for (i = 0; i < SSID_MAX_LEN; i++)
 		ssid[i] = rand() & 0xff;
-	return wpa_driver_ndis_set_ssid(drv, (u8 *) ssid, 32);
+	return wpa_driver_ndis_set_ssid(drv, (u8 *) ssid, SSID_MAX_LEN);
 }
 
 
@@ -642,12 +647,18 @@ static const u8 * wpa_scan_get_ie(const struct wpa_scan_res *res, u8 ie)
 	while (pos + 1 < end) {
 		if (pos + 2 + pos[1] > end)
 			break;
-		if (pos[0] == ie)
+		if (pos[0] == ie) {
+			xPmPrintf("%-10s", pos);
 			return pos;
+		}
+			
 		pos += 2 + pos[1];
 	}
 
 	return NULL;
+
+// 20181020 ToDo: AB next line should be the only one hier in get_ie is in ieee802_11_common	
+//	return get_ie((const u8 *) (res + 1), res->ie_len, ie);
 }
 
 
@@ -660,7 +671,7 @@ static struct wpa_scan_res * wpa_driver_ndis_add_scan_ssid(
 	if (wpa_scan_get_ie(r, WLAN_EID_SSID))
 		return r; /* SSID IE already present */
 
-	if (ssid->SsidLength == 0 || ssid->SsidLength > 32)
+	if (ssid->SsidLength == 0 || ssid->SsidLength > SSID_MAX_LEN)
 		return r; /* No valid SSID inside scan data */
 
 	nr = os_realloc(r, sizeof(*r) + r->ie_len + 2 + ssid->SsidLength);
@@ -1086,12 +1097,16 @@ static int wpa_driver_ndis_set_pmkid(struct wpa_driver_ndis_data *drv)
 }
 
 
-static int wpa_driver_ndis_add_pmkid(void *priv, const u8 *bssid,
-				     const u8 *pmkid)
+static int wpa_driver_ndis_add_pmkid(void *priv,
+				     struct wpa_pmkid_params *params)
 {
 	struct wpa_driver_ndis_data *drv = priv;
 	struct ndis_pmkid_entry *entry, *prev;
+	const u8 *bssid = params->bssid;
+	const u8 *pmkid = params->pmkid;
 
+	if (!bssid || !pmkid)
+		return -1;
 	if (drv->no_of_pmkid == 0)
 		return 0;
 
@@ -1127,12 +1142,16 @@ static int wpa_driver_ndis_add_pmkid(void *priv, const u8 *bssid,
 }
 
 
-static int wpa_driver_ndis_remove_pmkid(void *priv, const u8 *bssid,
-		 			const u8 *pmkid)
+static int wpa_driver_ndis_remove_pmkid(void *priv,
+					struct wpa_pmkid_params *params)
 {
 	struct wpa_driver_ndis_data *drv = priv;
 	struct ndis_pmkid_entry *entry, *prev;
+	const u8 *bssid = params->bssid;
+	const u8 *pmkid = params->pmkid;
 
+	if (!bssid || !pmkid)
+		return -1;
 	if (drv->no_of_pmkid == 0)
 		return 0;
 
@@ -1486,6 +1505,50 @@ void wpa_driver_ndis_event_media_specific(struct wpa_driver_ndis_data *drv,
 			   (int) status->StatusType);
 		break;
 	}
+}
+
+
+/* Called when an adapter is added */
+void wpa_driver_ndis_event_adapter_arrival(struct wpa_driver_ndis_data *drv)
+{
+	union wpa_event_data event;
+	int i;
+
+	wpa_printf(MSG_DEBUG, "NDIS: Notify Adapter Arrival");
+
+	for (i = 0; i < 30; i++) {
+		/* Re-open Packet32/NDISUIO connection */
+		wpa_driver_ndis_adapter_close(drv);
+		if (wpa_driver_ndis_adapter_init(drv) < 0 ||
+		    wpa_driver_ndis_adapter_open(drv) < 0) {
+			wpa_printf(MSG_DEBUG, "NDIS: Driver re-initialization "
+				   "(%d) failed", i);
+			os_sleep(1, 0);
+		} else {
+			wpa_printf(MSG_DEBUG, "NDIS: Driver re-initialized");
+			break;
+		}
+	}
+
+	os_memset(&event, 0, sizeof(event));
+	os_strlcpy(event.interface_status.ifname, drv->ifname,
+		   sizeof(event.interface_status.ifname));
+	event.interface_status.ievent = EVENT_INTERFACE_ADDED;
+	wpa_supplicant_event(drv->ctx, EVENT_INTERFACE_STATUS, &event);
+}
+
+
+/* Called when an adapter is removed */
+void wpa_driver_ndis_event_adapter_removal(struct wpa_driver_ndis_data *drv)
+{
+	union wpa_event_data event;
+
+	wpa_printf(MSG_DEBUG, "NDIS: Notify Adapter Removal");
+	os_memset(&event, 0, sizeof(event));
+	os_strlcpy(event.interface_status.ifname, drv->ifname,
+		   sizeof(event.interface_status.ifname));
+	event.interface_status.ievent = EVENT_INTERFACE_REMOVED;
+	wpa_supplicant_event(drv->ctx, EVENT_INTERFACE_STATUS, &event);
 }
 
 
@@ -1847,6 +1910,47 @@ static int wpa_driver_ndis_set_wzc(struct wpa_driver_ndis_data *drv,
 }
 
 
+static int wpa_driver_ndis_adapter_init(struct wpa_driver_ndis_data *drv)
+{
+#ifdef CONFIG_USE_NDISUIO
+#else /* CONFIG_USE_NDISUIO */
+	return 0;
+#endif /* CONFIG_USE_NDISUIO */
+}
+
+
+static int wpa_driver_ndis_adapter_open(struct wpa_driver_ndis_data *drv)
+{
+#ifdef CONFIG_USE_NDISUIO
+#else /* CONFIG_USE_NDISUIO */
+	char ifname[128];
+#ifndef __OS2__
+	os_snprintf(ifname, sizeof(ifname), "\\Device\\NPF_%s", drv->ifname);
+#else	
+	os_snprintf(ifname, sizeof(ifname), "%s", drv->ifname);
+#endif	//	__OS2__
+	wpa_printf(MSG_DEBUG, "NDIS: opening %s", ifname);
+	drv->adapter = PacketOpenAdapter(ifname);
+	if (drv->adapter == NULL) {
+		wpa_printf(MSG_DEBUG, "NDIS: PacketOpenAdapter failed for "
+			   "'%s'", ifname);
+		return -1;
+	}
+	return 0;
+#endif /* CONFIG_USE_NDISUIO */
+}
+
+
+static void wpa_driver_ndis_adapter_close(struct wpa_driver_ndis_data *drv)
+{
+#ifdef CONFIG_USE_NDISUIO
+#else /* CONFIG_USE_NDISUIO */
+	if (drv->adapter)
+		PacketCloseAdapter(drv->adapter);
+#endif /* CONFIG_USE_NDISUIO */
+}
+
+
 static int ndis_add_multicast(struct wpa_driver_ndis_data *drv)
 {
 	if (ndis_set_oid(drv, OID_802_3_MULTICAST_LIST,
@@ -1869,20 +1973,33 @@ static void * wpa_driver_ndis_init(void *ctx, const char *ifname)
 	if (drv == NULL)
 		return NULL;
 	drv->ctx = ctx;
-
+	/*
+	 * Compatibility code to strip possible prefix from the GUID. Previous
+	 * versions include \Device\NPF_ prefix for all names, but the internal
+	 * interface name is now only the GUI. Both Packet32 and NDISUIO
+	 * prefixes are supported.
+	 */
+	if (os_strncmp(ifname, "\\Device\\NPF_", 12) == 0)
+		ifname += 12;
+	else if (os_strncmp(ifname, "\\DEVICE\\", 8) == 0)
+		ifname += 8;
 	os_strlcpy(drv->ifname, ifname, sizeof(drv->ifname));
 
+	if (wpa_driver_ndis_adapter_init(drv) < 0) {
+		os_free(drv);
+		return NULL;
+	}
+
 	if (wpa_driver_ndis_get_names(drv) < 0) {
+		wpa_driver_ndis_adapter_close(drv);
 		os_free(drv);
 		return NULL;
 	}
 
 	wpa_driver_ndis_set_wzc(drv, 0);
 
-	drv->adapter = PacketOpenAdapter(drv->ifname);
-	if (drv->adapter == NULL) {
-		wpa_printf(MSG_DEBUG, "NDIS: PacketOpenAdapter failed for "
-			   "'%s'", drv->ifname);
+	if (wpa_driver_ndis_adapter_open(drv) < 0) {
+		wpa_driver_ndis_adapter_close(drv);
 		os_free(drv);
 		return NULL;
 	}
@@ -1891,7 +2008,7 @@ static void * wpa_driver_ndis_init(void *ctx, const char *ifname)
 			 (char *) drv->own_addr, ETH_ALEN) < 0) {
 		wpa_printf(MSG_DEBUG, "NDIS: Get OID_802_3_CURRENT_ADDRESS "
 			   "failed");
-		PacketCloseAdapter(drv->adapter);
+		wpa_driver_ndis_adapter_close(drv);
 		os_free(drv);
 		return NULL;
 	}
@@ -1979,8 +2096,8 @@ static void wpa_driver_ndis_deinit(void *priv)
 			   "radio off");
 	}
 
-	if (drv->adapter)
-		PacketCloseAdapter(drv->adapter);
+	wpa_driver_ndis_adapter_close(drv);
+		
 
 	if (drv->wzc_disabled)
 		wpa_driver_ndis_set_wzc(drv, 1);
@@ -1995,6 +2112,8 @@ wpa_driver_ndis_get_interfaces(void *global_priv)
 {
 	struct wpa_interface_info *iface = NULL, *niface;
 
+#ifdef CONFIG_USE_NDISUIO
+#else /* CONFIG_USE_NDISUIO */
 	PTSTR _names;
 	char *names, *pos, *pos2;
 	ULONG len;
@@ -2129,6 +2248,7 @@ wpa_driver_ndis_get_interfaces(void *global_priv)
 		iface = niface;
 	}
 
+#endif /* CONFIG_USE_NDISUIO */
 
 	return iface;
 }
