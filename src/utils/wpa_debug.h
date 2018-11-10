@@ -11,10 +11,25 @@
 
 #include "wpabuf.h"
 #ifdef CONFIG_PMPRINTF
+#include <os2safe.h>		// 20181101 AB, not really necessary as _udefault is used in main
+												//		but good practice in case parts of code used otherwise ...
+
+#define INCL_DOSERRORS    /* DOS error values */
+#define INCL_DOSMODULEMGR
+
+#include <os2.h>
+#include <errno.h>
+
+typedef unsigned long	ULONG;
+
+ULONG xPmPrintfVa( char *Format, va_list args);
+ULONG x_I_PmpfSetMacroHeader( char *Format, va_list args );
+int xPmPrintf( const char *Format, ... );
+
 #ifndef BOOL
 typedef unsigned long	BOOL;
 #endif
-typedef unsigned long	ULONG;
+
 #include "pmprintf.h"
 #endif /* CONFIG_PMPRINTF */
 

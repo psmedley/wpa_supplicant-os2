@@ -33,13 +33,13 @@ wpa_supplicant package for xwlan/wlanstat
 ------------------------------------------------------------------------------
 Author:          Jouni Malinen and contributors
                  Ported to OS/2 by Andreas Buchinger
-Last update:     20180501
-Current status:  v2.7 (OS/2-RC2)
+Last update:     20181104
+Current status:  v2.7-devel (OS/2-RC4)
 Home page:       https://bitbucket.org/Andi_B/os-2-wpa_supplicant/
 								 (http://trac.netlabs.org/ports/browser/wpa_supplicant/)
 
 wpa_supplicant was ported to OS/2 for use with xwlan/wlanstat. First port was
-made by Willibald Meyer. Maybe together with Christian Langanke the original
+done by Willibald Meyer. Maybe together with Christian Langanke the original
 author of xwlan. Later on Paul Smedley distributed different versions. Finally
 Andreas Buchinger set up the svn repository at netlabs.org with Pauls v2.2
 version and packed this build together.
@@ -47,20 +47,36 @@ version and packed this build together.
 Prerequisite:
 -------------
 - OS/2 or eCS with 32-bit TCP/IP stack. I've tested mainly with eCS2.1DE
-- libc065.dll (yum install libc)
+- libc066.dll (yum install libc)
+- libcx0.dll (yum install libcx)
 - crypto10.dll, ssl10.dll (yum install openssl)
+- gcc1.dll (yum install libgcc1)
 
 
 Optional components:
 --------------------
-
+- pmprintf, get it from https://bitbucket.org/os2stuff/pmprintf/downloads/
+  or hobbes
 
 Installation:
 -------------
-
+- When using xwlan/wlanstat the approbiate inst*.cmd places the files as needed
+-
 
 History:
 --------
+20181104 v2.7-devel (OS/2-RC4)
+- lot of changes from official repository are merged to the OS/2 version
+  including fix for KRACK (don't know if and how this influences the OS/2
+  version though), OS/2 sources are on a par with official development sources
+  (autumn 2018)
+- added ExceptQ support (now builds against libcx)
+- added pmprintf logging (if pmprintf.dll is found on target system)
+- cleaned up build system for smoothly building on current yum/rpm installations
+- enabled more options, see .config, if you need additional ones enabled, please
+  open an issue
+(https://bitbucket.org/Andi_B/os-2-wpa_supplicant/issues?status=new&status=open)
+
 20140910 v2.2 (eCS-v1)
 - first build from the official OS/2 - eCS repository at
   http://trac.netlabs.org/ports/browser/wpa_supplicant
@@ -77,7 +93,7 @@ directory and run 'make wpa_supplicant'. That's all.
 You can also build wpa_cli.exe and wpa_passphrase.exe with 'make all'. But these
 are not needed for xwlan.
 
-Building wpa_gui needs
+Building wpa_gui needs (20181104 - maybe not necessary anymore)
 1) 'make wpa_gui-qt4/Makefile' and
 2) 'make wpa_gui-qt4/lang/wpa_gui_de.qm'. You need lrelease.exe in your path
 which is usually found in %UNIXROOT%\usr\lib\qt4\bin\. After that do

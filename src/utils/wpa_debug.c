@@ -64,32 +64,82 @@ static FILE *out_file = NULL;
 
 #ifdef CONFIG_PMPRINTF
 /*
-	20090609 Andreas Buchinger, check if pmprintf.dll is available on this system
+	20180609 Andreas Buchinger, check if pmprintf.dll is available on this system
 	and if yes use it to output debug messages.
 */
-#define INCL_DOSERRORS    /* DOS error values */
+/*	is in wpa_debug.h anyway (included by common.h)
+#include <os2safe.h>		// 20181101 AB, not really necessary as _udefault is used in main
+												//		but good practice in case parts of code used otherwise ...
+
+#define INCL_DOSERRORS    // DOS error values
 #define INCL_DOSMODULEMGR
 
 #include <os2.h>
 #include <errno.h>
+*/
+static int xPmPrintfChecked 	= FALSE;
+static int xPmPrintfAvail 		= FALSE;
 
-static int x_PmPrintfChecked 	= FALSE;
-static int x_PmPrintfAvail 		= FALSE;
+APIRET xPmPrintfCheckAvail(void);
 
 static ULONG _System (* APIENTRY _PmPrintfVa)( char *Format, va_list args );
+static ULONG _System (* APIENTRY _I_PmpfSetMacroHeader)( char *Format, va_list args );
+static ULONG _System (* APIENTRY _PmPrintf)( char *Format, ... );
 
-static ULONG x_PmPrintfVa( char *Format, va_list args)
+ULONG xPmPrintfVa( char *Format, va_list args)
 	{
-	HMODULE hPmprintf;																			/* Module handle                     */
 	APIRET  rc              = ERROR_INVALID_FUNCTION;				/* Return code                       */
 
+	// now printf via pmprintf.dll if possible
+	if ( xPmPrintfCheckAvail() == NO_ERROR)
+		{
+		rc = _PmPrintfVa(Format, args );
+		}
+	return rc;
+	}
+
+
+ULONG x_I_PmpfSetMacroHeader( char *Format, va_list args )
+	{
+	APIRET  rc              = ERROR_INVALID_FUNCTION;				/* Return code                       */
+
+	// now printf via pmprintf.dll if possible
+	if ( xPmPrintfCheckAvail() == NO_ERROR)
+		{
+		rc = _I_PmpfSetMacroHeader(Format, args );
+		}
+	return rc;
+	}
+
+
+int xPmPrintf( const char *Format, ... )
+	{
+  va_list  args;
+	APIRET  rc              = ERROR_INVALID_FUNCTION;				/* Return code                       */
+
+	// now printf via pmprintf.dll if possible
+	if ( xPmPrintfCheckAvail() == NO_ERROR)
+		{
+    va_start(args, Format);
+    rc = xPmPrintfVa((unsigned char *) Format, args);
+    va_end(args);
+		}
+	return rc;
+	}
+
+
+APIRET xPmPrintfCheckAvail()
+	{
+	HMODULE hPmprintf;												/* Module handle                     */
+	APIRET  rc              = NO_ERROR;				/* Return code                       */
+	
 	// check for pmprintf.dll only once
-	if ( !x_PmPrintfChecked )
+	if ( !xPmPrintfChecked )
 		{
 		PSZ      ModuleName     = "PMPRINTF.DLL";  	/* Name of module   */
 		UCHAR    LoadError[256] = "";          			/* Area for Load failure information */
  		
-		x_PmPrintfChecked = TRUE;
+		xPmPrintfChecked = TRUE;
 		if ( DosQueryModuleHandle("PMPRINTF", &hPmprintf) != NO_ERROR ) {
 			// printf("no PMPRINTF.DLL\n");
 			}
@@ -105,31 +155,37 @@ static ULONG x_PmPrintfVa( char *Format, va_list args)
 				// printf("Module %s loaded.\n", ModuleName);
 	
 				rc = DosQueryProcAddr(hPmprintf,								// Handle to module
-															10,												// ProcName specified
-															NULL,											// ProcName (not specified)
+															0,												// ProcName specified
+															"PmPrintfVa",							// ProcName (not specified)
 															(PFN *)&_PmPrintfVa);			// Address returned
+	
+				rc |= DosQueryProcAddr(hPmprintf,								// Handle to module
+															0,												// ProcName specified
+															"I_PmpfSetMacroHeader",		// ProcName (not specified)
+															(PFN *)&_I_PmpfSetMacroHeader);			// Address returned
+	
+				rc |= DosQueryProcAddr(hPmprintf,								// Handle to module
+															0,												// ProcName specified
+															"PmPrintf",								// ProcName (not specified)
+															(PFN *)&_PmPrintf);				// Address returned
 	
 				// printf("rc=%ld, hPmprintf=%ld\n", rc, hPmprintf);
 				if ( rc == NO_ERROR )
 					{	// pmprintf.dll found
-					x_PmPrintfAvail = TRUE;
+					xPmPrintfAvail = TRUE;
 					// TRACE("");
 					}
 				else
 					{	// no pmprintf.dll
-					x_PmPrintfAvail = FALSE;
+					xPmPrintfAvail = FALSE;
 					// TRACE("");
 					}
 				}
 			}
 		}
 	
-	// now printf via pmprintf.dll if possible
-	if ( x_PmPrintfAvail == TRUE)
-		{
-		rc = _PmPrintfVa(Format, args );
-		}
-	return rc;
+	if ( xPmPrintfAvail == TRUE) return NO_ERROR;
+	else return ERROR_INVALID_FUNCTION;
 	}
 #endif /* CONFIG_PMPRINTF */
 
@@ -298,7 +354,7 @@ void wpa_printf(int level, const char *fmt, ...)
 		vprintf(fmt, ap);
 		printf("\n");
 #ifdef CONFIG_PMPRINTF
-		x_PmPrintfVa( (char *) fmt, ap);
+		xPmPrintfVa( (char *) fmt, ap);
 #endif /* CONFIG_PMPRINTF */
 #ifdef CONFIG_DEBUG_FILE
 		}
@@ -327,6 +383,10 @@ static void _wpa_hexdump(int level, const char *title, const u8 *buf,
 			 size_t len, int show)
 {
 	size_t i;
+#ifdef CONFIG_PMPRINTF
+	PSZ	pBuf, pBufStart, pBufEnd;
+	int	BufLen;
+#endif /* CONFIG_PMPRINTF */
 
 #ifdef CONFIG_DEBUG_LINUX_TRACING
 	if (wpa_debug_tracing_file != NULL) {
@@ -435,15 +495,34 @@ static void _wpa_hexdump(int level, const char *title, const u8 *buf,
 	} else {
 #endif /* CONFIG_DEBUG_FILE */
 	printf("%s - hexdump(len=%lu):", title, (unsigned long) len);
+#ifdef CONFIG_PMPRINTF
+		BufLen = strlen(title) + len * 3 + 100;		// 20181103 AB, 100 bytes for header/footer
+		if ( (pBuf = pBufStart = os_malloc(BufLen))	== NULL) return;	
+		pBufEnd = pBuf + BufLen;	
+		pBuf += sprintf(pBuf, "%s - hexdump(len=%lu):", title, (unsigned long) len);
+#endif /* CONFIG_PMPRINTF */
 	if (buf == NULL) {
 		printf(" [NULL]");
+#ifdef CONFIG_PMPRINTF
+		if (pBuf < pBufEnd - 20) pBuf += sprintf(pBuf, " [NULL]");
+#endif /* CONFIG_PMPRINTF */
 	} else if (show) {
-		for (i = 0; i < len; i++)
+		for (i = 0; i < len; i++) {
 			printf(" %02x", buf[i]);
+#ifdef CONFIG_PMPRINTF
+		if (pBuf < pBufEnd - 20) pBuf += sprintf(pBuf, " %02x", buf[i]);
+#endif /* CONFIG_PMPRINTF */
+		}
 	} else {
 		printf(" [REMOVED]");
+#ifdef CONFIG_PMPRINTF
+		if (pBuf < pBufEnd - 20) pBuf += sprintf(pBuf, " [REMOVED]");
+#endif /* CONFIG_PMPRINTF */
 	}
 	printf("\n");
+#ifdef CONFIG_PMPRINTF
+	xPmPrintf("%s", pBufStart);
+#endif /* CONFIG_PMPRINTF */
 #ifdef CONFIG_DEBUG_FILE
 	}
 #endif /* CONFIG_DEBUG_FILE */

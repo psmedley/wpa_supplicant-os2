@@ -482,7 +482,7 @@ void os_free(void *ptr);
 char * os_strdup(const char *s);
 #else /* WPA_TRACE */
 #ifndef os_malloc
-#define os_malloc(s) malloc((s))
+#define os_malloc(s) malloc(s)
 #endif
 #ifndef os_realloc
 #define os_realloc(p, s) realloc((p), (s))

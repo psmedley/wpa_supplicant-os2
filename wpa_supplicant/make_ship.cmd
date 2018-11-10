@@ -10,7 +10,21 @@
 @REM
 @REM
 
-@IF %1 == clean del /SQYX ..\..\wpa_supplicant_ship\*
+@IF NOT "%1". == "". GOTO SkipHelp
+@echo Use with option 'clean' to clean up directories first
+
+:SkipHelp
+@IF %1. == CLEAN. GOTO Clean
+@IF %1. == /CLEAN. GOTO Clean
+
+@IF "%1". == "". GOTO NoClean
+@echo Unknown option %1
+@GOTO END
+
+:Clean
+@echo ...cleaning up
+@del /SQYX ..\..\wpa_supplicant_ship\*
+:NoClean
 
 @if NOT DIREXIST ..\..\wpa_supplicant_ship                          ( md ..\..\wpa_supplicant_ship )
 
@@ -25,6 +39,7 @@
 @copy /U .\README.OS2                    ..\..\wpa_supplicant_ship\.
 
 @copy /U .\wp.cmd                        ..\..\wpa_supplicant_ship\.
+@copy /U .\wxwlan.cmd                    ..\..\wpa_supplicant_ship\.
 
 @copy /U .\wpa_gui-qt4\*.exe             ..\..\wpa_supplicant_ship\.
 

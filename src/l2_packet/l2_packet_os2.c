@@ -87,7 +87,7 @@ int l2_packet_send(struct l2_packet_data *l2, const u8 *dst_addr, u16 proto,
 {
 	struct l2_ethhdr *eth = os_malloc(sizeof(*eth) + len);
 
-	wpa_printf(WPA_DEBUG,"%s",__FUNCTION__);
+	wpa_printf(WPA_DEBUG,"%s",__func__);	// ToDo: does it work?
 	if (!l2->l2_hdr) {
 		int ret;
 		if (eth == NULL)
@@ -290,6 +290,7 @@ static int eth_get(const char *device, u8 ea[ETH_ALEN])
 	int mib[] = { CTL_NET, AF_ROUTE, 0, AF_LINK, NET_RT_IFLIST, 0 };
 
 	if (sysctl(mib, 6, NULL, &len, NULL, 0) < 0) {
+		xPmPrintf("for device=%s", device);			// ToDo: REMOVE
 		wpa_printf(MSG_ERROR, "eth_get sysctl returns < 0");
 		return -1;
 	}
@@ -331,7 +332,7 @@ struct l2_packet_data * l2_packet_init(
 {
 	struct l2_packet_data *l2;
 
-  wpa_printf(WPA_DEBUG,"%s",__FUNCTION__);
+  wpa_printf(WPA_DEBUG,"%s",__func__);		// ToDo: does it work?
 	
 	l2 = os_zalloc(sizeof(struct l2_packet_data));
 	if (l2 == NULL)
@@ -345,6 +346,7 @@ struct l2_packet_data * l2_packet_init(
 	if (eth_get(l2->ifname, l2->own_addr) < 0) {
 		fprintf(stderr, "Failed to get link-level address for "
 			"interface '%s'.\n", l2->ifname);
+		xPmPrintf("Failed to get link-level address for interface '%s'. l2->own_addr=%s", l2->ifname, l2->own_addr);
 		wpa_printf(MSG_ERROR, "Failed to get link-level address for " "interface '%s'.", l2->ifname);
 //		os_free(l2);
 //		return NULL;
@@ -379,7 +381,7 @@ struct l2_packet_data * l2_packet_init_bridge(
 
 void l2_packet_deinit(struct l2_packet_data *l2)
 {
-  wpa_printf(WPA_DEBUG,"%s",__FUNCTION__);
+  wpa_printf(WPA_DEBUG,"%s",__func__);		// ToDo: does it work?
 	
 	if (l2 != NULL) {
 		if (l2->fd >= 0) {

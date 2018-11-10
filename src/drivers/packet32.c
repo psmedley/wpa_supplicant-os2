@@ -11,7 +11,14 @@
  * This file sends and receives packets from Genmac driver via IOCtl
  */
 
+#include <os2safe.h>		// 20181101 AB, not really necessary as _udefault is used in main
+												//		but good practice in case parts of code used otherwise ...
+#define INCL_DOSDEVICES
+#define INCL_DOSDEVIOCTL
+#include <os2.h>
+
 #include "includes.h"
+
 #include "common.h"
 #include "Packet32.h"
 
@@ -56,13 +63,13 @@ static char Pversion[] = "V1.0.0" ;
 //----------------------------------------------------------------------------
 char *  PacketGetVersion()
 {
-    wpa_printf(MSG_DEBUG,"%s",__FUNCTION__);
+    wpa_printf(MSG_DEBUG,"%s",__func__);		// ToDo: does it work?
     return Pversion ;
 }
 //----------------------------------------------------------------------------
 int PacketRequest( void *Handle, int Set, PACKET_OID_DATA *p)
 {
-//  wpa_printf(MSG_DEBUG,"%s 0x%08x %d",__FUNCTION__,p->Oid,p->Length);
+//  wpa_printf(MSG_DEBUG,"%s 0x%08x %d",__func__,p->Oid,p->Length);	// ToDo: does it work?
 
     ULONG ParmInOut,DataInOut,rc ;
     ULONG Paras[10] ;
@@ -94,7 +101,7 @@ int PacketRequest( void *Handle, int Set, PACKET_OID_DATA *p)
     if( rc == 0 )p->Length = Paras[2]  ;
     if( Paras[1]||rc){
 
-        wpa_printf(MSG_DEBUG,"%s 0x%08lx %ld 0x%08lx 0x%08lx",__FUNCTION__,rc,Paras[2],Paras[3],p->Oid);
+        wpa_printf(MSG_DEBUG,"%s 0x%08lx %ld 0x%08lx 0x%08lx",__func__,rc,Paras[2],Paras[3],p->Oid);	// ToDo: does it work?
         return 0 ;
     }
     return 1;
@@ -169,7 +176,7 @@ int PacketGetAdapterNames( char *Names, ULONG *length)
 {
     char myName[32] ;
 
-    wpa_printf(MSG_DEBUG,"%s",__FUNCTION__);
+    wpa_printf(MSG_DEBUG,"%s",__func__);	// ToDo: does it work?
     int i,l,p=0,lan ;
     for( i = 0 ; i < 8 ; i++ ){
 
@@ -192,7 +199,7 @@ int PacketGetAdapterNames( char *Names, ULONG *length)
     }
     if (*length == 1)
        wpa_printf(MSG_ERROR,"%s error: cannot find Genmac V%u.%02u or better",
-                   __FUNCTION__,
+                   __func__,		// ToDo: does it work?
                    MAJOR_VERSION( GENMAC_MINVERSION_WPA),
                    MINOR_VERSION( GENMAC_MINVERSION_WPA));
 
@@ -214,7 +221,7 @@ void * PacketOpenAdapter( char *name)
         }
     }
 
-    wpa_printf(MSG_DEBUG,"%s %s %s",__FUNCTION__,name,devname);
+    wpa_printf(MSG_DEBUG,"%s %s %s",__func__,name,devname);		// ToDo: does it work?
 
     long openmode,rc,Handle,Action;
     openmode = OPEN_FLAGS_NOINHERIT|OPEN_ACCESS_READWRITE|OPEN_SHARE_DENYNONE;
@@ -225,7 +232,7 @@ void * PacketOpenAdapter( char *name)
 //----------------------------------------------------------------------------
 int PacketCloseAdapter( void *Handle)
 {
-    wpa_printf(MSG_DEBUG,"%s",__FUNCTION__);
+    wpa_printf(MSG_DEBUG,"%s",__func__);		// ToDo: does it work?
     return 0 ;
 }
 //----------------------------------------------------------------------------
@@ -280,7 +287,7 @@ int PacketReceiveStart( void *Handle )
             PacketReceive( Handle, buf);
 
         // wait a while before next try
-        wpa_printf(MSG_DEBUG,"%s wait for driver being ready", __FUNCTION__);
+        wpa_printf(MSG_DEBUG,"%s wait for driver being ready", __func__);	// ToDo: does it work?
         os_sleep( 1,0);
         }
     }

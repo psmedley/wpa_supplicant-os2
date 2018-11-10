@@ -3075,6 +3075,11 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 				"MFP: require MFP");
 			params.mgmt_frame_protection =
 				MGMT_FRAME_PROTECTION_REQUIRED;
+#ifdef CONFIG_OWE
+		} else if (!rsn && (ssid->key_mgmt & WPA_KEY_MGMT_OWE) &&
+			   !ssid->owe_only) {
+			params.mgmt_frame_protection = NO_MGMT_FRAME_PROTECTION;
+#endif /* CONFIG_OWE */
 		}
 	}
 #endif /* CONFIG_IEEE80211W */
@@ -3302,6 +3307,7 @@ static void wpa_supplicant_enable_one_network(struct wpa_supplicant *wpa_s,
 		return;
 
 	ssid->disabled = 0;
+	ssid->owe_transition_bss_select_count = 0;
 	wpas_clear_temp_disabled(wpa_s, ssid, 1);
 	wpas_notify_network_enabled_changed(wpa_s, ssid);
 
@@ -3566,6 +3572,8 @@ void wpa_supplicant_select_network(struct wpa_supplicant *wpa_s,
 	wpa_s->disconnected = 0;
 	wpa_s->reassociate = 1;
 	wpa_s->last_owe_group = 0;
+	if (ssid)
+		ssid->owe_transition_bss_select_count = 0;
 
 	if (wpa_s->connect_without_scan ||
 	    wpa_supplicant_fast_associate(wpa_s) != 1) {
@@ -3894,7 +3902,7 @@ static int select_driver(struct wpa_supplicant *wpa_s, int i)
 	if (wpa_drivers[i]->global_init && global->drv_priv[i] == NULL) {
 		global->drv_priv[i] = wpa_drivers[i]->global_init(global);
 		if (global->drv_priv[i] == NULL) {
-			wpa_printf(MSG_ERROR, "Failed to initialize driver "
+			wpa_printf(MSG_ERROR, "select: Failed to initialize driver "
 				   "'%s'", wpa_drivers[i]->name);
 			return -1;
 		}
@@ -5277,7 +5285,7 @@ next_driver:
 			driver = pos + 1;
 			goto next_driver;
 		}
-		wpa_msg(wpa_s, MSG_ERROR, "Failed to initialize driver "
+		wpa_msg(wpa_s, MSG_ERROR, "init: Failed to initialize driver "
 			"interface");
 		return -1;
 	}

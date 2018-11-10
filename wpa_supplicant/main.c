@@ -341,11 +341,11 @@ int main(int argc, char *argv[])
 	exitcode = 0;
 	global = wpa_supplicant_init(&params);
 	if (global == NULL) {
-		wpa_printf(MSG_ERROR, "Failed to initialize wpa_supplicant");
+		wpa_printf(MSG_ERROR, "\nFailed to initialize wpa_supplicant");
 		exitcode = -1;
 		goto out;
 	} else {
-		wpa_printf(MSG_INFO, "Successfully initialized "
+		wpa_printf(MSG_INFO, "\nSuccessfully initialized "
 			   "%s", wpa_supplicant_version);
 	}
 

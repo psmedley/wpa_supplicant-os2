@@ -1,1 +1,1 @@
-wpa_supplicant.exe -i lan2 -C dummy
+wpa_supplicant.exe %1 %2 %3 -i lan2 -C dummy

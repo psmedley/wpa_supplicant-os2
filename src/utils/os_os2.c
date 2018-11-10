@@ -13,15 +13,21 @@
  *
  * See README and COPYING for more details.
  */
+
+#include <os2safe.h>		// 20181101 AB, not really necessary as _udefault is used in main
+												//		but good practice in case parts of code used otherwise ...
+#include <emx/umalloc.h>
+
 #include "includes.h"
 #include "os.h"
-#include "common.h"
 
 #define INCL_ERRORS
 #define INCL_DOS
 #define INCL_VIO
 #define INCL_WIN
 #include <os2.h>
+
+#include "common.h"		// includes os2.h too so this has to be below the above INCL_ #defines
 
 // ---------- helper functions
 
@@ -74,12 +80,12 @@ unsigned short bswap_16( unsigned short us )
     return (us & 0xFF)|(us >> 8);
 }
 */
-unsigned int  alarm(unsigned int a)
+/*unsigned int  alarm(unsigned int a)
 {
     sleep( a);
     return 0 ;
 }
-
+*/
 // ------------------------------------------------------------
 
 void os_sleep(os_time_t sec, os_time_t usec)
@@ -236,19 +242,29 @@ int os_program_init(void)
    PPIB ppib;
    PTIB ptib;
    CHAR szExecutable[ _MAX_PATH];
-   PSZ  pszFilename;
+   //PSZ  pszFilename;
+   const char *pszFilename;		// ToDo: PCSZ ???
 
-   PSZ pszParms;
+   //PSZ pszParms;
+	 const char *pszParms;		// ToDo: PCSZ ???
    BOOL fResize = FALSE;
-   PSZ pszResizeValues;
+   //PSZ pszResizeValues;
+	 const char *pszResizeValues;		// ToDo: PCSZ ???
    VIOMODEINFO vmi;
 
-   // identify process - get process info
+   		// ToDo: should be not needed with os2safe...
+   // 20181101 AB setting default heap to low memory (see github.com/bitwiseworks/libcx)
+	 // 	since LIBCx 0.6.1 linker option -lcx would lead to use high memory by default when no LIBCX_HIGHMEM envvar is set
+	 //		As we need driver interface to genamac this is not possible here.
+	 _um_regular_heap = _linitheap();
+	 _udefault(_um_regular_heap);	
+	
+	 // identify process - get process info
    if (DosGetInfoBlocks( &ptib, &ppib))
       return 0;
    memset( szExecutable, 0, sizeof( szExecutable));
    DosQueryModuleName( ppib->pib_hmte, sizeof( szExecutable), szExecutable);
-   pszFilename = (PSZ) strrchr( szExecutable, '\\');
+   pszFilename = strrchr( szExecutable, '\\');
 
    // perform init code for wpa supplicant
    // increas priority to keep the key exchange alive
