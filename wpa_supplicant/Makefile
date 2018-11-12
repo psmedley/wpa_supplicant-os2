@@ -1904,9 +1904,9 @@ $(OBJS_c) $(OBJS_t) $(OBJS_t2) $(OBJS) $(BCHECK) $(EXTRA_progs): .config
 
 wpa_supplicant: $(BCHECK) $(OBJS) $(EXTRA_progs)
 	$(QUIET)cmd /c bldlvl.cmd
-	@$(E) "  OBJS " $(OBJS)
-	@$(E) "  LIBS " $(LIBS)
-	@$(E) "  EXTRALIBS " $(EXTRALIBS)
+#	@$(E) "  OBJS " $(OBJS)
+#	@$(E) "  LIBS " $(LIBS)
+#	@$(E) "  EXTRALIBS " $(EXTRALIBS)
 	$(Q)$(LDO) $(LDFLAGS) -o wpa_supplicant $(OBJS) $(LIBS) $(EXTRALIBS) bldlvl.def
 	@$(E) "  LD " $@
 
