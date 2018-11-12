@@ -1907,8 +1907,7 @@ wpa_supplicant: $(BCHECK) $(OBJS) $(EXTRA_progs)
 	@$(E) "  OBJS " $(OBJS)
 	@$(E) "  LIBS " $(LIBS)
 	@$(E) "  EXTRALIBS " $(EXTRALIBS)
-#	$(Q)$(LDO) $(LDFLAGS) -o wpa_supplicant $(OBJS) $(LIBS) $(EXTRALIBS) bldlvl.def
-	$(LDO) $(LDFLAGS) -o wpa_supplicant $(OBJS) $(LIBS) $(EXTRALIBS) bldlvl.def
+	$(Q)$(LDO) $(LDFLAGS) -o wpa_supplicant $(OBJS) $(LIBS) $(EXTRALIBS) bldlvl.def
 	@$(E) "  LD " $@
 
 eapol_test: $(OBJS_t)

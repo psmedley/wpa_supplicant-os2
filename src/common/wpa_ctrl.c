@@ -411,14 +411,14 @@ struct wpa_ctrl * wpa_ctrl_open(const char *ctrl_path)
 #ifdef CONFIG_CTRL_IFACE_UDP_IPV6
 		char addr[INET6_ADDRSTRLEN];
 		//wpa_printf(MSG_ERROR, "connect(%s:%d) failed: %s",					// ToDo:AB
-		printf(/*MSG_ERROR,*/ "connect(%s:%d) failed: %s",			 			// 20180501 AB maybe not reachable, use printf		
+		printf(/*MSG_ERROR,*/ "connect(%s:%d) failed: %s",			 			// 20181111 AB not reachable, use printf instead 	
 			   inet_ntop(AF_INET6, &ctrl->dest.sin6_addr, addr,
 				     sizeof(ctrl->dest)),
 			   ntohs(ctrl->dest.sin6_port),
 			   strerror(errno));
 #else /* CONFIG_CTRL_IFACE_UDP_IPV6 */
 		//wpa_printf(MSG_ERROR, "connect(%s:%d) failed: %s",					// ToDo:AB
-		printf(/*MSG_ERROR,*/ "connect(%s:%d) failed: %s",			 			// 20180501 AB maybe not reachable, use printf			
+		printf(/*MSG_ERROR,*/ "connect(%s:%d) failed: %s",			 			// 20181111 AB not reachable, use printf instead		
 				 inet_ntoa(ctrl->dest.sin_addr),
 			   ntohs(ctrl->dest.sin_port),
 			   strerror(errno));
