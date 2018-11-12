@@ -14,6 +14,10 @@
  * See README and COPYING for more details.
  */
 
+#ifdef __EMX__
+#define OS2EMX_PLAIN_CHAR
+#endif
+
 #include <os2safe.h>		// 20181101 AB, not really necessary as _udefault is used in main
 												//		but good practice in case parts of code used otherwise ...
 #include <emx/umalloc.h>
@@ -235,24 +239,20 @@ char * os_rel2abs_path(const char *rel_path)
         free(buf);
         return ret;
 }
-
 int os_program_init(void)
 {
    APIRET rc;
    PPIB ppib;
    PTIB ptib;
    CHAR szExecutable[ _MAX_PATH];
-   //PSZ  pszFilename;
-   const char *pszFilename;		// ToDo: PCSZ ???
+   PSZ  pszFilename;
 
-   //PSZ pszParms;
-	 const char *pszParms;		// ToDo: PCSZ ???
+   PSZ pszParms;
    BOOL fResize = FALSE;
-   //PSZ pszResizeValues;
-	 const char *pszResizeValues;		// ToDo: PCSZ ???
+   PSZ pszResizeValues;
    VIOMODEINFO vmi;
 
-   		// ToDo: should be not needed with os2safe...
+   // ToDo: should be not needed with os2safe...
    // 20181101 AB setting default heap to low memory (see github.com/bitwiseworks/libcx)
 	 // 	since LIBCx 0.6.1 linker option -lcx would lead to use high memory by default when no LIBCX_HIGHMEM envvar is set
 	 //		As we need driver interface to genamac this is not possible here.
