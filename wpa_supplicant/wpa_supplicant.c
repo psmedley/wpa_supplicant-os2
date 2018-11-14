@@ -1645,6 +1645,10 @@ static void wpas_ext_capab_byte(struct wpa_supplicant *wpa_s, u8 *pos, int idx)
 	case 0: /* Bits 0-7 */
 		break;
 	case 1: /* Bits 8-15 */
+		if (wpa_s->conf->coloc_intf_reporting) {
+			/* Bit 13 - Collocated Interference Reporting */
+			*pos |= 0x20;
+		}
 		break;
 	case 2: /* Bits 16-23 */
 #ifdef CONFIG_WNM
@@ -3902,7 +3906,7 @@ static int select_driver(struct wpa_supplicant *wpa_s, int i)
 	if (wpa_drivers[i]->global_init && global->drv_priv[i] == NULL) {
 		global->drv_priv[i] = wpa_drivers[i]->global_init(global);
 		if (global->drv_priv[i] == NULL) {
-			wpa_printf(MSG_ERROR, "select: Failed to initialize driver "
+			wpa_printf(MSG_ERROR, "Failed to initialize driver "
 				   "'%s'", wpa_drivers[i]->name);
 			return -1;
 		}
@@ -5285,7 +5289,7 @@ next_driver:
 			driver = pos + 1;
 			goto next_driver;
 		}
-		wpa_msg(wpa_s, MSG_ERROR, "init: Failed to initialize driver "
+		wpa_msg(wpa_s, MSG_ERROR, "Failed to initialize driver "
 			"interface");
 		return -1;
 	}

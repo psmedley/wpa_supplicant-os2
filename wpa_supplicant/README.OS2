@@ -69,7 +69,7 @@ History:
 - lot of changes from official repository are merged to the OS/2 version
   including fix for KRACK (don't know if and how this influences the OS/2
   version though), OS/2 sources are on a par with official development sources
-  (autumn 2018)
+  as of 20181114
 - added ExceptQ support (now builds against libcx)
 - added pmprintf logging (if pmprintf.dll is found on target system)
 - cleaned up build system for smoothly building on current yum/rpm installations

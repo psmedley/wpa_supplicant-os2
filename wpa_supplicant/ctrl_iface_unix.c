@@ -926,7 +926,7 @@ static void wpa_supplicant_ctrl_iface_send(struct wpa_supplicant *wpa_s,
 	msg.msg_iovlen = idx;
 
 	dl_list_for_each_safe(dst, next, ctrl_dst, struct wpa_ctrl_dst, list) {
-		int _errnoAB;					// 201804xx AB errno is used on OS/2 so change to something else
+		int _errnoAB;					// 201804xx AB _errno is used on OS/2 - emx so change to something else
 		char txt[200];
 
 		if (level < dst->debug_level)
