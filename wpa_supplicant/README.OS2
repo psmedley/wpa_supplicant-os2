@@ -63,6 +63,20 @@ Installation:
 - When using xwlan/wlanstat the approbiate inst*.cmd places the files as needed
 -
 
+Resizing window:
+----------------
+When starting wpa_supplicant with -r option you can specifiy the VIO window
+size by using environemnt variable WPA_SUPPLICANT_RESIZE. F.i. 'set
+WPA_SUPPLICANT_RESIZE=150,40' before starting the supplicant will resize the
+window to 150 columns and 40 rows. Though same restrictions as with all VIO
+windows (max. 8160 chars in total) applies. See 'mode' command. If
+WPA_SUPPLICANT_RESIZE is set but not with two numbers spearated by comma
+('set WPA_SUPPLICANT_RESIZE=1') default 80,102 is used.
+
+20181201 currently a hack
+ToDo: change resize without the need of env var
+===============================================
+
 History:
 --------
 20181104 v2.7-devel (OS/2-RC4)

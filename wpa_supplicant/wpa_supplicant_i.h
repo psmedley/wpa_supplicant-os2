@@ -301,6 +301,8 @@ struct wpa_global {
 #endif /* CONFIG_WIFI_DISPLAY */
 
 	struct psk_list_entry *add_psk; /* From group formation */
+	unsigned int win_size_col;
+	unsigned int win_size_row;
 };
 
 

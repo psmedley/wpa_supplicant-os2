@@ -90,6 +90,7 @@ static void usage(void)
 	       "  -p = driver parameters\n"
 	       "  -P = PID file\n"
 	       "  -q = decrease debugging verbosity (-qq even less)\n"
+	       "  -r = resize window to env var (f.i. 'set WPA_SUPPLICANT_RESIZE=150,40')\n"
 #ifdef CONFIG_DEBUG_SYSLOG
 	       "  -s = log output to syslog instead of stdout\n"
 #endif /* CONFIG_DEBUG_SYSLOG */
@@ -201,7 +202,7 @@ int main(int argc, char *argv[])
 
 	for (;;) {
 		c = getopt(argc, argv,
-			   "b:Bc:C:D:de:f:g:G:hi:I:KLMm:No:O:p:P:qsTtuvW");
+			   "b:Bc:C:D:de:f:g:G:hi:I:KLMm:No:O:p:P:qrsTtuvW");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -281,6 +282,9 @@ int main(int argc, char *argv[])
 			break;
 		case 'q':
 			params.wpa_debug_level++;
+			break;
+		case 'r':
+			// OS/2 allow resize in os_program_init()
 			break;
 #ifdef CONFIG_DEBUG_SYSLOG
 		case 's':

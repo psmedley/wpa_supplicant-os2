@@ -252,7 +252,7 @@ int os_program_init(void)
    PSZ pszResizeValues;
    VIOMODEINFO vmi;
 
-   // ToDo: should be not needed with os2safe...
+   // ToDo: should be not needed with os2safe... but is!
    // 20181101 AB setting default heap to low memory (see github.com/bitwiseworks/libcx)
 	 // 	since LIBCx 0.6.1 linker option -lcx would lead to use high memory by default when no LIBCX_HIGHMEM envvar is set
 	 //		As we need driver interface to genamac this is not possible here.
@@ -275,8 +275,9 @@ int os_program_init(void)
 
       // check if verbose parm has been specified
       pszParms = ppib->pib_pchcmd + strlen( ppib->pib_pchcmd) + 1;
-      fResize =  (strstr( pszParms, "-d") != NULL);
-      if (fResize)
+//20181127 AB allow resize with -r instead -d
+      fResize =  (strstr( pszParms, "-r") != NULL);
+			if (fResize)
          {
          // increase lines in VIO window
          memset( &vmi, 0, sizeof( VIOMODEINFO));
