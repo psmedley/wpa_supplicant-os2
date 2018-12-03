@@ -200,15 +200,12 @@ char * os_rel2abs_path(const char *rel_path)
 {
         char *buf = NULL, *cwd, *ret;
         size_t len = 128, cwd_len, rel_len, ret_len;
-        printf("os_rel2abs_path\n");
-        printf("  path=%s\n", rel_path);
         if (!rel_path)
           { // no valid rel_path
           return 0;
           }
         if ((rel_path[0] == '/') || ((rel_path[1] == ':') && ((rel_path[2] == '/') || (rel_path[2] == '\\'))))
                 return strdup(rel_path);
-        printf(" before for\n");
         for (;;) {
                 buf = malloc(len);
                 if (buf == NULL)
@@ -224,7 +221,6 @@ char * os_rel2abs_path(const char *rel_path)
                         break;
                 }
         }
-        printf(" before cwd_len\n");
         cwd_len = strlen(cwd);
         rel_len = strlen(rel_path);
         ret_len = cwd_len + 1 + rel_len + 1;
@@ -235,7 +231,6 @@ char * os_rel2abs_path(const char *rel_path)
                 memcpy(ret + cwd_len + 1, rel_path, rel_len);
                 ret[ret_len - 1] = '\0';
         }
-        printf("ret=%s\n", ret);
         free(buf);
         return ret;
 }

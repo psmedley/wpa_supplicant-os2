@@ -768,7 +768,7 @@ static xml_node_t * build_sub_rem_resp(struct hs20_svc *ctx,
 	}
 
 	snprintf(buf, sizeof(buf),
-		 "./Wi-Fi/%s/PerProviderSubscription/Credential1/Credential",
+		 "./Wi-Fi/%s/PerProviderSubscription/Cred01/Credential",
 		 realm);
 
 	if (add_update_node(ctx, spp_node, ns, buf, cred) < 0) {
@@ -834,7 +834,7 @@ static xml_node_t * policy_remediation(struct hs20_svc *ctx,
 		return NULL;
 
 	snprintf(buf, sizeof(buf),
-		 "./Wi-Fi/%s/PerProviderSubscription/Credential1/Policy",
+		 "./Wi-Fi/%s/PerProviderSubscription/Cred01/Policy",
 		 realm);
 
 	if (add_update_node(ctx, spp_node, ns, buf, policy) < 0) {
@@ -1092,7 +1092,7 @@ static xml_node_t * hs20_policy_update(struct hs20_svc *ctx,
 		return NULL;
 
 	snprintf(buf, sizeof(buf),
-		 "./Wi-Fi/%s/PerProviderSubscription/Credential1/Policy",
+		 "./Wi-Fi/%s/PerProviderSubscription/Cred01/Policy",
 		 realm);
 
 	if (add_update_node(ctx, spp_node, ns, buf, policy) < 0) {
@@ -1266,7 +1266,7 @@ static xml_node_t * build_pps(struct hs20_svc *ctx,
 			      const char *pw, const char *cert,
 			      int machine_managed, const char *test)
 {
-	xml_node_t *pps, *c, *trust, *aaa, *aaa1, *upd, *homesp;
+	xml_node_t *pps, *c, *trust, *aaa, *aaa1, *upd, *homesp, *p;
 	xml_node_t *cred, *eap, *userpw;
 
 	pps = xml_node_create_root(ctx->xml, NULL, NULL, NULL,
@@ -1276,7 +1276,7 @@ static xml_node_t * build_pps(struct hs20_svc *ctx,
 
 	add_text_node(ctx, pps, "UpdateIdentifier", "1");
 
-	c = xml_node_create(ctx->xml, pps, NULL, "Credential1");
+	c = xml_node_create(ctx->xml, pps, NULL, "Cred01");
 
 	add_text_node(ctx, c, "CredentialPriority", "1");
 
@@ -1295,9 +1295,26 @@ static xml_node_t * build_pps(struct hs20_svc *ctx,
 				   "aaa_trust_root_cert_fingerprint");
 	}
 
+	if (test && os_strcmp(test, "corrupt_polupd_hash") == 0) {
+		debug_print(ctx, 1,
+			    "TEST: Corrupt PPS/Cred*/Policy/PolicyUpdate/Trustroot/CertSHA256FingerPrint");
+		p = xml_node_create(ctx->xml, c, NULL, "Policy");
+		upd = xml_node_create(ctx->xml, p, NULL, "PolicyUpdate");
+		add_text_node(ctx, upd, "UpdateInterval", "30");
+		add_text_node(ctx, upd, "UpdateMethod", "SPP-ClientInitiated");
+		add_text_node(ctx, upd, "Restriction", "Unrestricted");
+		add_text_node_conf(ctx, realm, upd, "URI", "policy_url");
+		trust = xml_node_create(ctx->xml, upd, NULL, "TrustRoot");
+		add_text_node_conf(ctx, realm, trust, "CertURL",
+				   "policy_trust_root_cert_url");
+		add_text_node_conf_corrupt(ctx, realm, trust,
+					   "CertSHA256Fingerprint",
+					   "policy_trust_root_cert_fingerprint");
+	}
+
 	upd = xml_node_create(ctx->xml, c, NULL, "SubscriptionUpdate");
 	add_text_node(ctx, upd, "UpdateInterval", "4294967295");
-	add_text_node(ctx, upd, "UpdateMethod", "ClientInitiated");
+	add_text_node(ctx, upd, "UpdateMethod", "SPP-ClientInitiated");
 	add_text_node(ctx, upd, "Restriction", "HomeSP");
 	add_text_node_conf(ctx, realm, upd, "URI", "spp_http_auth_url");
 	trust = xml_node_create(ctx->xml, upd, NULL, "TrustRoot");
@@ -1548,7 +1565,7 @@ static xml_node_t * hs20_user_input_free_remediation(struct hs20_svc *ctx,
 		return NULL;
 
 	snprintf(buf, sizeof(buf),
-		 "./Wi-Fi/%s/PerProviderSubscription/Credential1/Credential",
+		 "./Wi-Fi/%s/PerProviderSubscription/Cred01/Credential",
 		 realm);
 
 	if (add_update_node(ctx, spp_node, ns, buf, cred) < 0) {
@@ -2245,6 +2262,9 @@ static xml_node_t * hs20_spp_update_response(struct hs20_svc *ctx,
 					      "", dmacc);
 			free(val);
 		}
+		if (oper == POLICY_UPDATE)
+			db_update_val(ctx, user, realm, "polupd_done", "1",
+				      dmacc);
 		ret = build_spp_exchange_complete(
 			ctx, session_id,
 			"Exchange complete, release TLS connection", NULL);

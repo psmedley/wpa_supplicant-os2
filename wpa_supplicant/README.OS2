@@ -33,8 +33,8 @@ wpa_supplicant package for xwlan/wlanstat
 ------------------------------------------------------------------------------
 Author:          Jouni Malinen and contributors
                  Ported to OS/2 by Andreas Buchinger
-Last update:     20181104
-Current status:  v2.7-devel (OS/2-RC4)
+Last update:     20181203
+Current status:  v2.7 (OS/2) GA
 Home page:       https://bitbucket.org/Andi_B/os-2-wpa_supplicant/
 								 (http://trac.netlabs.org/ports/browser/wpa_supplicant/)
 
@@ -79,6 +79,10 @@ ToDo: change resize without the need of env var
 
 History:
 --------
+20181203 v2.7 (OS/2)
+- merged in all changes up to official v2.7 (20181203)
+- added -r option for resizing VIO window on startup
+
 20181104 v2.7-devel (OS/2-RC4)
 - lot of changes from official repository are merged to the OS/2 version
   including fix for KRACK (don't know if and how this influences the OS/2

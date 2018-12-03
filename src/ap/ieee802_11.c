@@ -2922,7 +2922,8 @@ static u16 send_assoc_resp(struct hostapd_data *hapd, struct sta_info *sta,
 #endif /* CONFIG_IEEE80211R_AP */
 
 #ifdef CONFIG_OWE
-	if (sta && (hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_OWE))
+	if (sta && status_code == WLAN_STATUS_SUCCESS &&
+	    (hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_OWE))
 		p = wpa_auth_write_assoc_resp_owe(sta->wpa_sm, p,
 						  buf + buflen - p,
 						  ies, ies_len);
@@ -3069,7 +3070,7 @@ static u16 send_assoc_resp(struct hostapd_data *hapd, struct sta_info *sta,
 
 #ifdef CONFIG_OWE
 	if ((hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_OWE) &&
-	    sta && sta->owe_ecdh &&
+	    sta && sta->owe_ecdh && status_code == WLAN_STATUS_SUCCESS &&
 	    wpa_auth_sta_key_mgmt(sta->wpa_sm) == WPA_KEY_MGMT_OWE) {
 		struct wpabuf *pub;
 
@@ -3752,15 +3753,23 @@ static int handle_action(struct hostapd_data *hapd,
 			 unsigned int freq)
 {
 	struct sta_info *sta;
-	sta = ap_get_sta(hapd, mgmt->sa);
+	u8 *action __maybe_unused;
 
-	if (len < IEEE80211_HDRLEN + 1) {
+	if (len < IEEE80211_HDRLEN + 2 + 1) {
 		hostapd_logger(hapd, mgmt->sa, HOSTAPD_MODULE_IEEE80211,
 			       HOSTAPD_LEVEL_DEBUG,
 			       "handle_action - too short payload (len=%lu)",
 			       (unsigned long) len);
 		return 0;
 	}
+
+	action = (u8 *) &mgmt->u.action.u;
+	wpa_printf(MSG_DEBUG, "RX_ACTION category %u action %u sa " MACSTR
+		   " da " MACSTR " len %d freq %u",
+		   mgmt->u.action.category, *action,
+		   MAC2STR(mgmt->sa), MAC2STR(mgmt->da), (int) len, freq);
+
+	sta = ap_get_sta(hapd, mgmt->sa);
 
 	if (mgmt->u.action.category != WLAN_ACTION_PUBLIC &&
 	    (sta == NULL || !(sta->flags & WLAN_STA_ASSOC))) {
