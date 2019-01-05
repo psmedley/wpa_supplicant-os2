@@ -246,6 +246,8 @@ int os_program_init(void)
    BOOL fResize = FALSE;
    PSZ pszResizeValues;
    VIOMODEINFO vmi;
+	 UINT column, row;
+	 char character = ' ';
 
    // ToDo: should be not needed with os2safe... but is!
    // 20181101 AB setting default heap to low memory (see github.com/bitwiseworks/libcx)
@@ -263,14 +265,14 @@ int os_program_init(void)
 
    // perform init code for wpa supplicant
    // increas priority to keep the key exchange alive
-   if ((pszFilename) && (!stricmp( pszFilename, "\\WPA_SUPPLICANT.EXE")))
+	 if ((pszFilename) && (!stricmp( pszFilename, "\\WPA_SUPPLICANT.EXE")))
       {
       // increase priority
       DosSetPriority( PRTYS_PROCESS, PRTYC_FOREGROUNDSERVER , 0, ppib->pib_ulpid);
 
       // check if verbose parm has been specified
+			// 20181127 AB use resize option -r instead -d
       pszParms = ppib->pib_pchcmd + strlen( ppib->pib_pchcmd) + 1;
-//20181127 AB allow resize with -r instead -d
       fResize =  (strstr( pszParms, "-r") != NULL);
 			if (fResize)
          {
@@ -284,7 +286,8 @@ int os_program_init(void)
             // determine resize values
             pszResizeValues = getenv( "WPA_SUPPLICANT_RESIZE");
             if ((!pszResizeValues) ||
-               (sscanf( pszResizeValues, "%u,%u", (UINT *) &vmi.col, (UINT *) &vmi.row) != 2))
+//               (sscanf( pszResizeValues, "%u,%u", (USHORT *) &vmi.col, (USHORT *) &vmi.row) != 2))
+               (sscanf( pszResizeValues, "%u,%u", (UINT *) &column, (UINT *) &row) != 2))
                {
                // available space: 8160 characters
                // some optimum values:
@@ -292,22 +295,34 @@ int os_program_init(void)
                // 68 * 120 = 8160
                // 60 * 136 = 8160
                // set defaults
-               vmi.col = 80;
-               vmi.row = 102;
+               vmi.col = 100;
+               vmi.row = 25;
                }
+						else {
+							 // check max values
+							 if (column > 200) column = 200;
+							 while (column * row > 8160) row--;
+
+							 // 20181208 proper cast for vio vars
+							 vmi.col = (USHORT) column;
+               vmi.row = (USHORT) row;
+							}
 
             // set VIO mode
             rc = VioSetMode( &vmi, 0);
-            }
+						// clear screen
+            VioScrollUp   (0, 0, 10000, 10000, 10000, &character, 0);
+						}
          }
-      }
 
+		  }
    return 0;
 }
 
 void os_program_deinit(void)
 {
-        return;
+  xPmPrintf("-------------      os_program_deinit");
+	return;
 }
 
 int os_setenv(const char *name, const char *value, int overwrite)
