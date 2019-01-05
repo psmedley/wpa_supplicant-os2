@@ -10,15 +10,15 @@
 
 #include "includes.h"
 #if defined(__APPLE__) || defined(__GLIBC__)
-#include <net/bpf.h>
+	#include <net/bpf.h>
 #endif /* __APPLE__ */
 #include <pcap.h>
 
 #include <sys/ioctl.h>
 #ifdef __sun__
-#include <libdlpi.h>
+	#include <libdlpi.h>
 #else /* __sun__ */
-#include <sys/sysctl.h>
+	#include <sys/sysctl.h>
 #endif /* __sun__ */
 
 #include <net/if.h>
@@ -33,7 +33,7 @@
 #define WPA_DEBUG       MSG_DEBUG
 
 #if defined(__OS2__)
-#include "packet32.h"
+	#include "packet32.h"
 
 static void *WPA_Event = NULL ;
 
@@ -44,7 +44,7 @@ extern void wpa_driver_ndis_event_media_specific(void *drv,u8*,int);
 
 void wpa_driver_register_event_cb(void *h)
 {
-    WPA_Event = h ;
+	WPA_Event = h ;
 }
 #endif /* __OS2__ */
 
@@ -57,20 +57,20 @@ static const u8 pae_group_addr[ETH_ALEN] =
 	char ifname[100];
 	u8 own_addr[ETH_ALEN];
 	void (*rx_callback)(void *ctx, const u8 *src_addr,
-			    const u8 *buf, size_t len);
+					const u8 *buf, size_t len);
 	void *rx_callback_ctx;
 	int l2_hdr; // whether to include layer 2 (Ethernet) header data
 							// buffers
 }; */
 struct l2_packet_data {
-        char ifname[17];
-        u8 own_addr[ETH_ALEN];
-        void (*rx_callback)(void *ctx, const u8 *src_addr,
-                            const u8 *buf, size_t len);
-        void *rx_callback_ctx;
-        int l2_hdr; /* whether to include layer 2 (Ethernet) header data
-                     * buffers */
-        int fd;
+	char ifname[17];
+	u8 own_addr[ETH_ALEN];
+	void (*rx_callback)(void *ctx, const u8 *src_addr,
+											const u8 *buf, size_t len);
+	void *rx_callback_ctx;
+	int l2_hdr;	/* whether to include layer 2 (Ethernet) header data
+							 * buffers */
+	int fd;
 };
 
 
@@ -83,7 +83,7 @@ int l2_packet_get_own_addr(struct l2_packet_data *l2, u8 *addr)
 
 
 int l2_packet_send(struct l2_packet_data *l2, const u8 *dst_addr, u16 proto,
-		   const u8 *buf, size_t len)
+									 const u8 *buf, size_t len)
 {
 	struct l2_ethhdr *eth = os_malloc(sizeof(*eth) + len);
 
@@ -96,20 +96,20 @@ int l2_packet_send(struct l2_packet_data *l2, const u8 *dst_addr, u16 proto,
 		os_memcpy(eth->h_source, l2->own_addr, ETH_ALEN);
 		eth->h_proto = htons(proto);
 		os_memcpy(eth + 1, buf, len);
-//		ret = pcap_inject(l2->pcap, (u8 *) eth, len + sizeof(*eth));
-//    PacketSend( (void*)l2->fd,Buffer,len+14 );
+		//		ret = pcap_inject(l2->pcap, (u8 *) eth, len + sizeof(*eth));
+		//    PacketSend( (void*)l2->fd,Buffer,len+14 );
 
-// start old
-{  	unsigned char *Buffer = malloc(2000);
-    memcpy(&Buffer[ 0],dst_addr,6);
-    memcpy(&Buffer[ 6],l2->own_addr,6);
-		Buffer[12] = 0x88 ;
-		Buffer[13] = 0x8e ;
-    memcpy(&Buffer[14],buf,len);
-		wpa_hexdump(MSG_DEBUG,"SEND old XXXXXXXX ", Buffer, len);
-}
-// end old 		
-    wpa_hexdump(MSG_DEBUG,"SEND new XXXXXXXX ", (u8 *) eth, len);
+		// start old
+		{   unsigned char *Buffer = malloc(2000);
+			memcpy(&Buffer[ 0],dst_addr,6);
+			memcpy(&Buffer[ 6],l2->own_addr,6);
+			Buffer[12] = 0x88 ;
+			Buffer[13] = 0x8e ;
+			memcpy(&Buffer[14],buf,len);
+			wpa_hexdump(MSG_DEBUG,"SEND old XXXXXXXX ", Buffer, len);
+		}
+		// end old 		
+		wpa_hexdump(MSG_DEBUG,"SEND new XXXXXXXX ", (u8 *) eth, len);
 		ret = PacketSend( (void*)l2->fd, (u8 *) eth, len + sizeof(*eth) );
 		os_free(eth);
 		return ret;
@@ -121,82 +121,75 @@ int l2_packet_send(struct l2_packet_data *l2, const u8 *dst_addr, u16 proto,
 static void l2_packet_receive(int sock, void *eloop_ctx, void *sock_ctx)
 {
 	struct l2_packet_data *l2 = eloop_ctx;
-//	pcap_t *pcap = sock_ctx;
-//	struct pcap_pkthdr hdr;
-//	const u_char *packet;
-//	struct l2_ethhdr *ethhdr;
-//	unsigned char *buf;
-  u8 buf[2300];
-//	size_t len;
+	//	pcap_t *pcap = sock_ctx;
+	//	struct pcap_pkthdr hdr;
+	//	const u_char *packet;
+	//	struct l2_ethhdr *ethhdr;
+	//	unsigned char *buf;
+	u8 buf[2300];
+	//	size_t len;
 
 	int ret = 0;
 
-  /* TODO: receive frame (e.g., recv() using sock */
+	/* TODO: receive frame (e.g., recv() using sock */
+
+	/*	packet = pcap_next(pcap, &hdr);
 	
-/*	packet = pcap_next(pcap, &hdr);
-
-	if (packet == NULL || hdr.caplen < sizeof(*ethhdr))
-		return;
-
-	ethhdr = (struct l2_ethhdr *) packet;
-	if (l2->l2_hdr) {
-		buf = (unsigned char *) ethhdr;
-		len = hdr.caplen;
-	} else {
-		buf = (unsigned char *) (ethhdr + 1);
-		len = hdr.caplen - sizeof(*ethhdr);
-	}
-	l2->rx_callback(l2->rx_callback_ctx, ethhdr->h_source, buf, len);
-*/
+		if (packet == NULL || hdr.caplen < sizeof(*ethhdr))
+			return;
+	
+		ethhdr = (struct l2_ethhdr *) packet;
+		if (l2->l2_hdr) {
+			buf = (unsigned char *) ethhdr;
+			len = hdr.caplen;
+		} else {
+			buf = (unsigned char *) (ethhdr + 1);
+			len = hdr.caplen - sizeof(*ethhdr);
+		}
+		l2->rx_callback(l2->rx_callback_ctx, ethhdr->h_source, buf, len);
+	*/
 
 	ret = PacketReceive((void*)l2->fd,buf);
-	if ( ret & 0x8000000 )
-		{
+	if (ret & 0x8000000) {
 		int len = ret & 0xFFF ;
 		ULONG *ulP = (ULONG*)buf ;
-		
-		//wpa_hexdump(MSG_DEBUG,"STATUS XXXXXX ",buf,len);
-		if ( ulP[0] == 0x4001000b )
-			{
-			wpa_driver_ndis_event_connect(WPA_Event);
-			}
-		else if ( ulP[0] == 0x4001000C )
-			{
-			wpa_driver_ndis_event_disconnect(WPA_Event);
-			}
-		else if ( ulP[0] == 0x40010012 )
-			{
-			wpa_driver_ndis_event_media_specific(WPA_Event,&buf[4],len-4);
-			}
-		return ;
-		}
 
-	if ( ret )
-		{
+		//wpa_hexdump(MSG_DEBUG,"STATUS XXXXXX ",buf,len);
+		if (ulP[0] == 0x4001000b) {
+			wpa_driver_ndis_event_connect(WPA_Event);
+		} else if (ulP[0] == 0x4001000C) {
+			wpa_driver_ndis_event_disconnect(WPA_Event);
+		} else if (ulP[0] == 0x40010012) {
+			wpa_driver_ndis_event_media_specific(WPA_Event,&buf[4],len-4);
+		}
+		return ;
+	}
+
+	if (ret) {
 		//wpa_hexdump(MSG_DEBUG,"RXDATA ",buf,res);
 		l2->rx_callback(l2->rx_callback_ctx, &buf[6], &buf[6+6+2], ret-14);
-		}
+	}
 
 }
 
 static void l2_packet_receive_timeout(void *eloop_ctx, void *timeout_ctx)
 {
-        struct l2_packet_data *l2 = eloop_ctx;
+	struct l2_packet_data *l2 = eloop_ctx;
 
-        void *pcap = timeout_ctx;
+	void *pcap = timeout_ctx;
 
-        /* Register new timeout before calling l2_packet_receive() since
-         * receive handler may free this l2_packet instance (which will
-         * cancel this timeout). */
+	/* Register new timeout before calling l2_packet_receive() since
+	 * receive handler may free this l2_packet instance (which will
+	 * cancel this timeout). */
 
-        eloop_register_timeout(0,100000,l2_packet_receive_timeout,l2,pcap);
-        l2_packet_receive(l2->fd, eloop_ctx, timeout_ctx);
+	eloop_register_timeout(0,100000,l2_packet_receive_timeout,l2,pcap);
+	l2_packet_receive(l2->fd, eloop_ctx, timeout_ctx);
 
 }
 
 
 /*static int l2_packet_init_libpcap(struct l2_packet_data *l2,
-				  unsigned short protocol)
+					unsigned short protocol)
 {
 	bpf_u_int32 pcap_maskp, pcap_netp;
 	char pcap_filter[200], pcap_err[PCAP_ERRBUF_SIZE];
@@ -210,18 +203,18 @@ static void l2_packet_receive_timeout(void *eloop_ctx, void *timeout_ctx)
 		return -1;
 	}
 	if (pcap_datalink(l2->pcap) != DLT_EN10MB &&
-	    pcap_set_datalink(l2->pcap, DLT_EN10MB) < 0) {
+			pcap_set_datalink(l2->pcap, DLT_EN10MB) < 0) {
 		fprintf(stderr, "pcap_set_datalink(DLT_EN10MB): %s\n",
 			pcap_geterr(l2->pcap));
 		return -1;
 	}
 	os_snprintf(pcap_filter, sizeof(pcap_filter),
-		    "not ether src " MACSTR " and "
-		    "( ether dst " MACSTR " or ether dst " MACSTR " ) and "
-		    "ether proto 0x%x",
-		    MAC2STR(l2->own_addr), // do not receive own packets
-		    MAC2STR(l2->own_addr), MAC2STR(pae_group_addr),
-		    protocol);
+				"not ether src " MACSTR " and "
+				"( ether dst " MACSTR " or ether dst " MACSTR " ) and "
+				"ether proto 0x%x",
+				MAC2STR(l2->own_addr), // do not receive own packets
+				MAC2STR(l2->own_addr), MAC2STR(pae_group_addr),
+				protocol);
 	if (pcap_compile(l2->pcap, &pcap_fp, pcap_filter, 1, pcap_netp) < 0) {
 		fprintf(stderr, "pcap_compile: %s\n", pcap_geterr(l2->pcap));
 		return -1;
@@ -268,15 +261,15 @@ static int eth_get(const char *device, u8 ea[ETH_ALEN])
 	retval = dlpi_open(device, &dh, 0);
 	if (retval != DLPI_SUCCESS) {
 		wpa_printf(MSG_ERROR, "dlpi_open error: %s",
-			   dlpi_strerror(retval));
+							 dlpi_strerror(retval));
 		return -1;
 	}
 
 	retval = dlpi_get_physaddr(dh, DL_CURR_PHYS_ADDR, physaddr,
-				   &physaddrlen);
+														 &physaddrlen);
 	if (retval != DLPI_SUCCESS) {
 		wpa_printf(MSG_ERROR, "dlpi_get_physaddr error: %s",
-			   dlpi_strerror(retval));
+							 dlpi_strerror(retval));
 		dlpi_close(dh);
 		return -1;
 	}
@@ -304,10 +297,10 @@ static int eth_get(const char *device, u8 ea[ETH_ALEN])
 		sdl = (struct sockaddr_dl *)(ifm + 1);
 		wpa_printf(MSG_ERROR, "test buf=%-40s", buf);
 		if (ifm->ifm_type != RTM_IFINFO ||
-		    (ifm->ifm_addrs & RTA_IFP) == 0)
+				(ifm->ifm_addrs & RTA_IFP) == 0)
 			continue;
 		if (sdl->sdl_family != AF_LINK || sdl->sdl_nlen == 0 ||
-		    os_memcmp(sdl->sdl_data, device, sdl->sdl_nlen) != 0)
+				os_memcmp(sdl->sdl_data, device, sdl->sdl_nlen) != 0)
 			continue;
 		os_memcpy(ea, LLADDR(sdl), sdl->sdl_alen);
 		break;
@@ -324,15 +317,15 @@ static int eth_get(const char *device, u8 ea[ETH_ALEN])
 
 
 struct l2_packet_data * l2_packet_init(
-	const char *ifname, const u8 *own_addr, unsigned short protocol,
-	void (*rx_callback)(void *ctx, const u8 *src_addr,
-			    const u8 *buf, size_t len),
-	void *rx_callback_ctx, int l2_hdr)
+																			const char *ifname, const u8 *own_addr, unsigned short protocol,
+																			void (*rx_callback)(void *ctx, const u8 *src_addr,
+																													const u8 *buf, size_t len),
+																			void *rx_callback_ctx, int l2_hdr)
 {
 	struct l2_packet_data *l2;
 
-  wpa_printf(WPA_DEBUG,"%s",__func__);		// ToDo: does it work?
-	
+	wpa_printf(WPA_DEBUG,"%s",__func__);		// ToDo: does it work?
+
 	l2 = os_zalloc(sizeof(struct l2_packet_data));
 	if (l2 == NULL)
 		return NULL;
@@ -344,48 +337,49 @@ struct l2_packet_data * l2_packet_init(
 	// 20180817 AB ToDo: next lines remove? does it work with OS/2
 	if (eth_get(l2->ifname, l2->own_addr) < 0) {
 		fprintf(stderr, "Failed to get link-level address for "
-			"interface '%s'.\n", l2->ifname);
-/*		xPmPrintf("Failed to get link-level address for interface '%s'. l2->own_addr=%s", l2->ifname, l2->own_addr);
-		wpa_printf(MSG_ERROR, "Failed to get link-level address for " "interface '%s'.", l2->ifname);
-//		os_free(l2);
-//		return NULL;
-*/	}	
-
-/*	if (l2_packet_init_libpcap(l2, protocol)) {
-		os_free(l2);
-		return NULL;
+						"interface '%s'.\n", l2->ifname);
+		/*		xPmPrintf("Failed to get link-level address for interface '%s'. l2->own_addr=%s", l2->ifname, l2->own_addr);
+				wpa_printf(MSG_ERROR, "Failed to get link-level address for " "interface '%s'.", l2->ifname);
+		//		os_free(l2);
+		//		return NULL;
+		*/
 	}
-*/
-		l2->fd = (int)PacketOpenAdapter(l2->ifname);
-		PacketReceiveStart((void*)l2->fd);
-		if (own_addr)memcpy(l2->own_addr, own_addr, ETH_ALEN);
 
-		eloop_register_timeout(0,100000,l2_packet_receive_timeout,l2,l2);
-//   eloop_register_read_sock(l2->fd, l2_packet_receive, l2, NULL);
+	/*	if (l2_packet_init_libpcap(l2, protocol)) {
+			os_free(l2);
+			return NULL;
+		}
+	*/
+	l2->fd = (int)PacketOpenAdapter(l2->ifname);
+	PacketReceiveStart((void*)l2->fd);
+	if (own_addr)memcpy(l2->own_addr, own_addr, ETH_ALEN);
+
+	eloop_register_timeout(0,100000,l2_packet_receive_timeout,l2,l2);
+	//   eloop_register_read_sock(l2->fd, l2_packet_receive, l2, NULL);
 	return l2;
 }
 
 
 struct l2_packet_data * l2_packet_init_bridge(
-	const char *br_ifname, const char *ifname, const u8 *own_addr,
-	unsigned short protocol,
-	void (*rx_callback)(void *ctx, const u8 *src_addr,
-			    const u8 *buf, size_t len),
-	void *rx_callback_ctx, int l2_hdr)
+																						 const char *br_ifname, const char *ifname, const u8 *own_addr,
+																						 unsigned short protocol,
+																						 void (*rx_callback)(void *ctx, const u8 *src_addr,
+																																 const u8 *buf, size_t len),
+																						 void *rx_callback_ctx, int l2_hdr)
 {
 	return l2_packet_init(br_ifname, own_addr, protocol, rx_callback,
-			      rx_callback_ctx, l2_hdr);
+												rx_callback_ctx, l2_hdr);
 }
 
 
 void l2_packet_deinit(struct l2_packet_data *l2)
 {
-  wpa_printf(WPA_DEBUG,"%s",__func__);		// ToDo: does it work?
-	
+	wpa_printf(WPA_DEBUG,"%s",__func__);		// ToDo: does it work?
+
 	if (l2 != NULL) {
 		if (l2->fd >= 0) {
 			eloop_unregister_read_sock(l2->fd);
-      /* TODO: close connection */
+			/* TODO: close connection */
 			//pcap_close(l2->pcap);
 		}
 		os_free(l2);
@@ -395,41 +389,41 @@ void l2_packet_deinit(struct l2_packet_data *l2)
 
 int l2_packet_get_ip_addr(struct l2_packet_data *l2, char *buf, size_t len)
 {
-//	pcap_if_t *devs, *dev;
-//	struct pcap_addr *addr;
-//	struct sockaddr_in *saddr;
-//	int found = 0;
-//	char err[PCAP_ERRBUF_SIZE + 1];
+	//	pcap_if_t *devs, *dev;
+	//	struct pcap_addr *addr;
+	//	struct sockaddr_in *saddr;
+	//	int found = 0;
+	//	char err[PCAP_ERRBUF_SIZE + 1];
 
-  return -1;
-  /* TODO: get interface IP address */
-	
-/*	if (pcap_findalldevs(&devs, err) < 0) {
-		wpa_printf(MSG_DEBUG, "pcap_findalldevs: %s\n", err);
-		return -1;
-	}
+	return -1;
+	/* TODO: get interface IP address */
 
-	for (dev = devs; dev && !found; dev = dev->next) {
-		if (os_strcmp(dev->name, l2->ifname) != 0)
-			continue;
-
-		addr = dev->addresses;
-		while (addr) {
-			saddr = (struct sockaddr_in *) addr->addr;
-			if (saddr && saddr->sin_family == AF_INET) {
-				os_strlcpy(buf, inet_ntoa(saddr->sin_addr),
-					   len);
-				found = 1;
-				break;
-			}
-			addr = addr->next;
+	/*	if (pcap_findalldevs(&devs, err) < 0) {
+			wpa_printf(MSG_DEBUG, "pcap_findalldevs: %s\n", err);
+			return -1;
 		}
-	}
-
-	pcap_freealldevs(devs);
-
-	return found ? 0 : -1;
-*/
+	
+		for (dev = devs; dev && !found; dev = dev->next) {
+			if (os_strcmp(dev->name, l2->ifname) != 0)
+				continue;
+	
+			addr = dev->addresses;
+			while (addr) {
+				saddr = (struct sockaddr_in *) addr->addr;
+				if (saddr && saddr->sin_family == AF_INET) {
+					os_strlcpy(buf, inet_ntoa(saddr->sin_addr),
+							 len);
+					found = 1;
+					break;
+				}
+				addr = addr->next;
+			}
+		}
+	
+		pcap_freealldevs(devs);
+	
+		return found ? 0 : -1;
+	*/
 }
 
 
@@ -439,7 +433,7 @@ void l2_packet_notify_auth_start(struct l2_packet_data *l2)
 
 
 int l2_packet_set_packet_filter(struct l2_packet_data *l2,
-				enum l2_packet_filter_type type)
+																enum l2_packet_filter_type type)
 {
 	return -1;
 }

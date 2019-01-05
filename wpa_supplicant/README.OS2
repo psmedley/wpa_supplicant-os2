@@ -39,10 +39,10 @@ Home page:       https://bitbucket.org/Andi_B/os-2-wpa_supplicant/
 								 (http://trac.netlabs.org/ports/browser/wpa_supplicant/)
 
 wpa_supplicant was ported to OS/2 for use with xwlan/wlanstat. First port was
-done by Willibald Meyer. Maybe together with Christian Langanke the original
-author of xwlan. Later on Paul Smedley distributed different versions. Finally
-Andreas Buchinger set up the svn repository at netlabs.org with Pauls v2.2
-version and packed this build together.
+done by Willibald Meyer and Christian Langanke. Later on Paul Smedley
+distributed different versions. Finally Andreas Buchinger set up the svn
+repository at netlabs.org with Pauls v2.2 version and packed his build
+together. Current code base is maintained by Andreas Buchinger.
 
 Prerequisite:
 -------------
@@ -79,6 +79,9 @@ ToDo: change resize without the need of env var
 
 History:
 --------
+20181208 v2.7 (OS/2)
+- add checks for resize value limits
+
 20181203 v2.7 (OS/2)
 - merged in all changes up to official v2.7 (20181203)
 - added -r option for resizing VIO window on startup

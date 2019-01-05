@@ -11,21 +11,21 @@
 #include "common.h"
 
 #ifdef CONFIG_DEBUG_SYSLOG
-#include <syslog.h>
+	#include <syslog.h>
 
 int wpa_debug_syslog = 0;
 #endif /* CONFIG_DEBUG_SYSLOG */
 
 #ifdef CONFIG_DEBUG_LINUX_TRACING
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <string.h>
-#include <stdio.h>
+	#include <sys/types.h>
+	#include <sys/stat.h>
+	#include <fcntl.h>
+	#include <string.h>
+	#include <stdio.h>
 
 static FILE *wpa_debug_tracing_file = NULL;
 
-#define WPAS_TRACE_PFX "wpas <%d>: "
+	#define WPAS_TRACE_PFX "wpas <%d>: "
 #endif /* CONFIG_DEBUG_LINUX_TRACING */
 
 
@@ -36,14 +36,13 @@ int wpa_debug_timestamp = 0;
 
 #ifdef CONFIG_ANDROID_LOG
 
-#include <android/log.h>
+	#include <android/log.h>
 
-#ifndef ANDROID_LOG_NAME
-#define ANDROID_LOG_NAME	"wpa_supplicant"
-#endif /* ANDROID_LOG_NAME */
+	#ifndef ANDROID_LOG_NAME
+		#define ANDROID_LOG_NAME	"wpa_supplicant"
+	#endif /* ANDROID_LOG_NAME */
 
 static int wpa_to_android_level(int level)
-{
 	if (level == MSG_ERROR)
 		return ANDROID_LOG_ERROR;
 	if (level == MSG_WARNING)
@@ -57,16 +56,16 @@ static int wpa_to_android_level(int level)
 
 #ifndef CONFIG_NO_STDOUT_DEBUG
 
-#ifdef CONFIG_DEBUG_FILE
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
+	#ifdef CONFIG_DEBUG_FILE
+		#include <sys/types.h>
+		#include <sys/stat.h>
+		#include <fcntl.h>
 
 static FILE *out_file = NULL;
-#endif /* CONFIG_DEBUG_FILE */
+	#endif /* CONFIG_DEBUG_FILE */
 
 
-#ifdef CONFIG_PMPRINTF
+	#ifdef CONFIG_PMPRINTF
 /*
 	20180609 Andreas Buchinger, check if pmprintf.dll is available on this system
 	and if yes use it to output debug messages.
@@ -81,8 +80,8 @@ static FILE *out_file = NULL;
 #include <os2.h>
 #include <errno.h>
 */
-static int xPmPrintfChecked 	= FALSE;
-static int xPmPrintfAvail 		= FALSE;
+static int xPmPrintfChecked   = FALSE;
+static int xPmPrintfAvail     = FALSE;
 
 APIRET xPmPrintfCheckAvail(void);
 
@@ -91,136 +90,125 @@ static ULONG _System (* APIENTRY _I_PmpfSetMacroHeader)( char *Format, va_list a
 static ULONG _System (* APIENTRY _PmPrintf)( char *Format, ... );
 
 ULONG xPmPrintfVa( char *Format, va_list args)
-	{
+{
 	APIRET  rc              = ERROR_INVALID_FUNCTION;				/* Return code                       */
 
 	// now printf via pmprintf.dll if possible
-	if ( xPmPrintfCheckAvail() == NO_ERROR)
-		{
+	if (xPmPrintfCheckAvail() == NO_ERROR) {
 		rc = _PmPrintfVa(Format, args );
-		}
-	return rc;
 	}
+	return rc;
+}
 
 
 ULONG x_I_PmpfSetMacroHeader( char *Format, va_list args )
-	{
+{
 	APIRET  rc              = ERROR_INVALID_FUNCTION;				/* Return code                       */
 
 	// now printf via pmprintf.dll if possible
-	if ( xPmPrintfCheckAvail() == NO_ERROR)
-		{
+	if (xPmPrintfCheckAvail() == NO_ERROR) {
 		rc = _I_PmpfSetMacroHeader(Format, args );
-		}
-	return rc;
 	}
+	return rc;
+}
 
 
 int xPmPrintf( const char *Format, ... )
-	{
-  va_list  args;
+{
+	va_list  args;
 	APIRET  rc              = ERROR_INVALID_FUNCTION;				/* Return code                       */
 
 	// now printf via pmprintf.dll if possible
-	if ( xPmPrintfCheckAvail() == NO_ERROR)
-		{
-    va_start(args, Format);
-    rc = xPmPrintfVa((unsigned char *) Format, args);
-    va_end(args);
-		}
-	return rc;
+	if (xPmPrintfCheckAvail() == NO_ERROR) {
+		va_start(args, Format);
+		rc = xPmPrintfVa((unsigned char *) Format, args);
+		va_end(args);
 	}
+	return rc;
+}
 
 
 APIRET xPmPrintfCheckAvail()
-	{
+{
 	HMODULE hPmprintf;												/* Module handle                     */
 	APIRET  rc              = NO_ERROR;				/* Return code                       */
-	
+
 	// check for pmprintf.dll only once
-	if ( !xPmPrintfChecked )
-		{
-		PSZ      ModuleName     = "PMPRINTF.DLL";  	/* Name of module   */
-		UCHAR    LoadError[256] = "";          			/* Area for Load failure information */
- 		
+	if (!xPmPrintfChecked) {
+		PSZ      ModuleName     = "PMPRINTF.DLL";		/* Name of module   */
+		UCHAR    LoadError[256] = "";								/* Area for Load failure information */
+
 		xPmPrintfChecked = TRUE;
-		if ( DosQueryModuleHandle("PMPRINTF", &hPmprintf) != NO_ERROR ) {
+		if (DosQueryModuleHandle("PMPRINTF", &hPmprintf) != NO_ERROR) {
 			// printf("no PMPRINTF.DLL\n");
-			}
-		else
-			{
-			rc = DosLoadModule(LoadError,        			/* Failure information buffer */
-									sizeof(LoadError),       			/* Size of buffer             */
-									ModuleName,              			/* Module to load             */
-									&hPmprintf);          				/* Module handle returned     */
-			if (rc != NO_ERROR) /* printf("DosLoadModule error: return code = %ld\n", rc) */;
-			else
-				{
+		} else {
+			rc = DosLoadModule(LoadError,							/* Failure information buffer */
+												 sizeof(LoadError),						 /* Size of buffer             */
+												 ModuleName,									 /* Module to load             */
+												 &hPmprintf);									 /* Module handle returned     */
+			if (rc != NO_ERROR)	/* printf("DosLoadModule error: return code = %ld\n", rc) */;
+			else {
 				// printf("Module %s loaded.\n", ModuleName);
-	
+
 				rc = DosQueryProcAddr(hPmprintf,								// Handle to module
 															0,												// ProcName specified
 															"PmPrintfVa",							// ProcName (not specified)
 															(PFN *)&_PmPrintfVa);			// Address returned
-	
+
 				rc |= DosQueryProcAddr(hPmprintf,								// Handle to module
-															0,												// ProcName specified
-															"I_PmpfSetMacroHeader",		// ProcName (not specified)
-															(PFN *)&_I_PmpfSetMacroHeader);			// Address returned
-	
+															 0,												 // ProcName specified
+															 "I_PmpfSetMacroHeader",	 // ProcName (not specified)
+															 (PFN *)&_I_PmpfSetMacroHeader);		 // Address returned
+
 				rc |= DosQueryProcAddr(hPmprintf,								// Handle to module
-															0,												// ProcName specified
-															"PmPrintf",								// ProcName (not specified)
-															(PFN *)&_PmPrintf);				// Address returned
-	
+															 0,												 // ProcName specified
+															 "PmPrintf",							 // ProcName (not specified)
+															 (PFN *)&_PmPrintf);			 // Address returned
+
 				// printf("rc=%ld, hPmprintf=%ld\n", rc, hPmprintf);
-				if ( rc == NO_ERROR )
-					{	// pmprintf.dll found
+				if (rc == NO_ERROR) {	// pmprintf.dll found
 					xPmPrintfAvail = TRUE;
 					// TRACE("");
-					}
-				else
-					{	// no pmprintf.dll
+				} else { // no pmprintf.dll
 					xPmPrintfAvail = FALSE;
 					// TRACE("");
-					}
 				}
 			}
 		}
-	
-	if ( xPmPrintfAvail == TRUE) return NO_ERROR;
-	else return ERROR_INVALID_FUNCTION;
 	}
-#endif /* CONFIG_PMPRINTF */
+
+	if (xPmPrintfAvail == TRUE)	return NO_ERROR;
+	else return ERROR_INVALID_FUNCTION;
+}
+	#endif /* CONFIG_PMPRINTF */
 
 
 void wpa_debug_print_timestamp(void)
 {
-#ifndef CONFIG_ANDROID_LOG
+	#ifndef CONFIG_ANDROID_LOG
 	struct os_time tv;
 
 	if (!wpa_debug_timestamp)
 		return;
 
 	os_get_time(&tv);
-#ifdef CONFIG_DEBUG_FILE
+		#ifdef CONFIG_DEBUG_FILE
 	if (out_file) {
 		fprintf(out_file, "%ld.%06u: ", (long) tv.sec,
-			(unsigned int) tv.usec);
+						(unsigned int) tv.usec);
 	} else
-#endif /* CONFIG_DEBUG_FILE */
-	printf("%ld.%06u: ", (long) tv.sec, (unsigned int) tv.usec);
-#endif /* CONFIG_ANDROID_LOG */
+		#endif /* CONFIG_DEBUG_FILE */
+		printf("%ld.%06u: ", (long) tv.sec, (unsigned int) tv.usec);
+	#endif /* CONFIG_ANDROID_LOG */
 }
 
 
-#ifdef CONFIG_DEBUG_SYSLOG
-#ifndef LOG_HOSTAPD
-#define LOG_HOSTAPD LOG_DAEMON
-#endif /* LOG_HOSTAPD */
+	#ifdef CONFIG_DEBUG_SYSLOG
+		#ifndef LOG_HOSTAPD
+			#define LOG_HOSTAPD LOG_DAEMON
+		#endif /* LOG_HOSTAPD */
 
 void wpa_debug_open_syslog(void)
-{
 	openlog("wpa_supplicant", LOG_PID | LOG_NDELAY, LOG_HOSTAPD);
 	wpa_debug_syslog++;
 }
@@ -236,22 +224,22 @@ void wpa_debug_close_syslog(void)
 static int syslog_priority(int level)
 {
 	switch (level) {
-	case MSG_MSGDUMP:
-	case MSG_DEBUG:
-		return LOG_DEBUG;
-	case MSG_INFO:
-		return LOG_NOTICE;
-	case MSG_WARNING:
-		return LOG_WARNING;
-	case MSG_ERROR:
-		return LOG_ERR;
+		case MSG_MSGDUMP:
+		case MSG_DEBUG:
+			return LOG_DEBUG;
+		case MSG_INFO:
+			return LOG_NOTICE;
+		case MSG_WARNING:
+			return LOG_WARNING;
+		case MSG_ERROR:
+			return LOG_ERR;
 	}
 	return LOG_INFO;
 }
-#endif /* CONFIG_DEBUG_SYSLOG */
+	#endif /* CONFIG_DEBUG_SYSLOG */
 
 
-#ifdef CONFIG_DEBUG_LINUX_TRACING
+	#ifdef CONFIG_DEBUG_LINUX_TRACING
 
 int wpa_debug_open_linux_tracing(void)
 {
@@ -319,7 +307,7 @@ void wpa_debug_close_linux_tracing(void)
 	wpa_debug_tracing_file = NULL;
 }
 
-#endif /* CONFIG_DEBUG_LINUX_TRACING */
+	#endif /* CONFIG_DEBUG_LINUX_TRACING */
 
 
 /**
@@ -339,38 +327,38 @@ void wpa_printf(int level, const char *fmt, ...)
 
 	va_start(ap, fmt);
 	if (level >= wpa_debug_level) {
-#ifdef CONFIG_ANDROID_LOG
+	#ifdef CONFIG_ANDROID_LOG
 		__android_log_vprint(wpa_to_android_level(level),
-				     ANDROID_LOG_NAME, fmt, ap);
-#else /* CONFIG_ANDROID_LOG */
-#ifdef CONFIG_DEBUG_SYSLOG
+												 ANDROID_LOG_NAME, fmt, ap);
+	#else /* CONFIG_ANDROID_LOG */
+		#ifdef CONFIG_DEBUG_SYSLOG
 		if (wpa_debug_syslog) {
 			vsyslog(syslog_priority(level), fmt, ap);
 		} else {
-#endif /* CONFIG_DEBUG_SYSLOG */
-		wpa_debug_print_timestamp();
-#ifdef CONFIG_DEBUG_FILE
-		if (out_file) {
-			vfprintf(out_file, fmt, ap);
-			fprintf(out_file, "\n");
-		} else {
-#endif /* CONFIG_DEBUG_FILE */
-		vprintf(fmt, ap);
-		printf("\n");
-#ifdef CONFIG_PMPRINTF
-		xPmPrintfVa( (char *) fmt, ap);
-#endif /* CONFIG_PMPRINTF */
-#ifdef CONFIG_DEBUG_FILE
+		#endif /* CONFIG_DEBUG_SYSLOG */
+			wpa_debug_print_timestamp();
+		#ifdef CONFIG_DEBUG_FILE
+			if (out_file) {
+				vfprintf(out_file, fmt, ap);
+				fprintf(out_file, "\n");
+			} else {
+		#endif /* CONFIG_DEBUG_FILE */
+				vprintf(fmt, ap);
+				printf("\n");
+		#ifdef CONFIG_PMPRINTF
+				xPmPrintfVa( (char *) fmt, ap);
+		#endif /* CONFIG_PMPRINTF */
+		#ifdef CONFIG_DEBUG_FILE
+			}
+		#endif /* CONFIG_DEBUG_FILE */
+		#ifdef CONFIG_DEBUG_SYSLOG
 		}
-#endif /* CONFIG_DEBUG_FILE */
-#ifdef CONFIG_DEBUG_SYSLOG
-		}
-#endif /* CONFIG_DEBUG_SYSLOG */
-#endif /* CONFIG_ANDROID_LOG */
+		#endif /* CONFIG_DEBUG_SYSLOG */
+	#endif /* CONFIG_ANDROID_LOG */
 	}
 	va_end(ap);
 
-#ifdef CONFIG_DEBUG_LINUX_TRACING
+	#ifdef CONFIG_DEBUG_LINUX_TRACING
 	if (wpa_debug_tracing_file != NULL) {
 		va_start(ap, fmt);
 		fprintf(wpa_debug_tracing_file, WPAS_TRACE_PFX, level);
@@ -379,24 +367,24 @@ void wpa_printf(int level, const char *fmt, ...)
 		fflush(wpa_debug_tracing_file);
 		va_end(ap);
 	}
-#endif /* CONFIG_DEBUG_LINUX_TRACING */
+	#endif /* CONFIG_DEBUG_LINUX_TRACING */
 }
 
 
 static void _wpa_hexdump(int level, const char *title, const u8 *buf,
-			 size_t len, int show)
+												 size_t len, int show)
 {
 	size_t i;
-#ifdef CONFIG_PMPRINTF
-	PSZ	pBuf, pBufStart, pBufEnd;
-	int	BufLen;
-#endif /* CONFIG_PMPRINTF */
+	#ifdef CONFIG_PMPRINTF
+	PSZ pBuf, pBufStart, pBufEnd;
+	int BufLen;
+	#endif /* CONFIG_PMPRINTF */
 
-#ifdef CONFIG_DEBUG_LINUX_TRACING
+	#ifdef CONFIG_DEBUG_LINUX_TRACING
 	if (wpa_debug_tracing_file != NULL) {
 		fprintf(wpa_debug_tracing_file,
-			WPAS_TRACE_PFX "%s - hexdump(len=%lu):",
-			level, title, (unsigned long) len);
+						WPAS_TRACE_PFX "%s - hexdump(len=%lu):",
+						level, title, (unsigned long) len);
 		if (buf == NULL) {
 			fprintf(wpa_debug_tracing_file, " [NULL]\n");
 		} else if (!show) {
@@ -404,15 +392,15 @@ static void _wpa_hexdump(int level, const char *title, const u8 *buf,
 		} else {
 			for (i = 0; i < len; i++)
 				fprintf(wpa_debug_tracing_file,
-					" %02x", buf[i]);
+								" %02x", buf[i]);
 		}
 		fflush(wpa_debug_tracing_file);
 	}
-#endif /* CONFIG_DEBUG_LINUX_TRACING */
+	#endif /* CONFIG_DEBUG_LINUX_TRACING */
 
 	if (level < wpa_debug_level)
 		return;
-#ifdef CONFIG_ANDROID_LOG
+	#ifdef CONFIG_ANDROID_LOG
 	{
 		const char *display;
 		char *strbuf = NULL;
@@ -428,13 +416,13 @@ static void _wpa_hexdump(int level, const char *title, const u8 *buf,
 			strbuf = os_malloc(1 + 3 * slen);
 			if (strbuf == NULL) {
 				wpa_printf(MSG_ERROR, "wpa_hexdump: Failed to "
-					   "allocate message buffer");
+									 "allocate message buffer");
 				return;
 			}
 
 			for (i = 0; i < slen; i++)
 				os_snprintf(&strbuf[i * 3], 4, " %02x",
-					    buf[i]);
+										buf[i]);
 
 			display = strbuf;
 		} else {
@@ -442,15 +430,15 @@ static void _wpa_hexdump(int level, const char *title, const u8 *buf,
 		}
 
 		__android_log_print(wpa_to_android_level(level),
-				    ANDROID_LOG_NAME,
-				    "%s - hexdump(len=%lu):%s%s",
-				    title, (long unsigned int) len, display,
-				    len > slen ? " ..." : "");
+												ANDROID_LOG_NAME,
+												"%s - hexdump(len=%lu):%s%s",
+												title, (long unsigned int) len, display,
+												len > slen ? " ..." : "");
 		bin_clear_free(strbuf, 1 + 3 * slen);
 		return;
 	}
-#else /* CONFIG_ANDROID_LOG */
-#ifdef CONFIG_DEBUG_SYSLOG
+	#else /* CONFIG_ANDROID_LOG */
+		#ifdef CONFIG_DEBUG_SYSLOG
 	if (wpa_debug_syslog) {
 		const char *display;
 		char *strbuf = NULL;
@@ -463,13 +451,13 @@ static void _wpa_hexdump(int level, const char *title, const u8 *buf,
 			strbuf = os_malloc(1 + 3 * len);
 			if (strbuf == NULL) {
 				wpa_printf(MSG_ERROR, "wpa_hexdump: Failed to "
-					   "allocate message buffer");
+									 "allocate message buffer");
 				return;
 			}
 
 			for (i = 0; i < len; i++)
 				os_snprintf(&strbuf[i * 3], 4, " %02x",
-					    buf[i]);
+										buf[i]);
 
 			display = strbuf;
 		} else {
@@ -477,16 +465,16 @@ static void _wpa_hexdump(int level, const char *title, const u8 *buf,
 		}
 
 		syslog(syslog_priority(level), "%s - hexdump(len=%lu):%s",
-		       title, (unsigned long) len, display);
+					 title, (unsigned long) len, display);
 		bin_clear_free(strbuf, 1 + 3 * len);
 		return;
 	}
-#endif /* CONFIG_DEBUG_SYSLOG */
+		#endif /* CONFIG_DEBUG_SYSLOG */
 	wpa_debug_print_timestamp();
-#ifdef CONFIG_DEBUG_FILE
+		#ifdef CONFIG_DEBUG_FILE
 	if (out_file) {
 		fprintf(out_file, "%s - hexdump(len=%lu):",
-			title, (unsigned long) len);
+						title, (unsigned long) len);
 		if (buf == NULL) {
 			fprintf(out_file, " [NULL]");
 		} else if (show) {
@@ -497,40 +485,40 @@ static void _wpa_hexdump(int level, const char *title, const u8 *buf,
 		}
 		fprintf(out_file, "\n");
 	} else {
-#endif /* CONFIG_DEBUG_FILE */
-	printf("%s - hexdump(len=%lu):", title, (unsigned long) len);
-#ifdef CONFIG_PMPRINTF
+		#endif /* CONFIG_DEBUG_FILE */
+		printf("%s - hexdump(len=%lu):", title, (unsigned long) len);
+		#ifdef CONFIG_PMPRINTF
 		BufLen = strlen(title) + len * 3 + 100;		// 20181103 AB, 100 bytes for header/footer
-		if ( (pBuf = pBufStart = os_malloc(BufLen))	== NULL) return;	
-		pBufEnd = pBuf + BufLen;	
+		if ((pBuf = pBufStart = os_malloc(BufLen)) == NULL)	return;
+		pBufEnd = pBuf + BufLen;
 		pBuf += sprintf(pBuf, "%s - hexdump(len=%lu):", title, (unsigned long) len);
-#endif /* CONFIG_PMPRINTF */
-	if (buf == NULL) {
-		printf(" [NULL]");
-#ifdef CONFIG_PMPRINTF
-		if (pBuf < pBufEnd - 20) pBuf += sprintf(pBuf, " [NULL]");
-#endif /* CONFIG_PMPRINTF */
-	} else if (show) {
-		for (i = 0; i < len; i++) {
-			printf(" %02x", buf[i]);
-#ifdef CONFIG_PMPRINTF
-		if (pBuf < pBufEnd - 20) pBuf += sprintf(pBuf, " %02x", buf[i]);
-#endif /* CONFIG_PMPRINTF */
+		#endif /* CONFIG_PMPRINTF */
+		if (buf == NULL) {
+			printf(" [NULL]");
+		#ifdef CONFIG_PMPRINTF
+			if (pBuf < pBufEnd - 20) pBuf += sprintf(pBuf, " [NULL]");
+		#endif /* CONFIG_PMPRINTF */
+		} else if (show) {
+			for (i = 0; i < len; i++) {
+				printf(" %02x", buf[i]);
+		#ifdef CONFIG_PMPRINTF
+				if (pBuf < pBufEnd - 20) pBuf += sprintf(pBuf, " %02x", buf[i]);
+		#endif /* CONFIG_PMPRINTF */
+			}
+		} else {
+			printf(" [REMOVED]");
+		#ifdef CONFIG_PMPRINTF
+			if (pBuf < pBufEnd - 20) pBuf += sprintf(pBuf, " [REMOVED]");
+		#endif /* CONFIG_PMPRINTF */
 		}
-	} else {
-		printf(" [REMOVED]");
-#ifdef CONFIG_PMPRINTF
-		if (pBuf < pBufEnd - 20) pBuf += sprintf(pBuf, " [REMOVED]");
-#endif /* CONFIG_PMPRINTF */
+		printf("\n");
+		#ifdef CONFIG_PMPRINTF
+		xPmPrintf("%s", pBufStart);
+		#endif /* CONFIG_PMPRINTF */
+		#ifdef CONFIG_DEBUG_FILE
 	}
-	printf("\n");
-#ifdef CONFIG_PMPRINTF
-	xPmPrintf("%s", pBufStart);
-#endif /* CONFIG_PMPRINTF */
-#ifdef CONFIG_DEBUG_FILE
-	}
-#endif /* CONFIG_DEBUG_FILE */
-#endif /* CONFIG_ANDROID_LOG */
+		#endif /* CONFIG_DEBUG_FILE */
+	#endif /* CONFIG_ANDROID_LOG */
 }
 
 void wpa_hexdump(int level, const char *title, const void *buf, size_t len)
@@ -546,17 +534,17 @@ void wpa_hexdump_key(int level, const char *title, const void *buf, size_t len)
 
 
 static void _wpa_hexdump_ascii(int level, const char *title, const void *buf,
-			       size_t len, int show)
+															 size_t len, int show)
 {
 	size_t i, llen;
 	const u8 *pos = buf;
 	const size_t line_len = 16;
 
-#ifdef CONFIG_DEBUG_LINUX_TRACING
+	#ifdef CONFIG_DEBUG_LINUX_TRACING
 	if (wpa_debug_tracing_file != NULL) {
 		fprintf(wpa_debug_tracing_file,
-			WPAS_TRACE_PFX "%s - hexdump_ascii(len=%lu):",
-			level, title, (unsigned long) len);
+						WPAS_TRACE_PFX "%s - hexdump_ascii(len=%lu):",
+						level, title, (unsigned long) len);
 		if (buf == NULL) {
 			fprintf(wpa_debug_tracing_file, " [NULL]\n");
 		} else if (!show) {
@@ -565,34 +553,34 @@ static void _wpa_hexdump_ascii(int level, const char *title, const void *buf,
 			/* can do ascii processing in userspace */
 			for (i = 0; i < len; i++)
 				fprintf(wpa_debug_tracing_file,
-					" %02x", pos[i]);
+								" %02x", pos[i]);
 		}
 		fflush(wpa_debug_tracing_file);
 	}
-#endif /* CONFIG_DEBUG_LINUX_TRACING */
+	#endif /* CONFIG_DEBUG_LINUX_TRACING */
 
 	if (level < wpa_debug_level)
 		return;
-#ifdef CONFIG_ANDROID_LOG
+	#ifdef CONFIG_ANDROID_LOG
 	_wpa_hexdump(level, title, buf, len, show);
-#else /* CONFIG_ANDROID_LOG */
+	#else /* CONFIG_ANDROID_LOG */
 	wpa_debug_print_timestamp();
-#ifdef CONFIG_DEBUG_FILE
+		#ifdef CONFIG_DEBUG_FILE
 	if (out_file) {
 		if (!show) {
 			fprintf(out_file,
-				"%s - hexdump_ascii(len=%lu): [REMOVED]\n",
-				title, (unsigned long) len);
+							"%s - hexdump_ascii(len=%lu): [REMOVED]\n",
+							title, (unsigned long) len);
 			return;
 		}
 		if (buf == NULL) {
 			fprintf(out_file,
-				"%s - hexdump_ascii(len=%lu): [NULL]\n",
-				title, (unsigned long) len);
+							"%s - hexdump_ascii(len=%lu): [NULL]\n",
+							title, (unsigned long) len);
 			return;
 		}
 		fprintf(out_file, "%s - hexdump_ascii(len=%lu):\n",
-			title, (unsigned long) len);
+						title, (unsigned long) len);
 		while (len) {
 			llen = len > line_len ? line_len : len;
 			fprintf(out_file, "    ");
@@ -614,71 +602,71 @@ static void _wpa_hexdump_ascii(int level, const char *title, const void *buf,
 			len -= llen;
 		}
 	} else {
-#endif /* CONFIG_DEBUG_FILE */
-	if (!show) {
-		printf("%s - hexdump_ascii(len=%lu): [REMOVED]\n",
-		       title, (unsigned long) len);
-		return;
-	}
-	if (buf == NULL) {
-		printf("%s - hexdump_ascii(len=%lu): [NULL]\n",
-		       title, (unsigned long) len);
-		return;
-	}
-	printf("%s - hexdump_ascii(len=%lu):\n", title, (unsigned long) len);
-	while (len) {
-		llen = len > line_len ? line_len : len;
-		printf("    ");
-		for (i = 0; i < llen; i++)
-			printf(" %02x", pos[i]);
-		for (i = llen; i < line_len; i++)
-			printf("   ");
-		printf("   ");
-		for (i = 0; i < llen; i++) {
-			if (isprint(pos[i]))
-				printf("%c", pos[i]);
-			else
-				printf("_");
+		#endif /* CONFIG_DEBUG_FILE */
+		if (!show) {
+			printf("%s - hexdump_ascii(len=%lu): [REMOVED]\n",
+						 title, (unsigned long) len);
+			return;
 		}
-		for (i = llen; i < line_len; i++)
-			printf(" ");
-		printf("\n");
-		pos += llen;
-		len -= llen;
+		if (buf == NULL) {
+			printf("%s - hexdump_ascii(len=%lu): [NULL]\n",
+						 title, (unsigned long) len);
+			return;
+		}
+		printf("%s - hexdump_ascii(len=%lu):\n", title, (unsigned long) len);
+		while (len) {
+			llen = len > line_len ? line_len : len;
+			printf("    ");
+			for (i = 0; i < llen; i++)
+				printf(" %02x", pos[i]);
+			for (i = llen; i < line_len; i++)
+				printf("   ");
+			printf("   ");
+			for (i = 0; i < llen; i++) {
+				if (isprint(pos[i]))
+					printf("%c", pos[i]);
+				else
+					printf("_");
+			}
+			for (i = llen; i < line_len; i++)
+				printf(" ");
+			printf("\n");
+			pos += llen;
+			len -= llen;
+		}
+		#ifdef CONFIG_DEBUG_FILE
 	}
-#ifdef CONFIG_DEBUG_FILE
-	}
-#endif /* CONFIG_DEBUG_FILE */
-#endif /* CONFIG_ANDROID_LOG */
+		#endif /* CONFIG_DEBUG_FILE */
+	#endif /* CONFIG_ANDROID_LOG */
 }
 
 
 void wpa_hexdump_ascii(int level, const char *title, const void *buf,
-		       size_t len)
+											 size_t len)
 {
 	_wpa_hexdump_ascii(level, title, buf, len, 1);
 }
 
 
 void wpa_hexdump_ascii_key(int level, const char *title, const void *buf,
-			   size_t len)
+													 size_t len)
 {
 	_wpa_hexdump_ascii(level, title, buf, len, wpa_debug_show_keys);
 }
 
 
-#ifdef CONFIG_DEBUG_FILE
+	#ifdef CONFIG_DEBUG_FILE
 static char *last_path = NULL;
-#endif /* CONFIG_DEBUG_FILE */
+	#endif /* CONFIG_DEBUG_FILE */
 
 int wpa_debug_reopen_file(void)
 {
-#ifdef CONFIG_DEBUG_FILE
+	#ifdef CONFIG_DEBUG_FILE
 	int rv;
 	char *tmp;
 
 	if (!last_path)
-		return 0; /* logfile not used */
+		return 0;	/* logfile not used */
 
 	tmp = os_strdup(last_path);
 	if (!tmp)
@@ -688,15 +676,15 @@ int wpa_debug_reopen_file(void)
 	rv = wpa_debug_open_file(tmp);
 	os_free(tmp);
 	return rv;
-#else /* CONFIG_DEBUG_FILE */
+	#else /* CONFIG_DEBUG_FILE */
 	return 0;
-#endif /* CONFIG_DEBUG_FILE */
+	#endif /* CONFIG_DEBUG_FILE */
 }
 
 
 int wpa_debug_open_file(const char *path)
 {
-#ifdef CONFIG_DEBUG_FILE
+	#ifdef CONFIG_DEBUG_FILE
 	int out_fd;
 
 	if (!path)
@@ -709,57 +697,57 @@ int wpa_debug_open_file(const char *path)
 	}
 
 	out_fd = open(path, O_CREAT | O_APPEND | O_WRONLY,
-		      S_IRUSR | S_IWUSR | S_IRGRP);
+								S_IRUSR | S_IWUSR | S_IRGRP);
 	if (out_fd < 0) {
 		wpa_printf(MSG_ERROR,
-			   "%s: Failed to open output file descriptor, using standard output",
-			   __func__);
+							 "%s: Failed to open output file descriptor, using standard output",
+							 __func__);
 		return -1;
 	}
 
-#ifdef __linux__
+		#ifdef __linux__
 	if (fcntl(out_fd, F_SETFD, FD_CLOEXEC) < 0) {
 		wpa_printf(MSG_DEBUG,
-			   "%s: Failed to set FD_CLOEXEC - continue without: %s",
-			   __func__, strerror(errno));
+							 "%s: Failed to set FD_CLOEXEC - continue without: %s",
+							 __func__, strerror(errno));
 	}
-#endif /* __linux__ */
+		#endif /* __linux__ */
 
 	out_file = fdopen(out_fd, "a");
 	if (out_file == NULL) {
 		wpa_printf(MSG_ERROR, "wpa_debug_open_file: Failed to open "
-			   "output file, using standard output");
+							 "output file, using standard output");
 		close(out_fd);
 		return -1;
 	}
-#ifndef _WIN32
+		#ifndef _WIN32
 	setvbuf(out_file, NULL, _IOLBF, 0);
-#endif /* _WIN32 */
-#else /* CONFIG_DEBUG_FILE */
+		#endif /* _WIN32 */
+	#else /* CONFIG_DEBUG_FILE */
 	(void)path;
-#endif /* CONFIG_DEBUG_FILE */
+	#endif /* CONFIG_DEBUG_FILE */
 	return 0;
 }
 
 
 void wpa_debug_close_file(void)
 {
-#ifdef CONFIG_DEBUG_FILE
+	#ifdef CONFIG_DEBUG_FILE
 	if (!out_file)
 		return;
 	fclose(out_file);
 	out_file = NULL;
 	os_free(last_path);
 	last_path = NULL;
-#endif /* CONFIG_DEBUG_FILE */
+	#endif /* CONFIG_DEBUG_FILE */
 }
 
 
 void wpa_debug_setup_stdout(void)
 {
-#ifndef _WIN32
+	#ifndef _WIN32
 	setvbuf(stdout, NULL, _IOLBF, 0);
-#endif /* _WIN32 */
+	#endif /* _WIN32 */
 }
 
 #endif /* CONFIG_NO_STDOUT_DEBUG */
@@ -797,7 +785,7 @@ void wpa_msg(void *ctx, int level, const char *fmt, ...)
 	buf = os_malloc(buflen);
 	if (buf == NULL) {
 		wpa_printf(MSG_ERROR, "wpa_msg: Failed to allocate message "
-			   "buffer");
+							 "buffer");
 		return;
 	}
 	va_start(ap, fmt);
@@ -806,7 +794,7 @@ void wpa_msg(void *ctx, int level, const char *fmt, ...)
 		const char *ifname = wpa_msg_ifname_cb(ctx);
 		if (ifname) {
 			int res = os_snprintf(prefix, sizeof(prefix), "%s: ",
-					      ifname);
+														ifname);
 			if (os_snprintf_error(sizeof(prefix), res))
 				prefix[0] = '\0';
 		}
@@ -837,7 +825,7 @@ void wpa_msg_ctrl(void *ctx, int level, const char *fmt, ...)
 	buf = os_malloc(buflen);
 	if (buf == NULL) {
 		wpa_printf(MSG_ERROR, "wpa_msg_ctrl: Failed to allocate "
-			   "message buffer");
+							 "message buffer");
 		return;
 	}
 	va_start(ap, fmt);
@@ -862,7 +850,7 @@ void wpa_msg_global(void *ctx, int level, const char *fmt, ...)
 	buf = os_malloc(buflen);
 	if (buf == NULL) {
 		wpa_printf(MSG_ERROR, "wpa_msg_global: Failed to allocate "
-			   "message buffer");
+							 "message buffer");
 		return;
 	}
 	va_start(ap, fmt);
@@ -892,7 +880,7 @@ void wpa_msg_global_ctrl(void *ctx, int level, const char *fmt, ...)
 	buf = os_malloc(buflen);
 	if (buf == NULL) {
 		wpa_printf(MSG_ERROR,
-			   "wpa_msg_global_ctrl: Failed to allocate message buffer");
+							 "wpa_msg_global_ctrl: Failed to allocate message buffer");
 		return;
 	}
 	va_start(ap, fmt);
@@ -917,7 +905,7 @@ void wpa_msg_no_global(void *ctx, int level, const char *fmt, ...)
 	buf = os_malloc(buflen);
 	if (buf == NULL) {
 		wpa_printf(MSG_ERROR, "wpa_msg_no_global: Failed to allocate "
-			   "message buffer");
+							 "message buffer");
 		return;
 	}
 	va_start(ap, fmt);
@@ -944,7 +932,7 @@ void wpa_msg_global_only(void *ctx, int level, const char *fmt, ...)
 	buf = os_malloc(buflen);
 	if (buf == NULL) {
 		wpa_printf(MSG_ERROR, "%s: Failed to allocate message buffer",
-			   __func__);
+							 __func__);
 		return;
 	}
 	va_start(ap, fmt);
@@ -969,7 +957,7 @@ void hostapd_logger_register_cb(hostapd_logger_cb_func func)
 
 
 void hostapd_logger(void *ctx, const u8 *addr, unsigned int module, int level,
-		    const char *fmt, ...)
+										const char *fmt, ...)
 {
 	va_list ap;
 	char *buf;
@@ -983,7 +971,7 @@ void hostapd_logger(void *ctx, const u8 *addr, unsigned int module, int level,
 	buf = os_malloc(buflen);
 	if (buf == NULL) {
 		wpa_printf(MSG_ERROR, "hostapd_logger: Failed to allocate "
-			   "message buffer");
+							 "message buffer");
 		return;
 	}
 	va_start(ap, fmt);
@@ -993,7 +981,7 @@ void hostapd_logger(void *ctx, const u8 *addr, unsigned int module, int level,
 		hostapd_logger_cb(ctx, addr, module, level, buf, len);
 	else if (addr)
 		wpa_printf(MSG_DEBUG, "hostapd_logger: STA " MACSTR " - %s",
-			   MAC2STR(addr), buf);
+							 MAC2STR(addr), buf);
 	else
 		wpa_printf(MSG_DEBUG, "hostapd_logger: %s", buf);
 	bin_clear_free(buf, buflen);
@@ -1004,20 +992,20 @@ void hostapd_logger(void *ctx, const u8 *addr, unsigned int module, int level,
 const char * debug_level_str(int level)
 {
 	switch (level) {
-	case MSG_EXCESSIVE:
-		return "EXCESSIVE";
-	case MSG_MSGDUMP:
-		return "MSGDUMP";
-	case MSG_DEBUG:
-		return "DEBUG";
-	case MSG_INFO:
-		return "INFO";
-	case MSG_WARNING:
-		return "WARNING";
-	case MSG_ERROR:
-		return "ERROR";
-	default:
-		return "?";
+		case MSG_EXCESSIVE:
+			return "EXCESSIVE";
+		case MSG_MSGDUMP:
+			return "MSGDUMP";
+		case MSG_DEBUG:
+			return "DEBUG";
+		case MSG_INFO:
+			return "INFO";
+		case MSG_WARNING:
+			return "WARNING";
+		case MSG_ERROR:
+			return "ERROR";
+		default:
+			return "?";
 	}
 }
 
