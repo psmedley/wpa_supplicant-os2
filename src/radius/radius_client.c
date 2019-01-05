@@ -333,7 +333,7 @@ void radius_client_set_interim_error_cb(struct radius_client_data *radius,
 static int radius_client_handle_send_error(struct radius_client_data *radius,
 					   int s, RadiusType msg_type)
 {
-#ifndef CONFIG_NATIVE_WINDOWS
+#if !defined(CONFIG_NATIVE_WINDOWS) && !defined(__OS2__)
 	int _errno = errno;
 	wpa_printf(MSG_INFO, "send[RADIUS,s=%d]: %s", s, strerror(errno));
 	if (_errno == ENOTCONN || _errno == EDESTADDRREQ || _errno == EINVAL ||

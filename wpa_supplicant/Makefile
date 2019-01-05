@@ -1837,8 +1837,10 @@ OBJS += $(OBJS_l2)
 endif
 
 ifdef CONFIG_DRIVER_GENMAC
-#OBJS += ../src/drivers/driver_genmac.o
-#OBJS += ../src/drivers/packet32.o
+OBJS_t += ../src/drivers/driver_genmac.o
+OBJS_t += ../src/drivers/packet32.o
+OBJS_t2 += ../src/drivers/driver_genmac.o
+OBJS_t2 += ../src/drivers/packet32.o
 endif
 
 ifdef CONFIG_NDIS_EVENTS_INTEGRATED
@@ -1911,6 +1913,8 @@ wpa_supplicant: $(BCHECK) $(OBJS) $(EXTRA_progs)
 	@$(E) "  LD " $@
 
 eapol_test: $(OBJS_t)
+	@$(E) "  OBJS " $(OBJS)
+	@$(E) "  OBJS_t " $(OBJS_t)
 	$(Q)$(LDO) $(LDFLAGS) -o eapol_test $(OBJS_t) $(LIBS)
 	@$(E) "  LD " $@
 
