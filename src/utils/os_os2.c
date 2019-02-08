@@ -309,9 +309,10 @@ int os_program_init(void)
 	return 0;
 }
 
+#include <wpa_debug.h>		// 20190203 AB hack for qt gui
 void os_program_deinit(void)
 {
-	xPmPrintf("-------------      os_program_deinit");
+// ToDo: wpa_gui does not find it linking with...	xPmPrintf("------  os_program_deinit");
 	return;
 }
 

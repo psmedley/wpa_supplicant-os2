@@ -18,5 +18,6 @@ make %1 %2 %3 %4 %5 2>&1 | tee out.log
 make -C wpa_gui-qt4  %1 %2 %3 %4 %5 2>&1 | tee out2.log
 
 @REM temporary for test
-copy wpa_supplicant.exe e:\_work\xwlan\trunk\release\.
-copy wpa_supplicant.exe e:\_work\xwlan\trunk\debug\.
+replace wpa_supplicant.exe e:\_work\xwlan\trunk\release\. /u
+replace wpa_supplicant.exe e:\_work\xwlan\trunk\debug\. /u
+

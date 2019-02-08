@@ -33,8 +33,8 @@ wpa_supplicant package for xwlan/wlanstat
 ------------------------------------------------------------------------------
 Author:          Jouni Malinen and contributors
                  Ported to OS/2 by Andreas Buchinger
-Last update:     20181203
-Current status:  v2.7 (OS/2) GA
+Last update:     20190125
+Current status:  v2.7 (OS/2) GA2
 Home page:       https://bitbucket.org/Andi_B/os-2-wpa_supplicant/
 								 (http://trac.netlabs.org/ports/browser/wpa_supplicant/)
 
@@ -61,7 +61,17 @@ Optional components:
 Installation:
 -------------
 - When using xwlan/wlanstat the approbiate inst*.cmd places the files as needed
--
+
+Manually switching between versions:
+------------------------------------
+- Switch of active WPA secured wireless connection (Disable radio)
+- When using wlanstat.exe replace the wpa_supplicant.exe which lives in the same
+	directory as wlanstat.exe with this version. Place the *.xqs file here too.
+- When usiing the widget replace wpa_supplicant.exe in the xcenter directory
+	(*\xworkplace\plugins\xcenter\xwlan\.) with this version. Place the *.xqs file
+	here too.
+- Enable radio and the new wpa_supplicant is used. Check current version in the
+	WPA_Supplicant tab from the properties dialog. No need to reboot.
 
 Resizing window:
 ----------------
@@ -71,11 +81,7 @@ WPA_SUPPLICANT_RESIZE=150,40' before starting the supplicant will resize the
 window to 150 columns and 40 rows. Though same restrictions as with all VIO
 windows (max. 8160 chars in total) applies. See 'mode' command. If
 WPA_SUPPLICANT_RESIZE is set but not with two numbers spearated by comma
-('set WPA_SUPPLICANT_RESIZE=1') default 80,102 is used.
-
-20181201 currently a hack
-ToDo: change resize without the need of env var
-===============================================
+('set WPA_SUPPLICANT_RESIZE=') default 80,102 is used.
 
 History:
 --------
@@ -98,7 +104,7 @@ History:
   open an issue
 (https://bitbucket.org/Andi_B/os-2-wpa_supplicant/issues?status=new&status=open)
 
-20140910 v2.2 (eCS-v1)
+20140910 v2.2 (eCS-v1)			
 - first build from the official OS/2 - eCS repository at
   http://trac.netlabs.org/ports/browser/wpa_supplicant
 - minor changes to build cleanly with rpm installed gcc

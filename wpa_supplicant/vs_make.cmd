@@ -9,5 +9,6 @@
 @
 @REM temporary for test
 @replace wpa_supplicant.exe e:\_work\xwlan\trunk\release\. /u
+@replace wpa_supplicant.exe e:\_work\xwlan\trunk\debug\. /u
 @
 @REM @call make -C %1/wpa_gui-qt4  %1 %2 %3 %4 %5 2>&1 | tee out2.log

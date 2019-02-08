@@ -250,7 +250,7 @@ static void l2_packet_receive_timeout(void *eloop_ctx, void *timeout_ctx)
 }
 */
 
-static int eth_get(const char *device, u8 ea[ETH_ALEN])
+static int eth_get(const char *device, u8 ea[ETH_ALEN])		// 20190126 AB does not work on OS/2 and not needed
 {
 #ifdef __sun__
 	dlpi_handle_t dh;
@@ -283,7 +283,7 @@ static int eth_get(const char *device, u8 ea[ETH_ALEN])
 	int mib[] = { CTL_NET, AF_ROUTE, 0, AF_LINK, NET_RT_IFLIST, 0 };
 
 	if (sysctl(mib, 6, NULL, &len, NULL, 0) < 0) {
-		wpa_printf(MSG_ERROR, "eth_get sysctl returns < 0");
+		//	wpa_printf(MSG_ERROR, "eth_get sysctl returns < 0");
 		return -1;
 	}
 	if ((buf = os_malloc(len)) == NULL)
@@ -336,14 +336,13 @@ struct l2_packet_data * l2_packet_init(
 
 	// 20180817 AB ToDo: next lines remove? does it work with OS/2
 	if (eth_get(l2->ifname, l2->own_addr) < 0) {
-		fprintf(stderr, "Failed to get link-level address for "
-						"interface '%s'.\n", l2->ifname);
-		/*		xPmPrintf("Failed to get link-level address for interface '%s'. l2->own_addr=%s", l2->ifname, l2->own_addr);
-				wpa_printf(MSG_ERROR, "Failed to get link-level address for " "interface '%s'.", l2->ifname);
-		//		os_free(l2);
-		//		return NULL;
-		*/
+		//	fprintf(stderr, "Failed to get link-level address for interface '%s'.\n", l2->ifname);
+		//	wpa_printf(MSG_ERROR, "Failed to get link-level address for " "interface '%s'.", l2->ifname);
+		//	os_free(l2);
+		//	return NULL;
+		
 	}
+
 
 	/*	if (l2_packet_init_libpcap(l2, protocol)) {
 			os_free(l2);
