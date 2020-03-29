@@ -12,13 +12,13 @@
 #include "os.h"
 
 #ifndef _SOCKLEN_T_DECLARED	 		// 20180501 AB probably added by me
-  #define _SOCKLEN_T_DECLARED
+  #define _SOCKLEN_T_DECLARED		// 20200322 AB not needed when new libc is release
   #define SOCKLEN_T int
   typedef int socklen_t;
 #endif /* _SOCKLEN_T_DECLARED */
 
 #if defined(__OS2__)
-	#define VERSION_STR_POSTFIX "GA2 (OS/2, "__DATE__" "__TIME__", AB)"
+	#define VERSION_STR_POSTFIX " (OS/2, "__DATE__" "__TIME__", AB)"
 #endif /* __OS2__ */
 
 #if defined(__linux__) || defined(__GLIBC__)
@@ -94,7 +94,6 @@ typedef int socklen_t;
 
 
 /* Define platform specific integer types */
-
 #ifdef __OS2__	 						// 201804xx AB
 typedef u_int64_t u64;
 typedef u_int32_t u32;
@@ -366,6 +365,9 @@ static inline void WPA_PUT_LE64(u8 *a, u64 val)
 #ifndef ETH_P_OUI
 #define ETH_P_OUI 0x88B7
 #endif /* ETH_P_OUI */
+#ifndef ETH_P_8021Q
+#define ETH_P_8021Q 0x8100
+#endif /* ETH_P_8021Q */
 
 
 #ifdef __GNUC__
@@ -499,6 +501,7 @@ int hwaddr_aton2(const char *txt, u8 *addr);
 int hex2byte(const char *hex);
 int hexstr2bin(const char *hex, u8 *buf, size_t len);
 void inc_byte_array(u8 *counter, size_t len);
+void buf_shift_right(u8 *buf, size_t len, size_t bits);
 void wpa_get_ntp_timestamp(u8 *buf);
 int wpa_scnprintf(char *buf, size_t size, const char *fmt, ...);
 int wpa_snprintf_hex_sep(char *buf, size_t buf_size, const u8 *data, size_t len,
@@ -589,6 +592,9 @@ int is_ctrl_char(char c);
 int str_starts(const char *str, const char *start);
 
 u8 rssi_to_rcpi(int rssi);
+char * get_param(const char *cmd, const char *param);
+
+void forced_memzero(void *ptr, size_t len);
 
 /*
  * gcc 4.4 ends up generating strict-aliasing warnings about some very common

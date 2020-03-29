@@ -33,8 +33,8 @@ wpa_supplicant package for xwlan/wlanstat
 ------------------------------------------------------------------------------
 Author:          Jouni Malinen and contributors
                  Ported to OS/2 by Andreas Buchinger
-Last update:     20190125
-Current status:  v2.7 (OS/2) GA2
+Last update:     20200329
+Current status:  v2.10-devel (OS/2, Mar 29 2020 17:03:09, AB)
 Home page:       https://bitbucket.org/Andi_B/os-2-wpa_supplicant/
 								 (http://trac.netlabs.org/ports/browser/wpa_supplicant/)
 
@@ -85,6 +85,13 @@ WPA_SUPPLICANT_RESIZE is set but not with two numbers spearated by comma
 
 History:
 --------
+20200329 v2.10-devel
+- update to latest code from official repository (March, 2020)
+	see Changelog and repository commit messages
+- added -V option to show version as header
+- change driver interface names from driver_ndis to driver_genmac and integrate
+	CONFIG_DRIVER_GENMAC more smoothly
+
 20181208 v2.7 (OS/2)
 - add checks for resize value limits
 

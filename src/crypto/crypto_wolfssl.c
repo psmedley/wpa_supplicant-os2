@@ -826,6 +826,7 @@ done:
 
 
 int crypto_dh_derive_secret(u8 generator, const u8 *prime, size_t prime_len,
+			    const u8 *order, size_t order_len,
 			    const u8 *privkey, size_t privkey_len,
 			    const u8 *pubkey, size_t pubkey_len,
 			    u8 *secret, size_t *len)
@@ -952,6 +953,8 @@ int crypto_hash_finish(struct crypto_hash *ctx, u8 *mac, size_t *len)
 	ret = 0;
 done:
 	bin_clear_free(ctx, sizeof(*ctx));
+	if (TEST_FAIL())
+		return -1;
 	return ret;
 }
 
@@ -1039,6 +1042,26 @@ struct crypto_bignum * crypto_bignum_init_set(const u8 *buf, size_t len)
 }
 
 
+struct crypto_bignum * crypto_bignum_init_uint(unsigned int val)
+{
+	mp_int *a;
+
+	if (TEST_FAIL())
+		return NULL;
+
+	a = (mp_int *) crypto_bignum_init();
+	if (!a)
+		return NULL;
+
+	if (mp_set_int(a, val) != MP_OKAY) {
+		os_free(a);
+		a = NULL;
+	}
+
+	return (struct crypto_bignum *) a;
+}
+
+
 void crypto_bignum_deinit(struct crypto_bignum *n, int clear)
 {
 	if (!n)
@@ -1082,6 +1105,8 @@ int crypto_bignum_rand(struct crypto_bignum *r, const struct crypto_bignum *m)
 	int ret = 0;
 	WC_RNG rng;
 
+	if (TEST_FAIL())
+		return -1;
 	if (wc_InitRng(&rng) != 0)
 		return -1;
 	if (mp_rand_prime((mp_int *) r,
@@ -1146,7 +1171,7 @@ int crypto_bignum_sub(const struct crypto_bignum *a,
 	if (TEST_FAIL())
 		return -1;
 
-	return mp_add((mp_int *) a, (mp_int *) b,
+	return mp_sub((mp_int *) a, (mp_int *) b,
 		      (mp_int *) r) == MP_OKAY ? 0 : -1;
 }
 
@@ -1163,6 +1188,19 @@ int crypto_bignum_div(const struct crypto_bignum *a,
 }
 
 
+int crypto_bignum_addmod(const struct crypto_bignum *a,
+			 const struct crypto_bignum *b,
+			 const struct crypto_bignum *c,
+			 struct crypto_bignum *d)
+{
+	if (TEST_FAIL())
+		return -1;
+
+	return mp_addmod((mp_int *) a, (mp_int *) b, (mp_int *) c,
+			 (mp_int *) d) == MP_OKAY ?  0 : -1;
+}
+
+
 int crypto_bignum_mulmod(const struct crypto_bignum *a,
 			 const struct crypto_bignum *b,
 			 const struct crypto_bignum *m,
@@ -1173,6 +1211,18 @@ int crypto_bignum_mulmod(const struct crypto_bignum *a,
 
 	return mp_mulmod((mp_int *) a, (mp_int *) b, (mp_int *) m,
 			 (mp_int *) d) == MP_OKAY ?  0 : -1;
+}
+
+
+int crypto_bignum_sqrmod(const struct crypto_bignum *a,
+			 const struct crypto_bignum *b,
+			 struct crypto_bignum *c)
+{
+	if (TEST_FAIL())
+		return -1;
+
+	return mp_sqrmod((mp_int *) a, (mp_int *) b,
+			 (mp_int *) c) == MP_OKAY ?  0 : -1;
 }
 
 
@@ -1190,12 +1240,6 @@ int crypto_bignum_cmp(const struct crypto_bignum *a,
 		      const struct crypto_bignum *b)
 {
 	return mp_cmp((mp_int *) a, (mp_int *) b);
-}
-
-
-int crypto_bignum_bits(const struct crypto_bignum *a)
-{
-	return mp_count_bits((mp_int *) a);
 }
 
 
@@ -1347,16 +1391,6 @@ void crypto_ec_deinit(struct crypto_ec* e)
 }
 
 
-int crypto_ec_cofactor(struct crypto_ec *e, struct crypto_bignum *cofactor)
-{
-	if (!e || !cofactor)
-		return -1;
-
-	mp_set((mp_int *) cofactor, e->key.dp->cofactor);
-	return 0;
-}
-
-
 struct crypto_ec_point * crypto_ec_point_init(struct crypto_ec *e)
 {
 	if (TEST_FAIL())
@@ -1394,6 +1428,18 @@ const struct crypto_bignum * crypto_ec_get_prime(struct crypto_ec *e)
 const struct crypto_bignum * crypto_ec_get_order(struct crypto_ec *e)
 {
 	return (const struct crypto_bignum *) &e->order;
+}
+
+
+const struct crypto_bignum * crypto_ec_get_a(struct crypto_ec *e)
+{
+	return (const struct crypto_bignum *) &e->a;
+}
+
+
+const struct crypto_bignum * crypto_ec_get_b(struct crypto_ec *e)
+{
+	return (const struct crypto_bignum *) &e->b;
 }
 
 
@@ -1786,6 +1832,12 @@ fail:
 	wpabuf_free(secret);
 	secret = NULL;
 	goto done;
+}
+
+
+size_t crypto_ecdh_prime_len(struct crypto_ecdh *ecdh)
+{
+	return crypto_ec_prime_len(ecdh->ec);
 }
 
 #endif /* CONFIG_ECC */

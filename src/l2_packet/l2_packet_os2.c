@@ -37,9 +37,9 @@
 
 static void *WPA_Event = NULL ;
 
-extern void wpa_driver_ndis_event_connect(void *drv);
-extern void wpa_driver_ndis_event_disconnect(void *drv);
-extern void wpa_driver_ndis_event_media_specific(void *drv,u8*,int);
+extern void wpa_driver_genmac_event_connect(void *drv);
+extern void wpa_driver_genmac_event_disconnect(void *drv);
+extern void wpa_driver_genmac_event_media_specific(void *drv,u8*,int);
 
 
 void wpa_driver_register_event_cb(void *h)
@@ -49,8 +49,8 @@ void wpa_driver_register_event_cb(void *h)
 #endif /* __OS2__ */
 
 
-static const u8 pae_group_addr[ETH_ALEN] =
-{ 0x01, 0x80, 0xc2, 0x00, 0x00, 0x03 };
+//static const u8 pae_group_addr[ETH_ALEN] =
+//{ 0x01, 0x80, 0xc2, 0x00, 0x00, 0x03 };
 
 /*struct l2_packet_data {
 	pcap_t *pcap;
@@ -156,11 +156,11 @@ static void l2_packet_receive(int sock, void *eloop_ctx, void *sock_ctx)
 
 		//wpa_hexdump(MSG_DEBUG,"STATUS XXXXXX ",buf,len);
 		if (ulP[0] == 0x4001000b) {
-			wpa_driver_ndis_event_connect(WPA_Event);
+			wpa_driver_genmac_event_connect(WPA_Event);
 		} else if (ulP[0] == 0x4001000C) {
-			wpa_driver_ndis_event_disconnect(WPA_Event);
+			wpa_driver_genmac_event_disconnect(WPA_Event);
 		} else if (ulP[0] == 0x40010012) {
-			wpa_driver_ndis_event_media_specific(WPA_Event,&buf[4],len-4);
+			wpa_driver_genmac_event_media_specific(WPA_Event,&buf[4],len-4);
 		}
 		return ;
 	}

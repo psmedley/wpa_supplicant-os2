@@ -45,12 +45,15 @@ endif
 OBJS_lib += ../src/utils/libutils.a
 OBJS_lib += ../src/crypto/libcrypto.a
 
-CFLAGS += -DCONFIG_PEERKEY
-CFLAGS += -DCONFIG_IEEE80211W
+CFLAGS += -DCONFIG_OCV
 CFLAGS += -DCONFIG_IEEE80211R
 CFLAGS += -DCONFIG_HS20
 CFLAGS += -DCONFIG_DEBUG_FILE
 CFLAGS += -DCONFIG_FILS
+CFLAGS += -DCONFIG_SAE
+CFLAGS += -DCONFIG_OWE
+CFLAGS += -DCONFIG_DPP
+CFLAGS += -DCONFIG_SHA384
 
 OBJS += ../src/common/ieee802_11_common.o
 OBJS += ../src/common/wpa_common.o

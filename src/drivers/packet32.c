@@ -12,7 +12,7 @@
  */
 
 #include <os2safe.h>		// 20181101 AB, not really necessary as _udefault is used in main
-//		but good practice in case parts of code used otherwise ...
+												//		but good practice in case parts of code used otherwise ...
 #define INCL_DOSDEVICES
 #define INCL_DOSDEVIOCTL
 #include <os2.h>

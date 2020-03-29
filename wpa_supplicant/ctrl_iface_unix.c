@@ -194,11 +194,11 @@ static void wpa_supplicant_ctrl_iface_receive(int sock, void *eloop_ctx,
 				     reply_len);
 		if (sendto(sock, reply, reply_len, 0, (struct sockaddr *) &from,
 			   fromlen) < 0) {
-			int _errnoAB = errno;	 						// 201804xx AB _errno is used on OS/2 so change to something else
+			int _errno = errno;
 			wpa_dbg(wpa_s, MSG_DEBUG,
 				"ctrl_iface sendto failed: %d - %s",
-				_errnoAB, strerror(_errnoAB));
-			if (_errnoAB == ENOBUFS || _errnoAB == EAGAIN) {
+				_errno, strerror(_errno));
+			if (_errno == ENOBUFS || _errno == EAGAIN) {
 				/*
 				 * The socket send buffer could be full. This
 				 * may happen if client programs are not
@@ -570,8 +570,8 @@ static int wpas_ctrl_iface_open_sock(struct wpa_supplicant *wpa_s,
 		}
 	}
 
-	if (gid_set && chown(dir, -1, gid) < 0) {
-		wpa_printf(MSG_ERROR, "chown[ctrl_interface=%s,gid=%d]: %s",
+	if (gid_set && lchown(dir, -1, gid) < 0) {
+		wpa_printf(MSG_ERROR, "lchown[ctrl_interface=%s,gid=%d]: %s",
 			   dir, (int) gid, strerror(errno));
 		goto fail;
 	}
@@ -638,8 +638,8 @@ static int wpas_ctrl_iface_open_sock(struct wpa_supplicant *wpa_s,
 		}
 	}
 
-	if (gid_set && chown(fname, -1, gid) < 0) {
-		wpa_printf(MSG_ERROR, "chown[ctrl_interface=%s,gid=%d]: %s",
+	if (gid_set && lchown(fname, -1, gid) < 0) {
+		wpa_printf(MSG_ERROR, "lchown[ctrl_interface=%s,gid=%d]: %s",
 			   fname, (int) gid, strerror(errno));
 		goto fail;
 	}
@@ -926,7 +926,7 @@ static void wpa_supplicant_ctrl_iface_send(struct wpa_supplicant *wpa_s,
 	msg.msg_iovlen = idx;
 
 	dl_list_for_each_safe(dst, next, ctrl_dst, struct wpa_ctrl_dst, list) {
-		int _errnoAB;					// 201804xx AB _errno is used on OS/2 - emx so change to something else
+		int _errno;
 		char txt[200];
 
 		if (level < dst->debug_level)
@@ -943,20 +943,20 @@ static void wpa_supplicant_ctrl_iface_send(struct wpa_supplicant *wpa_s,
 			continue;
 		}
 
-		_errnoAB = errno;
+		_errno = errno;
 		os_snprintf(txt, sizeof(txt), "CTRL_IFACE monitor: %d (%s) for",
-			    _errnoAB, strerror(_errnoAB));
+			    _errno, strerror(_errno));
 		sockaddr_print(MSG_DEBUG, txt, &dst->addr, dst->addrlen);
 		dst->errors++;
 
-		if (dst->errors > 10 || _errnoAB == ENOENT || _errnoAB == EPERM) {
+		if (dst->errors > 10 || _errno == ENOENT || _errno == EPERM) {
 			sockaddr_print(MSG_INFO, "CTRL_IFACE: Detach monitor that cannot receive messages:",
 				       &dst->addr, dst->addrlen);
 			wpa_supplicant_ctrl_iface_detach(ctrl_dst, &dst->addr,
 							 dst->addrlen);
 		}
 
-		if (_errnoAB == ENOBUFS || _errnoAB == EAGAIN) {
+		if (_errno == ENOBUFS || _errno == EAGAIN) {
 			/*
 			 * The socket send buffer could be full. This may happen
 			 * if client programs are not receiving their pending
@@ -1235,9 +1235,9 @@ static int wpas_global_ctrl_iface_open_sock(struct wpa_global *global,
 			wpa_printf(MSG_DEBUG, "ctrl_interface_group=%d",
 				   (int) gid);
 		}
-		if (chown(ctrl, -1, gid) < 0) {
+		if (lchown(ctrl, -1, gid) < 0) {
 			wpa_printf(MSG_ERROR,
-				   "chown[global_ctrl_interface=%s,gid=%d]: %s",
+				   "lchown[global_ctrl_interface=%s,gid=%d]: %s",
 				   ctrl, (int) gid, strerror(errno));
 			goto fail;
 		}

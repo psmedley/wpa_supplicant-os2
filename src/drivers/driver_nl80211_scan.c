@@ -197,9 +197,9 @@ nl80211_scan_common(struct i802_bss *bss, u8 cmd,
 		if (ssids == NULL)
 			goto fail;
 		for (i = 0; i < params->num_ssids; i++) {
-			wpa_hexdump_ascii(MSG_MSGDUMP, "nl80211: Scan SSID",
-					  params->ssids[i].ssid,
-					  params->ssids[i].ssid_len);
+			wpa_printf(MSG_MSGDUMP, "nl80211: Scan SSID %s",
+				   wpa_ssid_txt(params->ssids[i].ssid,
+						params->ssids[i].ssid_len));
 			if (nla_put(msg, i + 1, params->ssids[i].ssid_len,
 				    params->ssids[i].ssid))
 				goto fail;
@@ -537,10 +537,10 @@ int wpa_driver_nl80211_sched_scan(void *priv,
 
 		for (i = 0; i < drv->num_filter_ssids; i++) {
 			struct nlattr *match_set_ssid;
-			wpa_hexdump_ascii(MSG_MSGDUMP,
-					  "nl80211: Sched scan filter SSID",
-					  drv->filter_ssids[i].ssid,
-					  drv->filter_ssids[i].ssid_len);
+			wpa_printf(MSG_MSGDUMP,
+				   "nl80211: Sched scan filter SSID %s",
+				   wpa_ssid_txt(drv->filter_ssids[i].ssid,
+						drv->filter_ssids[i].ssid_len));
 
 			match_set_ssid = nla_nest_start(msg, i + 1);
 			if (match_set_ssid == NULL ||
@@ -928,7 +928,9 @@ nl80211_get_scan_results(struct wpa_driver_nl80211_data *drv)
 	struct wpa_scan_results *res;
 	int ret;
 	struct nl80211_bss_info_arg arg;
+	int count = 0;
 
+try_again:
 	res = os_zalloc(sizeof(*res));
 	if (res == NULL)
 		return NULL;
@@ -941,6 +943,18 @@ nl80211_get_scan_results(struct wpa_driver_nl80211_data *drv)
 	arg.drv = drv;
 	arg.res = res;
 	ret = send_and_recv_msgs(drv, msg, bss_info_handler, &arg);
+	if (ret == -EAGAIN) {
+		count++;
+		if (count >= 10) {
+			wpa_printf(MSG_INFO,
+				   "nl80211: Failed to receive consistent scan result dump");
+		} else {
+			wpa_printf(MSG_DEBUG,
+				   "nl80211: Failed to receive consistent scan result dump - try again");
+			wpa_scan_results_free(res);
+			goto try_again;
+		}
+	}
 	if (ret == 0) {
 		struct nl80211_noise_info info;
 
@@ -1098,9 +1112,9 @@ int wpa_driver_nl80211_vendor_scan(struct i802_bss *bss,
 		if (ssids == NULL)
 			goto fail;
 		for (i = 0; i < params->num_ssids; i++) {
-			wpa_hexdump_ascii(MSG_MSGDUMP, "nl80211: Scan SSID",
-					params->ssids[i].ssid,
-					params->ssids[i].ssid_len);
+			wpa_printf(MSG_MSGDUMP, "nl80211: Scan SSID %s",
+				   wpa_ssid_txt(params->ssids[i].ssid,
+						params->ssids[i].ssid_len));
 			if (nla_put(msg, i + 1, params->ssids[i].ssid_len,
 				    params->ssids[i].ssid))
 				goto fail;

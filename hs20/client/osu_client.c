@@ -117,8 +117,8 @@ static int android_update_permission(const char *path, mode_t mode)
 
 	/* Allow processes running with Group ID as AID_WIFI,
 	 * to read files from SP, SP/<fqdn>, Cert and osu-info directories */
-	if (chown(path, -1, AID_WIFI)) {
-		wpa_printf(MSG_INFO, "CTRL: Could not chown directory: %s",
+	if (lchown(path, -1, AID_WIFI)) {
+		wpa_printf(MSG_INFO, "CTRL: Could not lchown directory: %s",
 			   strerror(errno));
 		return -1;
 	}
@@ -310,7 +310,7 @@ static int download_cert(struct hs20_osu_client *ctx, xml_node_t *params,
 	size_t len;
 	u8 digest1[SHA256_MAC_LEN], digest2[SHA256_MAC_LEN];
 	int res;
-	unsigned char *b64;
+	char *b64;
 	FILE *f;
 
 	url_node = get_node(ctx->xml, params, "CertURL");
@@ -364,7 +364,7 @@ static int download_cert(struct hs20_osu_client *ctx, xml_node_t *params,
 		return -1;
 	}
 
-	b64 = base64_encode((unsigned char *) cert, len, NULL);
+	b64 = base64_encode(cert, len, NULL);
 	os_free(cert);
 	if (b64 == NULL)
 		return -1;
@@ -612,8 +612,8 @@ int hs20_add_pps_mo(struct hs20_osu_client *ctx, const char *uri,
 		}
 	}
 
-	android_update_permission("SP", S_IRWXU | S_IRGRP | S_IXGRP);
-	android_update_permission(fname, S_IRWXU | S_IRGRP | S_IXGRP);
+	android_update_permission("SP", S_IRWXU | S_IRWXG);
+	android_update_permission(fname, S_IRWXU | S_IRWXG);
 
 	snprintf(fname, fname_len, "SP/%s/pps.xml", fqdn);
 
@@ -1588,6 +1588,7 @@ static void set_pps_cred_digital_cert(struct hs20_osu_client *ctx, int id,
 				      xml_node_t *node, const char *fqdn)
 {
 	char buf[200], dir[200];
+	int res;
 
 	wpa_printf(MSG_INFO, "- Credential/DigitalCertificate");
 
@@ -1599,14 +1600,20 @@ static void set_pps_cred_digital_cert(struct hs20_osu_client *ctx, int id,
 		wpa_printf(MSG_INFO, "Failed to set username");
 	}
 
-	snprintf(buf, sizeof(buf), "%s/SP/%s/client-cert.pem", dir, fqdn);
+	res = os_snprintf(buf, sizeof(buf), "%s/SP/%s/client-cert.pem", dir,
+			  fqdn);
+	if (os_snprintf_error(sizeof(buf), res))
+		return;
 	if (os_file_exists(buf)) {
 		if (set_cred_quoted(ctx->ifname, id, "client_cert", buf) < 0) {
 			wpa_printf(MSG_INFO, "Failed to set client_cert");
 		}
 	}
 
-	snprintf(buf, sizeof(buf), "%s/SP/%s/client-key.pem", dir, fqdn);
+	res = os_snprintf(buf, sizeof(buf), "%s/SP/%s/client-key.pem", dir,
+			  fqdn);
+	if (os_snprintf_error(sizeof(buf), res))
+		return;
 	if (os_file_exists(buf)) {
 		if (set_cred_quoted(ctx->ifname, id, "private_key", buf) < 0) {
 			wpa_printf(MSG_INFO, "Failed to set private_key");
@@ -1620,6 +1627,7 @@ static void set_pps_cred_realm(struct hs20_osu_client *ctx, int id,
 {
 	char *str = xml_node_get_text(ctx->xml, node);
 	char buf[200], dir[200];
+	int res;
 
 	if (str == NULL)
 		return;
@@ -1634,7 +1642,9 @@ static void set_pps_cred_realm(struct hs20_osu_client *ctx, int id,
 
 	if (getcwd(dir, sizeof(dir)) == NULL)
 		return;
-	snprintf(buf, sizeof(buf), "%s/SP/%s/aaa-ca.pem", dir, fqdn);
+	res = os_snprintf(buf, sizeof(buf), "%s/SP/%s/aaa-ca.pem", dir, fqdn);
+	if (os_snprintf_error(sizeof(buf), res))
+		return;
 	if (os_file_exists(buf)) {
 		if (set_cred_quoted(ctx->ifname, id, "ca_cert", buf) < 0) {
 			wpa_printf(MSG_INFO, "Failed to set CA cert");
@@ -2396,7 +2406,7 @@ static int cmd_osu_select(struct hs20_osu_client *ctx, const char *dir,
 
 	snprintf(fname, sizeof(fname), "file://%s/osu-providers.html", dir);
 	write_summary(ctx, "Start web browser with OSU provider selection page");
-	ret = hs20_web_browser(fname);
+	ret = hs20_web_browser(fname, 0);
 
 selected:
 	if (ret > 0 && (size_t) ret <= osu_count) {
@@ -2717,6 +2727,8 @@ static int cmd_pol_upd(struct hs20_osu_client *ctx, const char *address,
 
 	if (!pps_fname) {
 		char buf[256];
+		int res;
+
 		wpa_printf(MSG_INFO, "Determining PPS file based on Home SP information");
 		if (address && os_strncmp(address, "fqdn=", 5) == 0) {
 			wpa_printf(MSG_INFO, "Use requested FQDN from command line");
@@ -2737,8 +2749,13 @@ static int cmd_pol_upd(struct hs20_osu_client *ctx, const char *address,
 			    "SP/%s/pps.xml", ctx->fqdn);
 		pps_fname = pps_fname_buf;
 
-		os_snprintf(ca_fname_buf, sizeof(ca_fname_buf), "SP/%s/ca.pem",
-			    buf);
+		res = os_snprintf(ca_fname_buf, sizeof(ca_fname_buf),
+				  "SP/%s/ca.pem", buf);
+		if (os_snprintf_error(sizeof(ca_fname_buf), res)) {
+			os_free(ctx->fqdn);
+			ctx->fqdn = NULL;
+			return -1;
+		}
 		ca_fname = ca_fname_buf;
 	}
 
@@ -3135,7 +3152,7 @@ static void check_workarounds(struct hs20_osu_client *ctx)
 
 static void usage(void)
 {
-	printf("usage: hs20-osu-client [-dddqqKt] [-S<station ifname>] \\\n"
+	printf("usage: hs20-osu-client [-dddqqKtT] [-S<station ifname>] \\\n"
 	       "    [-w<wpa_supplicant ctrl_iface dir>] "
 	       "[-r<result file>] [-f<debug file>] \\\n"
 	       "    [-s<summary file>] \\\n"
@@ -3181,7 +3198,7 @@ int main(int argc, char *argv[])
 		return -1;
 
 	for (;;) {
-		c = getopt(argc, argv, "df:hKNo:O:qr:s:S:tw:x:");
+		c = getopt(argc, argv, "df:hKNo:O:qr:s:S:tTw:x:");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -3218,6 +3235,9 @@ int main(int argc, char *argv[])
 			break;
 		case 't':
 			wpa_debug_timestamp++;
+			break;
+		case 'T':
+			ctx.ignore_tls = 1;
 			break;
 		case 'w':
 			wpas_ctrl_path = optarg;
@@ -3386,7 +3406,7 @@ int main(int argc, char *argv[])
 
 		wpa_printf(MSG_INFO, "Launch web browser to URL %s",
 			   argv[optind + 1]);
-		ret = hs20_web_browser(argv[optind + 1]);
+		ret = hs20_web_browser(argv[optind + 1], ctx.ignore_tls);
 		wpa_printf(MSG_INFO, "Web browser result: %d", ret);
 	} else if (strcmp(argv[optind], "parse_cert") == 0) {
 		if (argc - optind < 2) {

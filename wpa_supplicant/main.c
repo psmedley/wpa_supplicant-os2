@@ -28,9 +28,9 @@ static void usage(void)
 	       "s"
 #endif /* CONFIG_DEBUG_SYSLOG */
 	       "t"
-#ifdef CONFIG_DBUS
+#ifdef CONFIG_CTRL_IFACE_DBUS_NEW
 	       "u"
-#endif /* CONFIG_DBUS */
+#endif /* CONFIG_CTRL_IFACE_DBUS_NEW */
 	       "vW] [-P<pid file>] "
 	       "[-g<global ctrl>] \\\n"
 	       "        [-G<group>] \\\n"
@@ -99,10 +99,11 @@ static void usage(void)
 	       "  -T = record to Linux tracing in addition to logging\n"
 	       "       (records all messages regardless of debug verbosity)\n"
 #endif /* CONFIG_DEBUG_LINUX_TRACING */
-#ifdef CONFIG_DBUS
+#ifdef CONFIG_CTRL_IFACE_DBUS_NEW
 	       "  -u = enable DBus control interface\n"
-#endif /* CONFIG_DBUS */
+#endif /* CONFIG_CTRL_IFACE_DBUS_NEW */
 	       "  -v = show version\n"
+	       "  -V = start with version as header\n"
 	       "  -W = wait for a control interface monitor before starting\n");
 
 	printf("example:\n"
@@ -202,7 +203,7 @@ int main(int argc, char *argv[])
 
 	for (;;) {
 		c = getopt(argc, argv,
-			   "b:Bc:C:D:de:f:g:G:hi:I:KLMm:No:O:p:P:qrsTtuvW");
+			   "b:Bc:C:D:de:f:g:G:hi:I:KLMm:No:O:p:P:qrsTtuvVW");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -299,15 +300,18 @@ int main(int argc, char *argv[])
 		case 't':
 			params.wpa_debug_timestamp++;
 			break;
-#ifdef CONFIG_DBUS
+#ifdef CONFIG_CTRL_IFACE_DBUS_NEW
 		case 'u':
 			params.dbus_ctrl_interface = 1;
 			break;
-#endif /* CONFIG_DBUS */
+#endif /* CONFIG_CTRL_IFACE_DBUS_NEW */
 		case 'v':
 			printf("%s\n", wpa_supplicant_version);
 			exitcode = 0;
 			goto out;
+		case 'V':
+			printf("%s\n", wpa_supplicant_version);
+			break;
 		case 'W':
 			params.wait_for_monitor++;
 			break;
@@ -345,12 +349,12 @@ int main(int argc, char *argv[])
 	exitcode = 0;
 	global = wpa_supplicant_init(&params);
 	if (global == NULL) {
-		wpa_printf(MSG_ERROR, "\nFailed to initialize wpa_supplicant");
+		wpa_printf(MSG_ERROR, "Failed to initialize wpa_supplicant");
 		exitcode = -1;
 		goto out;
 	} else {
-		wpa_printf(MSG_INFO, "\nSuccessfully initialized "
-			   "%s", wpa_supplicant_version);
+		wpa_printf(MSG_INFO, "Successfully initialized "
+			   "wpa_supplicant");
 	}
 
 	if (fst_global_init()) {

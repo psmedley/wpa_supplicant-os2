@@ -11,7 +11,11 @@
 #ifndef CONFIG_NATIVE_WINDOWS
 
 #ifdef CONFIG_TESTING_OPTIONS
+#ifdef __NetBSD__
+#include <net/if_ether.h>
+#else
 #include <net/ethernet.h>
+#endif
 #include <netinet/ip.h>
 #endif /* CONFIG_TESTING_OPTIONS */
 
@@ -65,9 +69,6 @@
 #define HOSTAPD_CLI_DUP_VALUE_MAX_LEN 256
 
 #ifdef CONFIG_CTRL_IFACE_UDP
-#define COOKIE_LEN 8
-static unsigned char cookie[COOKIE_LEN];
-static unsigned char gcookie[COOKIE_LEN];
 #define HOSTAPD_CTRL_IFACE_PORT		8877
 #define HOSTAPD_CTRL_IFACE_PORT_LIMIT	50
 #define HOSTAPD_GLOBAL_CTRL_IFACE_PORT		8878
@@ -130,7 +131,6 @@ static int hostapd_ctrl_iface_new_sta(struct hostapd_data *hapd,
 }
 
 
-#ifdef CONFIG_IEEE80211W
 #ifdef NEED_AP_MLME
 static int hostapd_ctrl_iface_sa_query(struct hostapd_data *hapd,
 				       const char *txtaddr)
@@ -149,7 +149,6 @@ static int hostapd_ctrl_iface_sa_query(struct hostapd_data *hapd,
 	return 0;
 }
 #endif /* NEED_AP_MLME */
-#endif /* CONFIG_IEEE80211W */
 
 
 #ifdef CONFIG_WPS
@@ -883,7 +882,7 @@ static int hostapd_ctrl_iface_bss_tm_req(struct hostapd_data *hapd,
 		/* TODO: TSF configurable/learnable */
 		bss_term_dur[0] = 4; /* Subelement ID */
 		bss_term_dur[1] = 10; /* Length */
-		os_memset(bss_term_dur, 2, 8);
+		os_memset(&bss_term_dur[2], 0, 8);
 		end = os_strchr(pos, ',');
 		if (end == NULL) {
 			wpa_printf(MSG_DEBUG, "Invalid bss_term data");
@@ -1098,7 +1097,6 @@ static int hostapd_ctrl_iface_get_key_mgmt(struct hostapd_data *hapd,
 	}
 #endif /* CONFIG_FILS */
 #endif /* CONFIG_IEEE80211R_AP */
-#ifdef CONFIG_IEEE80211W
 	if (hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_PSK_SHA256) {
 		ret = os_snprintf(pos, end - pos, "WPA-PSK-SHA256 ");
 		if (os_snprintf_error(end - pos, ret))
@@ -1111,7 +1109,6 @@ static int hostapd_ctrl_iface_get_key_mgmt(struct hostapd_data *hapd,
 			return pos - buf;
 		pos += ret;
 	}
-#endif /* CONFIG_IEEE80211W */
 #ifdef CONFIG_SAE
 	if (hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_SAE) {
 		ret = os_snprintf(pos, end - pos, "SAE ");
@@ -1290,6 +1287,14 @@ static int hostapd_ctrl_iface_get_config(struct hostapd_data *hapd,
 		pos += ret;
 	}
 
+	if (hapd->conf->wpa && hapd->conf->wpa_deny_ptk0_rekey) {
+		ret = os_snprintf(pos, end - pos, "wpa_deny_ptk0_rekey=%d\n",
+				  hapd->conf->wpa_deny_ptk0_rekey);
+		if (os_snprintf_error(end - pos, ret))
+			return pos - buf;
+		pos += ret;
+	}
+
 	return pos - buf;
 }
 
@@ -1329,6 +1334,33 @@ static void hostapd_disassoc_deny_mac(struct hostapd_data *hapd)
 					  WLAN_REASON_UNSPECIFIED);
 	}
 }
+
+
+static int hostapd_ctrl_iface_set_band(struct hostapd_data *hapd,
+				       const char *band)
+{
+	union wpa_event_data event;
+	enum set_band setband;
+
+	if (os_strcmp(band, "AUTO") == 0)
+		setband = WPA_SETBAND_AUTO;
+	else if (os_strcmp(band, "5G") == 0)
+		setband = WPA_SETBAND_5G;
+	else if (os_strcmp(band, "2G") == 0)
+		setband = WPA_SETBAND_2G;
+	else
+		return -1;
+
+	if (hostapd_drv_set_band(hapd, setband) == 0) {
+		os_memset(&event, 0, sizeof(event));
+		event.channel_list_changed.initiator = REGDOM_SET_BY_USER;
+		event.channel_list_changed.type = REGDOM_TYPE_UNKNOWN;
+		wpa_supplicant_event(hapd, EVENT_CHANNEL_LIST_CHANGED, &event);
+	}
+
+	return 0;
+}
+
 
 static int hostapd_ctrl_iface_set(struct hostapd_data *hapd, char *cmd)
 {
@@ -1413,6 +1445,8 @@ static int hostapd_ctrl_iface_set(struct hostapd_data *hapd, char *cmd)
 		os_free(hapd->dpp_configurator_params);
 		hapd->dpp_configurator_params = os_strdup(value);
 #endif /* CONFIG_DPP */
+	} else if (os_strcasecmp(cmd, "setband") == 0) {
+		ret = hostapd_ctrl_iface_set_band(hapd, value);
 	} else {
 		ret = hostapd_set_iface(hapd->iconf, hapd->conf, cmd, value);
 		if (ret)
@@ -1428,6 +1462,11 @@ static int hostapd_ctrl_iface_set(struct hostapd_data *hapd, char *cmd)
 			if (ieee802_11_update_beacons(hapd->iface))
 				wpa_printf(MSG_DEBUG,
 					   "Failed to update beacons with WMM parameters");
+		} else if (os_strcmp(cmd, "wpa_passphrase") == 0 ||
+			   os_strcmp(cmd, "sae_password") == 0 ||
+			   os_strcmp(cmd, "sae_pwe") == 0) {
+			if (hapd->started)
+				hostapd_setup_sae_pt(hapd->conf);
 		}
 	}
 
@@ -1484,6 +1523,63 @@ static int hostapd_ctrl_iface_disable(struct hostapd_iface *iface)
 		wpa_printf(MSG_ERROR, "Disabling of interface failed");
 		return -1;
 	}
+	return 0;
+}
+
+
+static int
+hostapd_ctrl_iface_kick_mismatch_psk_sta_iter(struct hostapd_data *hapd,
+					      struct sta_info *sta, void *ctx)
+{
+	struct hostapd_wpa_psk *psk;
+	const u8 *pmk;
+	int pmk_len;
+	int pmk_match;
+	int sta_match;
+	int bss_match;
+	int reason;
+
+	pmk = wpa_auth_get_pmk(sta->wpa_sm, &pmk_len);
+
+	for (psk = hapd->conf->ssid.wpa_psk; pmk && psk; psk = psk->next) {
+		pmk_match = PMK_LEN == pmk_len &&
+			os_memcmp(psk->psk, pmk, pmk_len) == 0;
+		sta_match = psk->group == 0 &&
+			os_memcmp(sta->addr, psk->addr, ETH_ALEN) == 0;
+		bss_match = psk->group == 1;
+
+		if (pmk_match && (sta_match || bss_match))
+			return 0;
+	}
+
+	wpa_printf(MSG_INFO, "STA " MACSTR
+		   " PSK/passphrase no longer valid - disconnect",
+		   MAC2STR(sta->addr));
+	reason = WLAN_REASON_PREV_AUTH_NOT_VALID;
+	hostapd_drv_sta_deauth(hapd, sta->addr, reason);
+	ap_sta_deauthenticate(hapd, sta, reason);
+
+	return 0;
+}
+
+
+static int hostapd_ctrl_iface_reload_wpa_psk(struct hostapd_data *hapd)
+{
+	struct hostapd_bss_config *conf = hapd->conf;
+	int err;
+
+	hostapd_config_clear_wpa_psk(&conf->ssid.wpa_psk);
+
+	err = hostapd_setup_wpa_psk(conf);
+	if (err < 0) {
+		wpa_printf(MSG_ERROR, "Reloading WPA-PSK passwords failed: %d",
+			   err);
+		return -1;
+	}
+
+	ap_for_each_sta(hapd, hostapd_ctrl_iface_kick_mismatch_psk_sta_iter,
+			NULL);
+
 	return 0;
 }
 
@@ -1571,7 +1667,7 @@ static int hostapd_ctrl_iface_mgmt_tx(struct hostapd_data *hapd, char *cmd)
 		return -1;
 	}
 
-	res = hostapd_drv_send_mlme(hapd, buf, len, 0);
+	res = hostapd_drv_send_mlme(hapd, buf, len, 0, NULL, 0, 0);
 	os_free(buf);
 	return res;
 }
@@ -1770,29 +1866,43 @@ static void hostapd_data_test_rx(void *ctx, const u8 *src_addr, const u8 *buf,
 {
 	struct hostapd_data *hapd = ctx;
 	const struct ether_header *eth;
-	struct iphdr ip;
+	struct ip ip;
 	const u8 *pos;
 	unsigned int i;
+	char extra[30];
 
-	if (len != HWSIM_PACKETLEN)
+	if (len < sizeof(*eth) + sizeof(ip) || len > HWSIM_PACKETLEN) {
+		wpa_printf(MSG_DEBUG,
+			   "test data: RX - ignore unexpected length %d",
+			   (int) len);
 		return;
+	}
 
 	eth = (const struct ether_header *) buf;
 	os_memcpy(&ip, eth + 1, sizeof(ip));
 	pos = &buf[sizeof(*eth) + sizeof(ip)];
 
-	if (ip.ihl != 5 || ip.version != 4 ||
-	    ntohs(ip.tot_len) != HWSIM_IP_LEN)
+	if (ip.ip_hl != 5 || ip.ip_v != 4 ||
+	    ntohs(ip.ip_len) > HWSIM_IP_LEN) {
+		wpa_printf(MSG_DEBUG,
+			   "test data: RX - ignore unexpect IP header");
 		return;
+	}
 
-	for (i = 0; i < HWSIM_IP_LEN - sizeof(ip); i++) {
-		if (*pos != (u8) i)
+	for (i = 0; i < ntohs(ip.ip_len) - sizeof(ip); i++) {
+		if (*pos != (u8) i) {
+			wpa_printf(MSG_DEBUG,
+				   "test data: RX - ignore mismatching payload");
 			return;
+		}
 		pos++;
 	}
 
-	wpa_msg(hapd->msg_ctx, MSG_INFO, "DATA-TEST-RX " MACSTR " " MACSTR,
-		MAC2STR(eth->ether_dhost), MAC2STR(eth->ether_shost));
+	extra[0] = '\0';
+	if (ntohs(ip.ip_len) != HWSIM_IP_LEN)
+		os_snprintf(extra, sizeof(extra), " len=%d", ntohs(ip.ip_len));
+	wpa_msg(hapd->msg_ctx, MSG_INFO, "DATA-TEST-RX " MACSTR " " MACSTR "%s",
+		MAC2STR(eth->ether_dhost), MAC2STR(eth->ether_shost), extra);
 }
 
 
@@ -1837,20 +1947,21 @@ static int hostapd_ctrl_iface_data_test_config(struct hostapd_data *hapd,
 static int hostapd_ctrl_iface_data_test_tx(struct hostapd_data *hapd, char *cmd)
 {
 	u8 dst[ETH_ALEN], src[ETH_ALEN];
-	char *pos;
+	char *pos, *pos2;
 	int used;
 	long int val;
 	u8 tos;
 	u8 buf[2 + HWSIM_PACKETLEN];
 	struct ether_header *eth;
-	struct iphdr *ip;
+	struct ip *ip;
 	u8 *dpos;
 	unsigned int i;
+	size_t send_len = HWSIM_IP_LEN;
 
 	if (hapd->l2_test == NULL)
 		return -1;
 
-	/* format: <dst> <src> <tos> */
+	/* format: <dst> <src> <tos> [len=<length>] */
 
 	pos = cmd;
 	used = hwaddr_aton2(pos, dst);
@@ -1864,32 +1975,40 @@ static int hostapd_ctrl_iface_data_test_tx(struct hostapd_data *hapd, char *cmd)
 		return -1;
 	pos += used;
 
-	val = strtol(pos, NULL, 0);
+	val = strtol(pos, &pos2, 0);
 	if (val < 0 || val > 0xff)
 		return -1;
 	tos = val;
+
+	pos = os_strstr(pos2, " len=");
+	if (pos) {
+		i = atoi(pos + 5);
+		if (i < sizeof(*ip) || i > HWSIM_IP_LEN)
+			return -1;
+		send_len = i;
+	}
 
 	eth = (struct ether_header *) &buf[2];
 	os_memcpy(eth->ether_dhost, dst, ETH_ALEN);
 	os_memcpy(eth->ether_shost, src, ETH_ALEN);
 	eth->ether_type = htons(ETHERTYPE_IP);
-	ip = (struct iphdr *) (eth + 1);
+	ip = (struct ip *) (eth + 1);
 	os_memset(ip, 0, sizeof(*ip));
-	ip->ihl = 5;
-	ip->version = 4;
-	ip->ttl = 64;
-	ip->tos = tos;
-	ip->tot_len = htons(HWSIM_IP_LEN);
-	ip->protocol = 1;
-	ip->saddr = htonl(192U << 24 | 168 << 16 | 1 << 8 | 1);
-	ip->daddr = htonl(192U << 24 | 168 << 16 | 1 << 8 | 2);
-	ip->check = ipv4_hdr_checksum(ip, sizeof(*ip));
+	ip->ip_hl = 5;
+	ip->ip_v = 4;
+	ip->ip_ttl = 64;
+	ip->ip_tos = tos;
+	ip->ip_len = htons(send_len);
+	ip->ip_p = 1;
+	ip->ip_src.s_addr = htonl(192U << 24 | 168 << 16 | 1 << 8 | 1);
+	ip->ip_dst.s_addr = htonl(192U << 24 | 168 << 16 | 1 << 8 | 2);
+	ip->ip_sum = ipv4_hdr_checksum(ip, sizeof(*ip));
 	dpos = (u8 *) (ip + 1);
-	for (i = 0; i < HWSIM_IP_LEN - sizeof(*ip); i++)
+	for (i = 0; i < send_len - sizeof(*ip); i++)
 		*dpos++ = i;
 
 	if (l2_packet_send(hapd->l2_test, dst, ETHERTYPE_IP, &buf[2],
-			   HWSIM_PACKETLEN) < 0)
+			   sizeof(struct ether_header) + send_len) < 0)
 		return -1;
 
 	wpa_dbg(hapd->msg_ctx, MSG_DEBUG, "test data: TX dst=" MACSTR
@@ -2029,7 +2148,6 @@ static int hostapd_ctrl_reset_pn(struct hostapd_data *hapd, const char *cmd)
 	if (hwaddr_aton(cmd, addr))
 		return -1;
 
-#ifdef CONFIG_IEEE80211W
 	if (is_broadcast_ether_addr(addr) && os_strstr(cmd, "IGTK")) {
 		if (hapd->last_igtk_alg == WPA_ALG_NONE)
 			return -1;
@@ -2041,19 +2159,20 @@ static int hostapd_ctrl_reset_pn(struct hostapd_data *hapd, const char *cmd)
 		if (hostapd_drv_set_key(hapd->conf->iface, hapd,
 					hapd->last_igtk_alg,
 					broadcast_ether_addr,
-					hapd->last_igtk_key_idx, 1, NULL, 0,
-					zero, hapd->last_igtk_len) < 0)
+					hapd->last_igtk_key_idx, 0, 1, NULL, 0,
+					zero, hapd->last_igtk_len,
+					KEY_FLAG_GROUP_TX_DEFAULT) < 0)
 			return -1;
 
 		/* Set the previously configured key to reset its TSC */
 		return hostapd_drv_set_key(hapd->conf->iface, hapd,
 					   hapd->last_igtk_alg,
 					   broadcast_ether_addr,
-					   hapd->last_igtk_key_idx, 1, NULL, 0,
-					   hapd->last_igtk,
-					   hapd->last_igtk_len);
+					   hapd->last_igtk_key_idx, 0, 1, NULL,
+					   0, hapd->last_igtk,
+					   hapd->last_igtk_len,
+					   KEY_FLAG_GROUP_TX_DEFAULT);
 	}
-#endif /* CONFIG_IEEE80211W */
 
 	if (is_broadcast_ether_addr(addr)) {
 		if (hapd->last_gtk_alg == WPA_ALG_NONE)
@@ -2066,16 +2185,19 @@ static int hostapd_ctrl_reset_pn(struct hostapd_data *hapd, const char *cmd)
 		if (hostapd_drv_set_key(hapd->conf->iface, hapd,
 					hapd->last_gtk_alg,
 					broadcast_ether_addr,
-					hapd->last_gtk_key_idx, 1, NULL, 0,
-					zero, hapd->last_gtk_len) < 0)
+					hapd->last_gtk_key_idx, 0, 1, NULL, 0,
+					zero, hapd->last_gtk_len,
+					KEY_FLAG_GROUP_TX_DEFAULT) < 0)
 			return -1;
 
 		/* Set the previously configured key to reset its TSC */
 		return hostapd_drv_set_key(hapd->conf->iface, hapd,
 					   hapd->last_gtk_alg,
 					   broadcast_ether_addr,
-					   hapd->last_gtk_key_idx, 1, NULL, 0,
-					   hapd->last_gtk, hapd->last_gtk_len);
+					   hapd->last_gtk_key_idx, 0, 1, NULL,
+					   0, hapd->last_gtk,
+					   hapd->last_gtk_len,
+					   KEY_FLAG_GROUP_TX_DEFAULT);
 	}
 
 	sta = ap_get_sta(hapd, addr);
@@ -2091,14 +2213,16 @@ static int hostapd_ctrl_reset_pn(struct hostapd_data *hapd, const char *cmd)
 	/* First, use a zero key to avoid any possible duplicate key avoidance
 	 * in the driver. */
 	if (hostapd_drv_set_key(hapd->conf->iface, hapd, sta->last_tk_alg,
-				sta->addr, sta->last_tk_key_idx, 1, NULL, 0,
-				zero, sta->last_tk_len) < 0)
+				sta->addr, sta->last_tk_key_idx, 0, 1, NULL, 0,
+				zero, sta->last_tk_len,
+				KEY_FLAG_PAIRWISE_RX_TX) < 0)
 		return -1;
 
 	/* Set the previously configured key to reset its TSC/RSC */
 	return hostapd_drv_set_key(hapd->conf->iface, hapd, sta->last_tk_alg,
-				   sta->addr, sta->last_tk_key_idx, 1, NULL, 0,
-				   sta->last_tk, sta->last_tk_len);
+				   sta->addr, sta->last_tk_key_idx, 0, 1, NULL,
+				   0, sta->last_tk, sta->last_tk_len,
+				   KEY_FLAG_PAIRWISE_RX_TX);
 }
 
 
@@ -2107,11 +2231,12 @@ static int hostapd_ctrl_set_key(struct hostapd_data *hapd, const char *cmd)
 	u8 addr[ETH_ALEN];
 	const char *pos = cmd;
 	enum wpa_alg alg;
+	enum key_flag key_flag;
 	int idx, set_tx;
 	u8 seq[6], key[WPA_TK_MAX_LEN];
 	size_t key_len;
 
-	/* parameters: alg addr idx set_tx seq key */
+	/* parameters: alg addr idx set_tx seq key key_flag */
 
 	alg = atoi(pos);
 	pos = os_strchr(pos, ' ');
@@ -2140,13 +2265,24 @@ static int hostapd_ctrl_set_key(struct hostapd_data *hapd, const char *cmd)
 	if (*pos != ' ')
 		return -1;
 	pos++;
-	key_len = os_strlen(pos) / 2;
+	if (!os_strchr(pos, ' '))
+		return -1;
+	key_len = (os_strchr(pos, ' ') - pos) / 2;
 	if (hexstr2bin(pos, key, key_len) < 0)
+		return -1;
+	pos += 2 * key_len;
+	if (*pos != ' ')
+		return -1;
+
+	pos++;
+	key_flag = atoi(pos);
+	pos = os_strchr(pos, ' ');
+	if (pos)
 		return -1;
 
 	wpa_printf(MSG_INFO, "TESTING: Set key");
-	return hostapd_drv_set_key(hapd->conf->iface, hapd, alg, addr, idx,
-				   set_tx, seq, 6, key, key_len);
+	return hostapd_drv_set_key(hapd->conf->iface, hapd, alg, addr, idx, 0,
+				   set_tx, seq, 6, key, key_len, key_flag);
 }
 
 
@@ -2161,8 +2297,9 @@ static void restore_tk(void *ctx1, void *ctx2)
 	 * in replay protection issues for now since there is no clean way of
 	 * preventing encryption of a single EAPOL frame. */
 	hostapd_drv_set_key(hapd->conf->iface, hapd, sta->last_tk_alg,
-			    sta->addr, sta->last_tk_key_idx, 1, NULL, 0,
-			    sta->last_tk, sta->last_tk_len);
+			    sta->addr, sta->last_tk_key_idx, 0, 1, NULL, 0,
+			    sta->last_tk, sta->last_tk_len,
+			    KEY_FLAG_PAIRWISE_RX_TX);
 }
 
 
@@ -2185,8 +2322,8 @@ static int hostapd_ctrl_resend_m1(struct hostapd_data *hapd, const char *cmd)
 		wpa_printf(MSG_INFO, "TESTING: Clear TK for " MACSTR,
 			   MAC2STR(sta->addr));
 		hostapd_drv_set_key(hapd->conf->iface, hapd, WPA_ALG_NONE,
-				    sta->addr, sta->last_tk_key_idx, 0, NULL, 0,
-				    NULL, 0);
+				    sta->addr, sta->last_tk_key_idx, 0, 0, NULL,
+				    0, NULL, 0, KEY_FLAG_PAIRWISE);
 	}
 
 	wpa_printf(MSG_INFO, "TESTING: Send M1 to " MACSTR, MAC2STR(sta->addr));
@@ -2215,8 +2352,8 @@ static int hostapd_ctrl_resend_m3(struct hostapd_data *hapd, const char *cmd)
 		wpa_printf(MSG_INFO, "TESTING: Clear TK for " MACSTR,
 			   MAC2STR(sta->addr));
 		hostapd_drv_set_key(hapd->conf->iface, hapd, WPA_ALG_NONE,
-				    sta->addr, sta->last_tk_key_idx, 0, NULL, 0,
-				    NULL, 0);
+				    sta->addr, sta->last_tk_key_idx, 0, 0, NULL,
+				    0, NULL, 0, KEY_FLAG_PAIRWISE);
 	}
 
 	wpa_printf(MSG_INFO, "TESTING: Send M3 to " MACSTR, MAC2STR(sta->addr));
@@ -2245,8 +2382,8 @@ static int hostapd_ctrl_resend_group_m1(struct hostapd_data *hapd,
 		wpa_printf(MSG_INFO, "TESTING: Clear TK for " MACSTR,
 			   MAC2STR(sta->addr));
 		hostapd_drv_set_key(hapd->conf->iface, hapd, WPA_ALG_NONE,
-				    sta->addr, sta->last_tk_key_idx, 0, NULL, 0,
-				    NULL, 0);
+				    sta->addr, sta->last_tk_key_idx, 0, 0, NULL,
+				    0, NULL, 0, KEY_FLAG_PAIRWISE);
 	}
 
 	wpa_printf(MSG_INFO,
@@ -2254,6 +2391,34 @@ static int hostapd_ctrl_resend_group_m1(struct hostapd_data *hapd,
 		   MACSTR, MAC2STR(sta->addr));
 	return wpa_auth_resend_group_m1(sta->wpa_sm,
 					plain ? restore_tk : NULL, hapd, sta);
+}
+
+
+static int hostapd_ctrl_get_pmk(struct hostapd_data *hapd, const char *cmd,
+				char *buf, size_t buflen)
+{
+	struct sta_info *sta;
+	u8 addr[ETH_ALEN];
+	const u8 *pmk;
+	int pmk_len;
+
+	if (hwaddr_aton(cmd, addr))
+		return -1;
+
+	sta = ap_get_sta(hapd, addr);
+	if (!sta || !sta->wpa_sm) {
+		wpa_printf(MSG_DEBUG, "No STA WPA state machine for " MACSTR,
+			   MAC2STR(addr));
+		return -1;
+	}
+	pmk = wpa_auth_get_pmk(sta->wpa_sm, &pmk_len);
+	if (!pmk) {
+		wpa_printf(MSG_DEBUG, "No PMK stored for " MACSTR,
+			   MAC2STR(addr));
+		return -1;
+	}
+
+	return wpa_snprintf_hex(buf, buflen, pmk, pmk_len);
 }
 
 #endif /* CONFIG_TESTING_OPTIONS */
@@ -2599,6 +2764,20 @@ static int hostapd_ctrl_iface_req_beacon(struct hostapd_data *hapd,
 }
 
 
+static int hostapd_ctrl_iface_show_neighbor(struct hostapd_data *hapd,
+					    char *buf, size_t buflen)
+{
+	if (!(hapd->conf->radio_measurements[0] &
+	      WLAN_RRM_CAPS_NEIGHBOR_REPORT)) {
+		wpa_printf(MSG_ERROR,
+			   "CTRL: SHOW_NEIGHBOR: Neighbor report is not enabled");
+		return -1;
+	}
+
+	return hostapd_neighbor_show(hapd, buf, buflen);
+}
+
+
 static int hostapd_ctrl_iface_set_neighbor(struct hostapd_data *hapd, char *buf)
 {
 	struct wpa_ssid_value ssid;
@@ -2705,6 +2884,7 @@ static int hostapd_ctrl_iface_remove_neighbor(struct hostapd_data *hapd,
 					      char *buf)
 {
 	struct wpa_ssid_value ssid;
+	struct wpa_ssid_value *ssidp = NULL;
 	u8 bssid[ETH_ALEN];
 	char *tmp;
 
@@ -2714,13 +2894,16 @@ static int hostapd_ctrl_iface_remove_neighbor(struct hostapd_data *hapd,
 	}
 
 	tmp = os_strstr(buf, "ssid=");
-	if (!tmp || ssid_parse(tmp + 5, &ssid)) {
-		wpa_printf(MSG_ERROR,
-			   "CTRL: REMOVE_NEIGHBORr: Bad or missing SSID");
-		return -1;
+	if (tmp) {
+		ssidp = &ssid;
+		if (ssid_parse(tmp + 5, &ssid)) {
+			wpa_printf(MSG_ERROR,
+				   "CTRL: REMOVE_NEIGHBOR: Bad SSID");
+			return -1;
+		}
 	}
 
-	return hostapd_neighbor_remove(hapd, bssid, &ssid);
+	return hostapd_neighbor_remove(hapd, bssid, ssidp);
 }
 
 
@@ -2826,6 +3009,34 @@ static int hostapd_ctrl_iface_acl_add_mac(struct mac_acl_entry **acl, int *num,
 }
 
 
+static int hostapd_ctrl_iface_get_capability(struct hostapd_data *hapd,
+					     const char *field, char *buf,
+					     size_t buflen)
+{
+	wpa_printf(MSG_DEBUG, "CTRL_IFACE: GET_CAPABILITY '%s'", field);
+
+#ifdef CONFIG_DPP
+	if (os_strcmp(field, "dpp") == 0) {
+		int res;
+
+#ifdef CONFIG_DPP2
+		res = os_snprintf(buf, buflen, "DPP=2");
+#else /* CONFIG_DPP2 */
+		res = os_snprintf(buf, buflen, "DPP=1");
+#endif /* CONFIG_DPP2 */
+		if (os_snprintf_error(buflen, res))
+			return -1;
+		return res;
+	}
+#endif /* CONFIG_DPP */
+
+	wpa_printf(MSG_DEBUG, "CTRL_IFACE: Unknown GET_CAPABILITY field '%s'",
+		   field);
+
+	return -1;
+}
+
+
 static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 					      char *buf, char *reply,
 					      int reply_size,
@@ -2924,13 +3135,11 @@ static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 	} else if (os_strcmp(buf, "STOP_AP") == 0) {
 		if (hostapd_ctrl_iface_stop_ap(hapd))
 			reply_len = -1;
-#ifdef CONFIG_IEEE80211W
 #ifdef NEED_AP_MLME
 	} else if (os_strncmp(buf, "SA_QUERY ", 9) == 0) {
 		if (hostapd_ctrl_iface_sa_query(hapd, buf + 9))
 			reply_len = -1;
 #endif /* NEED_AP_MLME */
-#endif /* CONFIG_IEEE80211W */
 #ifdef CONFIG_WPS
 	} else if (os_strncmp(buf, "WPS_PIN ", 8) == 0) {
 		if (hostapd_ctrl_iface_wps_pin(hapd, buf + 8))
@@ -3013,6 +3222,9 @@ static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 	} else if (os_strncmp(buf, "ENABLE", 6) == 0) {
 		if (hostapd_ctrl_iface_enable(hapd->iface))
 			reply_len = -1;
+	} else if (os_strcmp(buf, "RELOAD_WPA_PSK") == 0) {
+		if (hostapd_ctrl_iface_reload_wpa_psk(hapd))
+			reply_len = -1;
 	} else if (os_strncmp(buf, "RELOAD", 6) == 0) {
 		if (hostapd_ctrl_iface_reload(hapd->iface))
 			reply_len = -1;
@@ -3077,6 +3289,9 @@ static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 	} else if (os_strcmp(buf, "REKEY_GTK") == 0) {
 		if (wpa_auth_rekey_gtk(hapd->wpa_auth) < 0)
 			reply_len = -1;
+	} else if (os_strncmp(buf, "GET_PMK ", 8) == 0) {
+		reply_len = hostapd_ctrl_get_pmk(hapd, buf + 8, reply,
+						 reply_size);
 #endif /* CONFIG_TESTING_OPTIONS */
 	} else if (os_strncmp(buf, "CHAN_SWITCH ", 12) == 0) {
 		if (hostapd_ctrl_iface_chan_switch(hapd->iface, buf + 12))
@@ -3114,6 +3329,9 @@ static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 	} else if (os_strncmp(buf, "SET_NEIGHBOR ", 13) == 0) {
 		if (hostapd_ctrl_iface_set_neighbor(hapd, buf + 13))
 			reply_len = -1;
+	} else if (os_strcmp(buf, "SHOW_NEIGHBOR") == 0) {
+		reply_len = hostapd_ctrl_iface_show_neighbor(hapd, reply,
+							     reply_size);
 	} else if (os_strncmp(buf, "REMOVE_NEIGHBOR ", 16) == 0) {
 		if (hostapd_ctrl_iface_remove_neighbor(hapd, buf + 16))
 			reply_len = -1;
@@ -3181,8 +3399,35 @@ static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 			if (os_snprintf_error(reply_size, reply_len))
 				reply_len = -1;
 		}
+	} else if (os_strncmp(buf, "DPP_NFC_URI ", 12) == 0) {
+		res = hostapd_dpp_nfc_uri(hapd, buf + 12);
+		if (res < 0) {
+			reply_len = -1;
+		} else {
+			reply_len = os_snprintf(reply, reply_size, "%d", res);
+			if (os_snprintf_error(reply_size, reply_len))
+				reply_len = -1;
+		}
+	} else if (os_strncmp(buf, "DPP_NFC_HANDOVER_REQ ", 21) == 0) {
+		res = hostapd_dpp_nfc_handover_req(hapd, buf + 20);
+		if (res < 0) {
+			reply_len = -1;
+		} else {
+			reply_len = os_snprintf(reply, reply_size, "%d", res);
+			if (os_snprintf_error(reply_size, reply_len))
+				reply_len = -1;
+		}
+	} else if (os_strncmp(buf, "DPP_NFC_HANDOVER_SEL ", 21) == 0) {
+		res = hostapd_dpp_nfc_handover_sel(hapd, buf + 20);
+		if (res < 0) {
+			reply_len = -1;
+		} else {
+			reply_len = os_snprintf(reply, reply_size, "%d", res);
+			if (os_snprintf_error(reply_size, reply_len))
+				reply_len = -1;
+		}
 	} else if (os_strncmp(buf, "DPP_BOOTSTRAP_GEN ", 18) == 0) {
-		res = hostapd_dpp_bootstrap_gen(hapd, buf + 18);
+		res = dpp_bootstrap_gen(hapd->iface->interfaces->dpp, buf + 18);
 		if (res < 0) {
 			reply_len = -1;
 		} else {
@@ -3191,12 +3436,14 @@ static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 				reply_len = -1;
 		}
 	} else if (os_strncmp(buf, "DPP_BOOTSTRAP_REMOVE ", 21) == 0) {
-		if (hostapd_dpp_bootstrap_remove(hapd, buf + 21) < 0)
+		if (dpp_bootstrap_remove(hapd->iface->interfaces->dpp,
+					 buf + 21) < 0)
 			reply_len = -1;
 	} else if (os_strncmp(buf, "DPP_BOOTSTRAP_GET_URI ", 22) == 0) {
 		const char *uri;
 
-		uri = hostapd_dpp_bootstrap_get_uri(hapd, atoi(buf + 22));
+		uri = dpp_bootstrap_get_uri(hapd->iface->interfaces->dpp,
+					    atoi(buf + 22));
 		if (!uri) {
 			reply_len = -1;
 		} else {
@@ -3205,8 +3452,9 @@ static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 				reply_len = -1;
 		}
 	} else if (os_strncmp(buf, "DPP_BOOTSTRAP_INFO ", 19) == 0) {
-		reply_len = hostapd_dpp_bootstrap_info(hapd, atoi(buf + 19),
-						       reply, reply_size);
+		reply_len = dpp_bootstrap_info(hapd->iface->interfaces->dpp,
+					       atoi(buf + 19),
+			reply, reply_size);
 	} else if (os_strncmp(buf, "DPP_AUTH_INIT ", 14) == 0) {
 		if (hostapd_dpp_auth_init(hapd, buf + 13) < 0)
 			reply_len = -1;
@@ -3217,7 +3465,8 @@ static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 		hostapd_dpp_stop(hapd);
 		hostapd_dpp_listen_stop(hapd);
 	} else if (os_strncmp(buf, "DPP_CONFIGURATOR_ADD", 20) == 0) {
-		res = hostapd_dpp_configurator_add(hapd, buf + 20);
+		res = dpp_configurator_add(hapd->iface->interfaces->dpp,
+					   buf + 20);
 		if (res < 0) {
 			reply_len = -1;
 		} else {
@@ -3226,15 +3475,17 @@ static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 				reply_len = -1;
 		}
 	} else if (os_strncmp(buf, "DPP_CONFIGURATOR_REMOVE ", 24) == 0) {
-		if (hostapd_dpp_configurator_remove(hapd, buf + 24) < 0)
+		if (dpp_configurator_remove(hapd->iface->interfaces->dpp,
+					    buf + 24) < 0)
 			reply_len = -1;
 	} else if (os_strncmp(buf, "DPP_CONFIGURATOR_SIGN ", 22) == 0) {
-		if (hostapd_dpp_configurator_sign(hapd, buf + 22) < 0)
+		if (hostapd_dpp_configurator_sign(hapd, buf + 21) < 0)
 			reply_len = -1;
 	} else if (os_strncmp(buf, "DPP_CONFIGURATOR_GET_KEY ", 25) == 0) {
-		reply_len = hostapd_dpp_configurator_get_key(hapd,
-							     atoi(buf + 25),
-							     reply, reply_size);
+		reply_len = dpp_configurator_get_key_id(
+			hapd->iface->interfaces->dpp,
+			atoi(buf + 25),
+			reply, reply_size);
 	} else if (os_strncmp(buf, "DPP_PKEX_ADD ", 13) == 0) {
 		res = hostapd_dpp_pkex_add(hapd, buf + 12);
 		if (res < 0) {
@@ -3253,6 +3504,9 @@ static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 		if (radius_server_dac_request(hapd->radius_srv, buf + 12) < 0)
 			reply_len = -1;
 #endif /* RADIUS_SERVER */
+	} else if (os_strncmp(buf, "GET_CAPABILITY ", 15) == 0) {
+		reply_len = hostapd_ctrl_iface_get_capability(
+			hapd, buf + 15, reply, reply_size);
 	} else {
 		os_memcpy(reply, "UNKNOWN COMMAND\n", 16);
 		reply_len = 16;
@@ -3280,7 +3534,7 @@ static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 	int reply_len;
 	int level = MSG_DEBUG;
 #ifdef CONFIG_CTRL_IFACE_UDP
-	unsigned char lcookie[COOKIE_LEN];
+	unsigned char lcookie[CTRL_IFACE_COOKIE_LEN];
 #endif /* CONFIG_CTRL_IFACE_UDP */
 
 	res = recvfrom(sock, buf, sizeof(buf) - 1, 0,
@@ -3305,28 +3559,30 @@ static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 #ifdef CONFIG_CTRL_IFACE_UDP
 	if (os_strcmp(buf, "GET_COOKIE") == 0) {
 		os_memcpy(reply, "COOKIE=", 7);
-		wpa_snprintf_hex(reply + 7, 2 * COOKIE_LEN + 1,
-				 cookie, COOKIE_LEN);
-		reply_len = 7 + 2 * COOKIE_LEN;
+		wpa_snprintf_hex(reply + 7, 2 * CTRL_IFACE_COOKIE_LEN + 1,
+				 hapd->ctrl_iface_cookie,
+				 CTRL_IFACE_COOKIE_LEN);
+		reply_len = 7 + 2 * CTRL_IFACE_COOKIE_LEN;
 		goto done;
 	}
 
 	if (os_strncmp(buf, "COOKIE=", 7) != 0 ||
-	    hexstr2bin(buf + 7, lcookie, COOKIE_LEN) < 0) {
+	    hexstr2bin(buf + 7, lcookie, CTRL_IFACE_COOKIE_LEN) < 0) {
 		wpa_printf(MSG_DEBUG,
 			   "CTRL: No cookie in the request - drop request");
 		os_free(reply);
 		return;
 	}
 
-	if (os_memcmp(cookie, lcookie, COOKIE_LEN) != 0) {
+	if (os_memcmp(hapd->ctrl_iface_cookie, lcookie,
+		      CTRL_IFACE_COOKIE_LEN) != 0) {
 		wpa_printf(MSG_DEBUG,
 			   "CTRL: Invalid cookie in the request - drop request");
 		os_free(reply);
 		return;
 	}
 
-	pos = buf + 7 + 2 * COOKIE_LEN;
+	pos = buf + 7 + 2 * CTRL_IFACE_COOKIE_LEN;
 	while (*pos == ' ')
 		pos++;
 #endif /* CONFIG_CTRL_IFACE_UDP */
@@ -3415,7 +3671,7 @@ int hostapd_ctrl_iface_init(struct hostapd_data *hapd)
 
 	dl_list_init(&hapd->ctrl_dst);
 	hapd->ctrl_sock = -1;
-	os_get_random(cookie, COOKIE_LEN);
+	os_get_random(hapd->ctrl_iface_cookie, CTRL_IFACE_COOKIE_LEN);
 
 #ifdef CONFIG_CTRL_IFACE_UDP_REMOTE
 	hints.ai_flags = AI_PASSIVE;
@@ -3506,18 +3762,18 @@ fail:
 	}
 
 	if (hapd->conf->ctrl_interface_gid_set &&
-	    chown(hapd->conf->ctrl_interface, -1,
-		  hapd->conf->ctrl_interface_gid) < 0) {
-		wpa_printf(MSG_ERROR, "chown[ctrl_interface]: %s",
+	    lchown(hapd->conf->ctrl_interface, -1,
+		   hapd->conf->ctrl_interface_gid) < 0) {
+		wpa_printf(MSG_ERROR, "lchown[ctrl_interface]: %s",
 			   strerror(errno));
 		return -1;
 	}
 
 	if (!hapd->conf->ctrl_interface_gid_set &&
 	    hapd->iface->interfaces->ctrl_iface_group &&
-	    chown(hapd->conf->ctrl_interface, -1,
-		  hapd->iface->interfaces->ctrl_iface_group) < 0) {
-		wpa_printf(MSG_ERROR, "chown[ctrl_interface]: %s",
+	    lchown(hapd->conf->ctrl_interface, -1,
+		   hapd->iface->interfaces->ctrl_iface_group) < 0) {
+		wpa_printf(MSG_ERROR, "lchown[ctrl_interface]: %s",
 			   strerror(errno));
 		return -1;
 	}
@@ -3590,16 +3846,16 @@ fail:
 	}
 
 	if (hapd->conf->ctrl_interface_gid_set &&
-	    chown(fname, -1, hapd->conf->ctrl_interface_gid) < 0) {
-		wpa_printf(MSG_ERROR, "chown[ctrl_interface/ifname]: %s",
+	    lchown(fname, -1, hapd->conf->ctrl_interface_gid) < 0) {
+		wpa_printf(MSG_ERROR, "lchown[ctrl_interface/ifname]: %s",
 			   strerror(errno));
 		goto fail;
 	}
 
 	if (!hapd->conf->ctrl_interface_gid_set &&
 	    hapd->iface->interfaces->ctrl_iface_group &&
-	    chown(fname, -1, hapd->iface->interfaces->ctrl_iface_group) < 0) {
-		wpa_printf(MSG_ERROR, "chown[ctrl_interface/ifname]: %s",
+	    lchown(fname, -1, hapd->iface->interfaces->ctrl_iface_group) < 0) {
+		wpa_printf(MSG_ERROR, "lchown[ctrl_interface/ifname]: %s",
 			   strerror(errno));
 		goto fail;
 	}
@@ -3733,7 +3989,7 @@ static void hostapd_ctrl_iface_flush(struct hapd_interfaces *interfaces)
 #endif /* CONFIG_TESTING_OPTIONS */
 
 #ifdef CONFIG_DPP
-	hostapd_dpp_deinit_global(interfaces);
+	dpp_global_clear(interfaces->dpp);
 #endif /* CONFIG_DPP */
 }
 
@@ -3994,7 +4250,7 @@ static int hostapd_global_ctrl_iface_ifname(struct hapd_interfaces *interfaces,
 static void hostapd_global_ctrl_iface_receive(int sock, void *eloop_ctx,
 					      void *sock_ctx)
 {
-	void *interfaces = eloop_ctx;
+	struct hapd_interfaces *interfaces = eloop_ctx;
 	char buffer[256], *buf = buffer;
 	int res;
 	struct sockaddr_storage from;
@@ -4003,7 +4259,7 @@ static void hostapd_global_ctrl_iface_receive(int sock, void *eloop_ctx,
 	int reply_len;
 	const int reply_size = 4096;
 #ifdef CONFIG_CTRL_IFACE_UDP
-	unsigned char lcookie[COOKIE_LEN];
+	unsigned char lcookie[CTRL_IFACE_COOKIE_LEN];
 #endif /* CONFIG_CTRL_IFACE_UDP */
 
 	res = recvfrom(sock, buffer, sizeof(buffer) - 1, 0,
@@ -4032,28 +4288,30 @@ static void hostapd_global_ctrl_iface_receive(int sock, void *eloop_ctx,
 #ifdef CONFIG_CTRL_IFACE_UDP
 	if (os_strcmp(buf, "GET_COOKIE") == 0) {
 		os_memcpy(reply, "COOKIE=", 7);
-		wpa_snprintf_hex(reply + 7, 2 * COOKIE_LEN + 1,
-				 gcookie, COOKIE_LEN);
-		reply_len = 7 + 2 * COOKIE_LEN;
+		wpa_snprintf_hex(reply + 7, 2 * CTRL_IFACE_COOKIE_LEN + 1,
+				 interfaces->ctrl_iface_cookie,
+				 CTRL_IFACE_COOKIE_LEN);
+		reply_len = 7 + 2 * CTRL_IFACE_COOKIE_LEN;
 		goto send_reply;
 	}
 
 	if (os_strncmp(buf, "COOKIE=", 7) != 0 ||
-	    hexstr2bin(buf + 7, lcookie, COOKIE_LEN) < 0) {
+	    hexstr2bin(buf + 7, lcookie, CTRL_IFACE_COOKIE_LEN) < 0) {
 		wpa_printf(MSG_DEBUG,
 			   "CTRL: No cookie in the request - drop request");
 		os_free(reply);
 		return;
 	}
 
-	if (os_memcmp(gcookie, lcookie, COOKIE_LEN) != 0) {
+	if (os_memcmp(interfaces->ctrl_iface_cookie, lcookie,
+		      CTRL_IFACE_COOKIE_LEN) != 0) {
 		wpa_printf(MSG_DEBUG,
 			   "CTRL: Invalid cookie in the request - drop request");
 		os_free(reply);
 		return;
 	}
 
-	buf += 7 + 2 * COOKIE_LEN;
+	buf += 7 + 2 * CTRL_IFACE_COOKIE_LEN;
 	while (*buf == ' ')
 		buf++;
 #endif /* CONFIG_CTRL_IFACE_UDP */
@@ -4197,7 +4455,7 @@ int hostapd_global_ctrl_iface_init(struct hapd_interfaces *interface)
 		}
 	}
 
-	os_get_random(gcookie, COOKIE_LEN);
+	os_get_random(interface->ctrl_iface_cookie, CTRL_IFACE_COOKIE_LEN);
 
 #ifdef CONFIG_CTRL_IFACE_UDP_REMOTE
 	hints.ai_flags = AI_PASSIVE;
@@ -4247,6 +4505,8 @@ try_again:
 		return -1;
 	}
 
+	wpa_msg_register_cb(hostapd_ctrl_iface_msg_cb);
+
 	return 0;
 
 fail:
@@ -4273,9 +4533,9 @@ fail:
 			goto fail;
 		}
 	} else if (interface->ctrl_iface_group &&
-		   chown(interface->global_iface_path, -1,
-			 interface->ctrl_iface_group) < 0) {
-		wpa_printf(MSG_ERROR, "chown[ctrl_interface]: %s",
+		   lchown(interface->global_iface_path, -1,
+			  interface->ctrl_iface_group) < 0) {
+		wpa_printf(MSG_ERROR, "lchown[ctrl_interface]: %s",
 			   strerror(errno));
 		goto fail;
 	}
@@ -4332,8 +4592,8 @@ fail:
 	}
 
 	if (interface->ctrl_iface_group &&
-	    chown(fname, -1, interface->ctrl_iface_group) < 0) {
-		wpa_printf(MSG_ERROR, "chown[ctrl_interface]: %s",
+	    lchown(fname, -1, interface->ctrl_iface_group) < 0) {
+		wpa_printf(MSG_ERROR, "lchown[ctrl_interface]: %s",
 			   strerror(errno));
 		goto fail;
 	}
@@ -4348,6 +4608,8 @@ fail:
 	interface->global_ctrl_sock = s;
 	eloop_register_read_sock(s, hostapd_global_ctrl_iface_receive,
 				 interface, NULL);
+
+	wpa_msg_register_cb(hostapd_ctrl_iface_msg_cb);
 
 	return 0;
 
@@ -4418,37 +4680,43 @@ static int hostapd_ctrl_check_event_enabled(struct wpa_ctrl_dst *dst,
 }
 
 
-static void hostapd_ctrl_iface_send(struct hostapd_data *hapd, int level,
-				    enum wpa_msg_type type,
-				    const char *buf, size_t len)
+static void hostapd_ctrl_iface_send_internal(int sock, struct dl_list *ctrl_dst,
+					     const char *ifname, int level,
+					     const char *buf, size_t len)
 {
 	struct wpa_ctrl_dst *dst, *next;
-	struct dl_list *ctrl_dst;
 	struct msghdr msg;
-	int idx;
-	struct iovec io[2];
+	int idx, res;
+	struct iovec io[5];
 	char levelstr[10];
-	int s;
 
-	if (type != WPA_MSG_ONLY_GLOBAL) {
-		s = hapd->ctrl_sock;
-		ctrl_dst = &hapd->ctrl_dst;
-	} else {
-		s = hapd->iface->interfaces->global_ctrl_sock;
-		ctrl_dst = &hapd->iface->interfaces->global_ctrl_dst;
-	}
-
-	if (s < 0 || dl_list_empty(ctrl_dst))
+	if (sock < 0 || dl_list_empty(ctrl_dst))
 		return;
 
-	os_snprintf(levelstr, sizeof(levelstr), "<%d>", level);
-	io[0].iov_base = levelstr;
-	io[0].iov_len = os_strlen(levelstr);
-	io[1].iov_base = (char *) buf;
-	io[1].iov_len = len;
+	res = os_snprintf(levelstr, sizeof(levelstr), "<%d>", level);
+	if (os_snprintf_error(sizeof(levelstr), res))
+		return;
+	idx = 0;
+	if (ifname) {
+		io[idx].iov_base = "IFNAME=";
+		io[idx].iov_len = 7;
+		idx++;
+		io[idx].iov_base = (char *) ifname;
+		io[idx].iov_len = os_strlen(ifname);
+		idx++;
+		io[idx].iov_base = " ";
+		io[idx].iov_len = 1;
+		idx++;
+	}
+	io[idx].iov_base = levelstr;
+	io[idx].iov_len = os_strlen(levelstr);
+	idx++;
+	io[idx].iov_base = (char *) buf;
+	io[idx].iov_len = len;
+	idx++;
 	os_memset(&msg, 0, sizeof(msg));
 	msg.msg_iov = io;
-	msg.msg_iovlen = 2;
+	msg.msg_iovlen = idx;
 
 	idx = 0;
 	dl_list_for_each_safe(dst, next, ctrl_dst, struct wpa_ctrl_dst, list) {
@@ -4458,27 +4726,42 @@ static void hostapd_ctrl_iface_send(struct hostapd_data *hapd, int level,
 				       &dst->addr, dst->addrlen);
 			msg.msg_name = &dst->addr;
 			msg.msg_namelen = dst->addrlen;
-			if (sendmsg(s, &msg, 0) < 0) {
+			if (sendmsg(sock, &msg, 0) < 0) {
 				int _errno = errno;
 				wpa_printf(MSG_INFO, "CTRL_IFACE monitor[%d]: "
 					   "%d - %s",
 					   idx, errno, strerror(errno));
 				dst->errors++;
 				if (dst->errors > 10 || _errno == ENOENT) {
-					if (type != WPA_MSG_ONLY_GLOBAL)
-						hostapd_ctrl_iface_detach(
-							hapd, &dst->addr,
-							dst->addrlen);
-					else
-						hostapd_global_ctrl_iface_detach(
-							hapd->iface->interfaces,
-							&dst->addr,
-							dst->addrlen);
+					ctrl_iface_detach(ctrl_dst,
+							  &dst->addr,
+							  dst->addrlen);
 				}
 			} else
 				dst->errors = 0;
 		}
 		idx++;
+	}
+}
+
+
+static void hostapd_ctrl_iface_send(struct hostapd_data *hapd, int level,
+				    enum wpa_msg_type type,
+				    const char *buf, size_t len)
+{
+	if (type != WPA_MSG_NO_GLOBAL) {
+		hostapd_ctrl_iface_send_internal(
+			hapd->iface->interfaces->global_ctrl_sock,
+			&hapd->iface->interfaces->global_ctrl_dst,
+			type != WPA_MSG_PER_INTERFACE ?
+			NULL : hapd->conf->iface,
+			level, buf, len);
+	}
+
+	if (type != WPA_MSG_ONLY_GLOBAL) {
+		hostapd_ctrl_iface_send_internal(
+			hapd->ctrl_sock, &hapd->ctrl_dst,
+			NULL, level, buf, len);
 	}
 }
 

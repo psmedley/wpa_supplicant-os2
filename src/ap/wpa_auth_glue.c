@@ -27,6 +27,7 @@
 #include "tkip_countermeasures.h"
 #include "ap_drv_ops.h"
 #include "ap_config.h"
+#include "ieee802_11.h"
 #include "pmksa_cache_auth.h"
 #include "wpa_auth.h"
 #include "wpa_auth_glue.h"
@@ -36,6 +37,8 @@ static void hostapd_wpa_auth_conf(struct hostapd_bss_config *conf,
 				  struct hostapd_config *iconf,
 				  struct wpa_auth_config *wconf)
 {
+	int sae_pw_id;
+
 	os_memset(wconf, 0, sizeof(*wconf));
 	wconf->wpa = conf->wpa;
 	wconf->wpa_key_mgmt = conf->wpa_key_mgmt;
@@ -52,15 +55,21 @@ static void hostapd_wpa_auth_conf(struct hostapd_bss_config *conf,
 	wconf->rsn_pairwise = conf->rsn_pairwise;
 	wconf->rsn_preauth = conf->rsn_preauth;
 	wconf->eapol_version = conf->eapol_version;
+#ifdef CONFIG_MACSEC
+	if (wconf->eapol_version > 2)
+		wconf->eapol_version = 2;
+#endif /* CONFIG_MACSEC */
 	wconf->wmm_enabled = conf->wmm_enabled;
 	wconf->wmm_uapsd = conf->wmm_uapsd;
 	wconf->disable_pmksa_caching = conf->disable_pmksa_caching;
+#ifdef CONFIG_OCV
+	wconf->ocv = conf->ocv;
+#endif /* CONFIG_OCV */
 	wconf->okc = conf->okc;
-#ifdef CONFIG_IEEE80211W
 	wconf->ieee80211w = conf->ieee80211w;
+	wconf->beacon_prot = conf->beacon_prot;
 	wconf->group_mgmt_cipher = conf->group_mgmt_cipher;
 	wconf->sae_require_mfp = conf->sae_require_mfp;
-#endif /* CONFIG_IEEE80211W */
 #ifdef CONFIG_IEEE80211R_AP
 	wconf->ssid_len = conf->ssid.ssid_len;
 	if (wconf->ssid_len > SSID_MAX_LEN)
@@ -99,9 +108,7 @@ static void hostapd_wpa_auth_conf(struct hostapd_bss_config *conf,
 		wconf->rsn_pairwise = WPA_CIPHER_CCMP;
 		wconf->rsn_preauth = 0;
 		wconf->disable_pmksa_caching = 1;
-#ifdef CONFIG_IEEE80211W
 		wconf->ieee80211w = 1;
-#endif /* CONFIG_IEEE80211W */
 	}
 #endif /* CONFIG_HS20 */
 #ifdef CONFIG_TESTING_OPTIONS
@@ -113,6 +120,40 @@ static void hostapd_wpa_auth_conf(struct hostapd_bss_config *conf,
 		os_memcpy(wconf->own_ie_override,
 			  wpabuf_head(conf->own_ie_override),
 			  wconf->own_ie_override_len);
+	}
+	if (conf->rsne_override_eapol &&
+	    wpabuf_len(conf->rsne_override_eapol) <= MAX_OWN_IE_OVERRIDE) {
+		wconf->rsne_override_eapol_set = 1;
+		wconf->rsne_override_eapol_len =
+			wpabuf_len(conf->rsne_override_eapol);
+		os_memcpy(wconf->rsne_override_eapol,
+			  wpabuf_head(conf->rsne_override_eapol),
+			  wconf->rsne_override_eapol_len);
+	}
+	if (conf->rsnxe_override_eapol &&
+	    wpabuf_len(conf->rsnxe_override_eapol) <= MAX_OWN_IE_OVERRIDE) {
+		wconf->rsnxe_override_eapol_set = 1;
+		wconf->rsnxe_override_eapol_len =
+			wpabuf_len(conf->rsnxe_override_eapol);
+		os_memcpy(wconf->rsnxe_override_eapol,
+			  wpabuf_head(conf->rsnxe_override_eapol),
+			  wconf->rsnxe_override_eapol_len);
+	}
+	if (conf->gtk_rsc_override &&
+	    wpabuf_len(conf->gtk_rsc_override) > 0 &&
+	    wpabuf_len(conf->gtk_rsc_override) <= WPA_KEY_RSC_LEN) {
+		os_memcpy(wconf->gtk_rsc_override,
+			  wpabuf_head(conf->gtk_rsc_override),
+			  wpabuf_len(conf->gtk_rsc_override));
+		wconf->gtk_rsc_override_set = 1;
+	}
+	if (conf->igtk_rsc_override &&
+	    wpabuf_len(conf->igtk_rsc_override) > 0 &&
+	    wpabuf_len(conf->igtk_rsc_override) <= WPA_KEY_RSC_LEN) {
+		os_memcpy(wconf->igtk_rsc_override,
+			  wpabuf_head(conf->igtk_rsc_override),
+			  wpabuf_len(conf->igtk_rsc_override));
+		wconf->igtk_rsc_override_set = 1;
 	}
 #endif /* CONFIG_TESTING_OPTIONS */
 #ifdef CONFIG_P2P
@@ -126,6 +167,15 @@ static void hostapd_wpa_auth_conf(struct hostapd_bss_config *conf,
 	os_memcpy(wconf->fils_cache_id, conf->fils_cache_id,
 		  FILS_CACHE_ID_LEN);
 #endif /* CONFIG_FILS */
+	wconf->sae_pwe = conf->sae_pwe;
+	sae_pw_id = hostapd_sae_pw_id_in_use(conf);
+	if (sae_pw_id == 2 && wconf->sae_pwe != 3)
+		wconf->sae_pwe = 1;
+	else if (sae_pw_id == 1 && wconf->sae_pwe == 0)
+		wconf->sae_pwe = 2;
+#ifdef CONFIG_OWE
+	wconf->owe_ptk_workaround = conf->owe_ptk_workaround;
+#endif /* CONFIG_OWE */
 }
 
 
@@ -242,12 +292,15 @@ static int hostapd_wpa_auth_get_eapol(void *ctx, const u8 *addr,
 
 static const u8 * hostapd_wpa_auth_get_psk(void *ctx, const u8 *addr,
 					   const u8 *p2p_dev_addr,
-					   const u8 *prev_psk, size_t *psk_len)
+					   const u8 *prev_psk, size_t *psk_len,
+					   int *vlan_id)
 {
 	struct hostapd_data *hapd = ctx;
 	struct sta_info *sta = ap_get_sta(hapd, addr);
 	const u8 *psk;
 
+	if (vlan_id)
+		*vlan_id = 0;
 	if (psk_len)
 		*psk_len = PMK_LEN;
 
@@ -283,7 +336,8 @@ static const u8 * hostapd_wpa_auth_get_psk(void *ctx, const u8 *addr,
 	}
 #endif /* CONFIG_OWE */
 
-	psk = hostapd_get_psk(hapd->conf, addr, p2p_dev_addr, prev_psk);
+	psk = hostapd_get_psk(hapd->conf, addr, p2p_dev_addr, prev_psk,
+			      vlan_id);
 	/*
 	 * This is about to iterate over all psks, prev_psk gives the last
 	 * returned psk which should not be returned again.
@@ -291,6 +345,9 @@ static const u8 * hostapd_wpa_auth_get_psk(void *ctx, const u8 *addr,
 	 */
 	if (sta && sta->psk && !psk) {
 		struct hostapd_sta_wpa_psk_short *pos;
+
+		if (vlan_id)
+			*vlan_id = 0;
 		psk = sta->psk->psk;
 		for (pos = sta->psk; pos; pos = pos->next) {
 			if (pos->is_passphrase) {
@@ -342,15 +399,19 @@ static int hostapd_wpa_auth_get_msk(void *ctx, const u8 *addr, u8 *msk,
 
 static int hostapd_wpa_auth_set_key(void *ctx, int vlan_id, enum wpa_alg alg,
 				    const u8 *addr, int idx, u8 *key,
-				    size_t key_len)
+				    size_t key_len, enum key_flag key_flag)
 {
 	struct hostapd_data *hapd = ctx;
 	const char *ifname = hapd->conf->iface;
 
 	if (vlan_id > 0) {
 		ifname = hostapd_get_vlan_id_ifname(hapd->conf->vlan, vlan_id);
-		if (ifname == NULL)
-			return -1;
+		if (!ifname) {
+			if (!(hapd->iface->drv_flags &
+			      WPA_DRIVER_FLAGS_VLAN_OFFLOAD))
+				return -1;
+			ifname = hapd->conf->iface;
+		}
 	}
 
 #ifdef CONFIG_TESTING_OPTIONS
@@ -365,7 +426,6 @@ static int hostapd_wpa_auth_set_key(void *ctx, int vlan_id, enum wpa_alg alg,
 				os_memcpy(sta->last_tk, key, key_len);
 			sta->last_tk_len = key_len;
 		}
-#ifdef CONFIG_IEEE80211W
 	} else if (alg == WPA_ALG_IGTK ||
 		   alg == WPA_ALG_BIP_GMAC_128 ||
 		   alg == WPA_ALG_BIP_GMAC_256 ||
@@ -375,7 +435,6 @@ static int hostapd_wpa_auth_set_key(void *ctx, int vlan_id, enum wpa_alg alg,
 		if (key)
 			os_memcpy(hapd->last_igtk, key, key_len);
 		hapd->last_igtk_len = key_len;
-#endif /* CONFIG_IEEE80211W */
 	} else {
 		hapd->last_gtk_alg = alg;
 		hapd->last_gtk_key_idx = idx;
@@ -384,8 +443,8 @@ static int hostapd_wpa_auth_set_key(void *ctx, int vlan_id, enum wpa_alg alg,
 		hapd->last_gtk_len = key_len;
 	}
 #endif /* CONFIG_TESTING_OPTIONS */
-	return hostapd_drv_set_key(ifname, hapd, alg, addr, idx, 1, NULL, 0,
-				   key, key_len);
+	return hostapd_drv_set_key(ifname, hapd, alg, addr, idx, vlan_id, 1,
+				   NULL, 0, key, key_len, key_flag);
 }
 
 
@@ -605,10 +664,6 @@ static int hostapd_wpa_auth_send_ether(void *ctx, const u8 *dst, u16 proto,
 	}
 #endif /* CONFIG_IEEE80211R_AP */
 
-	if (hapd->driver && hapd->driver->send_ether)
-		return hapd->driver->send_ether(hapd->drv_priv, dst,
-						hapd->own_addr, proto,
-						data, data_len);
 	if (hapd->l2 == NULL)
 		return -1;
 
@@ -670,6 +725,12 @@ static void hostapd_oui_deliver_later(void *eloop_ctx, void *timeout_ctx)
 	dl_list_for_each_safe(data, n, &hapd->l2_oui_queue,
 			      struct oui_deliver_later_data, list) {
 		oui_ctx = hostapd_wpa_get_oui(hapd, data->oui_suffix);
+		wpa_printf(MSG_DEBUG, "RRB(%s): %s src=" MACSTR " dst=" MACSTR
+			   " oui_suffix=%u data_len=%u data=%p",
+			   hapd->conf->iface, __func__,
+			   MAC2STR(data->src_addr), MAC2STR(data->dst_addr),
+			   data->oui_suffix, (unsigned int) data->data_len,
+			   data);
 		if (hapd->wpa_auth && oui_ctx) {
 			eth_p_oui_deliver(oui_ctx, data->src_addr,
 					  data->dst_addr,
@@ -694,16 +755,26 @@ static int hostapd_wpa_auth_oui_iter(struct hostapd_iface *iface, void *ctx)
 {
 	struct wpa_auth_oui_iface_iter_data *idata = ctx;
 	struct oui_deliver_later_data *data;
-	struct hostapd_data *hapd;
+	struct hostapd_data *hapd, *src_hapd = idata->src_hapd;
 	size_t j;
 
 	for (j = 0; j < iface->num_bss; j++) {
 		hapd = iface->bss[j];
-		if (hapd == idata->src_hapd)
-			continue;
+		if (hapd == src_hapd)
+			continue; /* don't deliver back to same interface */
+		if (!wpa_key_mgmt_ft(hapd->conf->wpa_key_mgmt) ||
+		    hapd->conf->ssid.ssid_len !=
+		    src_hapd->conf->ssid.ssid_len ||
+		    os_memcmp(hapd->conf->ssid.ssid,
+			      src_hapd->conf->ssid.ssid,
+			      hapd->conf->ssid.ssid_len) != 0 ||
+		    os_memcmp(hapd->conf->mobility_domain,
+			      src_hapd->conf->mobility_domain,
+			      MOBILITY_DOMAIN_ID_LEN) != 0)
+			continue; /* no matching FT SSID/mobility domain */
 		if (!is_multicast_ether_addr(idata->dst_addr) &&
 		    os_memcmp(hapd->own_addr, idata->dst_addr, ETH_ALEN) != 0)
-			continue;
+			continue; /* destination address does not match */
 
 		/* defer eth_p_oui_deliver until next eloop step as this is
 		 * when it would be triggerd from reading from sock
@@ -715,14 +786,20 @@ static int hostapd_wpa_auth_oui_iter(struct hostapd_iface *iface, void *ctx)
 		data = os_zalloc(sizeof(*data) + idata->data_len);
 		if (!data)
 			return 1;
+		wpa_printf(MSG_DEBUG,
+			   "RRB(%s): local delivery to %s dst=" MACSTR
+			   " oui_suffix=%u data_len=%u data=%p",
+			   src_hapd->conf->iface, hapd->conf->iface,
+			   MAC2STR(idata->dst_addr), idata->oui_suffix,
+			   (unsigned int) idata->data_len, data);
 
-		os_memcpy(data->src_addr, idata->src_hapd->own_addr, ETH_ALEN);
+		os_memcpy(data->src_addr, src_hapd->own_addr, ETH_ALEN);
 		os_memcpy(data->dst_addr, idata->dst_addr, ETH_ALEN);
 		os_memcpy(data + 1, idata->data, idata->data_len);
 		data->data_len = idata->data_len;
 		data->oui_suffix = idata->oui_suffix;
 
-		dl_list_add(&hapd->l2_oui_queue, &data->list);
+		dl_list_add_tail(&hapd->l2_oui_queue, &data->list);
 
 		if (!eloop_is_timeout_registered(hostapd_oui_deliver_later,
 						 hapd, NULL))
@@ -730,7 +807,11 @@ static int hostapd_wpa_auth_oui_iter(struct hostapd_iface *iface, void *ctx)
 					       hostapd_oui_deliver_later,
 					       hapd, NULL);
 
-		return 1;
+		/* If dst_addr is a multicast address, do not return any
+		 * non-zero value here. Otherwise, the iteration of
+		 * for_each_interface() will be stopped. */
+		if (!is_multicast_ether_addr(idata->dst_addr))
+			return 1;
 	}
 
 	return 0;
@@ -746,6 +827,10 @@ static int hostapd_wpa_auth_send_oui(void *ctx, const u8 *dst, u8 oui_suffix,
 	struct hostapd_data *hapd = ctx;
 	struct eth_p_oui_ctx *oui_ctx;
 
+	wpa_printf(MSG_DEBUG, "RRB(%s): send to dst=" MACSTR
+		   " oui_suffix=%u data_len=%u",
+		   hapd->conf->iface, MAC2STR(dst), oui_suffix,
+		   (unsigned int) data_len);
 #ifdef CONFIG_IEEE80211R_AP
 	if (hapd->iface->interfaces &&
 	    hapd->iface->interfaces->for_each_interface) {
@@ -776,6 +861,80 @@ static int hostapd_wpa_auth_send_oui(void *ctx, const u8 *dst, u8 oui_suffix,
 }
 
 
+static int hostapd_channel_info(void *ctx, struct wpa_channel_info *ci)
+{
+	struct hostapd_data *hapd = ctx;
+
+	return hostapd_drv_channel_info(hapd, ci);
+}
+
+
+static int hostapd_wpa_auth_update_vlan(void *ctx, const u8 *addr, int vlan_id)
+{
+#ifndef CONFIG_NO_VLAN
+	struct hostapd_data *hapd = ctx;
+	struct sta_info *sta;
+
+	sta = ap_get_sta(hapd, addr);
+	if (!sta)
+		return -1;
+
+	if (!(hapd->iface->drv_flags & WPA_DRIVER_FLAGS_VLAN_OFFLOAD)) {
+		struct vlan_description vlan_desc;
+
+		os_memset(&vlan_desc, 0, sizeof(vlan_desc));
+		vlan_desc.notempty = 1;
+		vlan_desc.untagged = vlan_id;
+		if (!hostapd_vlan_valid(hapd->conf->vlan, &vlan_desc)) {
+			wpa_printf(MSG_INFO,
+				   "Invalid VLAN ID %d in wpa_psk_file",
+				   vlan_id);
+			return -1;
+		}
+
+		if (ap_sta_set_vlan(hapd, sta, &vlan_desc) < 0) {
+			wpa_printf(MSG_INFO,
+				   "Failed to assign VLAN ID %d from wpa_psk_file to "
+				   MACSTR, vlan_id, MAC2STR(sta->addr));
+			return -1;
+		}
+	} else {
+		sta->vlan_id = vlan_id;
+	}
+
+	wpa_printf(MSG_INFO,
+		   "Assigned VLAN ID %d from wpa_psk_file to " MACSTR,
+		   vlan_id, MAC2STR(sta->addr));
+	if ((sta->flags & WLAN_STA_ASSOC) &&
+	    ap_sta_bind_vlan(hapd, sta) < 0)
+		return -1;
+#endif /* CONFIG_NO_VLAN */
+
+	return 0;
+}
+
+
+#ifdef CONFIG_OCV
+static int hostapd_get_sta_tx_params(void *ctx, const u8 *addr,
+				     int ap_max_chanwidth, int ap_seg1_idx,
+				     int *bandwidth, int *seg1_idx)
+{
+	struct hostapd_data *hapd = ctx;
+	struct sta_info *sta;
+
+	sta = ap_get_sta(hapd, addr);
+	if (!sta) {
+		hostapd_wpa_auth_logger(hapd, addr, LOGGER_INFO,
+					"Failed to get STA info to validate received OCI");
+		return -1;
+	}
+
+	return get_tx_parameters(sta, ap_max_chanwidth, ap_seg1_idx, bandwidth,
+				 seg1_idx);
+}
+#endif /* CONFIG_OCV */
+
+
 #ifdef CONFIG_IEEE80211R_AP
 
 static int hostapd_wpa_auth_send_ft_action(void *ctx, const u8 *dst,
@@ -802,7 +961,7 @@ static int hostapd_wpa_auth_send_ft_action(void *ctx, const u8 *dst,
 	os_memcpy(m->bssid, hapd->own_addr, ETH_ALEN);
 	os_memcpy(&m->u, data, data_len);
 
-	res = hostapd_drv_send_mlme(hapd, (u8 *) m, mlen, 0);
+	res = hostapd_drv_send_mlme(hapd, (u8 *) m, mlen, 0, NULL, 0, 0);
 	os_free(m);
 	return res;
 }
@@ -813,13 +972,29 @@ hostapd_wpa_auth_add_sta(void *ctx, const u8 *sta_addr)
 {
 	struct hostapd_data *hapd = ctx;
 	struct sta_info *sta;
+	int ret;
 
-	if (hostapd_add_sta_node(hapd, sta_addr, WLAN_AUTH_FT) < 0)
+	wpa_printf(MSG_DEBUG, "Add station entry for " MACSTR
+		   " based on WPA authenticator callback",
+		   MAC2STR(sta_addr));
+	ret = hostapd_add_sta_node(hapd, sta_addr, WLAN_AUTH_FT);
+
+	/*
+	 * The expected return values from hostapd_add_sta_node() are
+	 * 0: successfully added STA entry
+	 * -EOPNOTSUPP: driver or driver wrapper does not support/need this
+	 *	operations
+	 * any other negative value: error in adding the STA entry */
+	if (ret < 0 && ret != -EOPNOTSUPP)
 		return NULL;
 
 	sta = ap_sta_add(hapd, sta_addr);
 	if (sta == NULL)
 		return NULL;
+	if (ret == 0)
+		sta->added_unassoc = 1;
+
+	sta->ft_over_ds = 1;
 	if (sta->wpa_sm) {
 		sta->auth_alg = WLAN_AUTH_FT;
 		return sta->wpa_sm;
@@ -1189,6 +1364,11 @@ int hostapd_setup_wpa(struct hostapd_data *hapd)
 		.for_each_auth = hostapd_wpa_auth_for_each_auth,
 		.send_ether = hostapd_wpa_auth_send_ether,
 		.send_oui = hostapd_wpa_auth_send_oui,
+		.channel_info = hostapd_channel_info,
+		.update_vlan = hostapd_wpa_auth_update_vlan,
+#ifdef CONFIG_OCV
+		.get_sta_tx_params = hostapd_get_sta_tx_params,
+#endif /* CONFIG_OCV */
 #ifdef CONFIG_IEEE80211R_AP
 		.send_ft_action = hostapd_wpa_auth_send_ft_action,
 		.add_sta = hostapd_wpa_auth_add_sta,
@@ -1211,6 +1391,16 @@ int hostapd_setup_wpa(struct hostapd_data *hapd)
 		_conf.tx_status = 1;
 	if (hapd->iface->drv_flags & WPA_DRIVER_FLAGS_AP_MLME)
 		_conf.ap_mlme = 1;
+
+	if (!(hapd->iface->drv_flags & WPA_DRIVER_FLAGS_WIRED) &&
+	    (hapd->conf->wpa_deny_ptk0_rekey == PTK0_REKEY_ALLOW_NEVER ||
+	     (hapd->conf->wpa_deny_ptk0_rekey == PTK0_REKEY_ALLOW_LOCAL_OK &&
+	      !(hapd->iface->drv_flags & WPA_DRIVER_FLAGS_SAFE_PTK0_REKEYS)))) {
+		wpa_msg(hapd->msg_ctx, MSG_INFO,
+			"Disable PTK0 rekey support - replaced with disconnect");
+		_conf.wpa_deny_ptk0_rekey = 1;
+	}
+
 	hapd->wpa_auth = wpa_init(hapd->own_addr, &_conf, &cb, hapd);
 	if (hapd->wpa_auth == NULL) {
 		wpa_printf(MSG_ERROR, "WPA initialization failed.");
@@ -1245,9 +1435,7 @@ int hostapd_setup_wpa(struct hostapd_data *hapd)
 			   hapd->conf->iface;
 		hapd->l2 = l2_packet_init(ft_iface, NULL, ETH_P_RRB,
 					  hostapd_rrb_receive, hapd, 1);
-		if (hapd->l2 == NULL &&
-		    (hapd->driver == NULL ||
-		     hapd->driver->send_ether == NULL)) {
+		if (!hapd->l2) {
 			wpa_printf(MSG_ERROR, "Failed to open l2_packet "
 				   "interface");
 			return -1;

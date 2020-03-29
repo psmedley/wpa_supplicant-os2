@@ -10,6 +10,9 @@ call envqt.cmd
 @REM set LANG=en  <-- for understandable gcc messages
 @set LANG=en
 
+@REM Use set V=1 for verbose output
+@REM set V=1
+
 make %1 %2 %3 %4 %5 2>&1 | tee out.log
 
 
