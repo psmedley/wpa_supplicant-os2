@@ -770,7 +770,7 @@ void WpaGui::helpAbout()
 			   "Copyright (c) 2003-2015,\n"
 			   "Jouni Malinen <j@w1.fi>\n"
 			   "and contributors.\n"
-				 "Build by AB, "__DATE__" "__TIME__"\n"
+				 "Build by AB, " __DATE__ " " __TIME__ "\n"
 			   "\n"
 			   "This software may be distributed under\n"
 			   "the terms of the BSD license.\n"

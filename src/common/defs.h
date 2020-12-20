@@ -9,6 +9,7 @@
 #ifndef DEFS_H
 #define DEFS_H
 
+/* 20201220 AB ToDo: still necessary ? */
 #ifdef FALSE
 #undef FALSE
 #endif
@@ -16,7 +17,7 @@
 #undef TRUE
 #endif
 typedef enum { FALSE = 0, TRUE = 1 } Boolean;
-
+/* 20201220 AB ToDo: still necessary ? (end) */
 
 #define WPA_CIPHER_NONE BIT(0)
 #define WPA_CIPHER_WEP40 BIT(1)
@@ -199,7 +200,7 @@ enum wpa_alg {
 	WPA_ALG_WEP,
 	WPA_ALG_TKIP,
 	WPA_ALG_CCMP,
-	WPA_ALG_IGTK,
+	WPA_ALG_BIP_CMAC_128,
 	WPA_ALG_GCMP,
 	WPA_ALG_SMS4,
 	WPA_ALG_KRK,
@@ -209,6 +210,14 @@ enum wpa_alg {
 	WPA_ALG_BIP_GMAC_256,
 	WPA_ALG_BIP_CMAC_256
 };
+
+static inline int wpa_alg_bip(enum wpa_alg alg)
+{
+	return alg == WPA_ALG_BIP_CMAC_128 ||
+		alg == WPA_ALG_BIP_GMAC_128 ||
+		alg == WPA_ALG_BIP_GMAC_256 ||
+		alg == WPA_ALG_BIP_CMAC_256;
+}
 
 /**
  * enum wpa_states - wpa_supplicant state
@@ -389,9 +398,10 @@ enum mesh_plink_state {
 };
 
 enum set_band {
-	WPA_SETBAND_AUTO,
-	WPA_SETBAND_5G,
-	WPA_SETBAND_2G
+	WPA_SETBAND_AUTO = 0,
+	WPA_SETBAND_5G = BIT(0),
+	WPA_SETBAND_2G = BIT(1),
+	WPA_SETBAND_6G = BIT(2),
 };
 
 enum wpa_radio_work_band {
@@ -430,6 +440,7 @@ enum chan_width {
 };
 
 enum key_flag {
+	KEY_FLAG_MODIFY			= BIT(0),
 	KEY_FLAG_DEFAULT		= BIT(1),
 	KEY_FLAG_RX			= BIT(2),
 	KEY_FLAG_TX			= BIT(3),
@@ -446,8 +457,10 @@ enum key_flag {
 					  KEY_FLAG_DEFAULT,
 	KEY_FLAG_PAIRWISE_RX_TX		= KEY_FLAG_PAIRWISE | KEY_FLAG_RX_TX,
 	KEY_FLAG_PAIRWISE_RX		= KEY_FLAG_PAIRWISE | KEY_FLAG_RX,
+	KEY_FLAG_PAIRWISE_RX_TX_MODIFY	= KEY_FLAG_PAIRWISE_RX_TX |
+					  KEY_FLAG_MODIFY,
 	/* Max allowed flags for each key type */
-	KEY_FLAG_PAIRWISE_MASK		= KEY_FLAG_PAIRWISE_RX_TX,
+	KEY_FLAG_PAIRWISE_MASK		= KEY_FLAG_PAIRWISE_RX_TX_MODIFY,
 	KEY_FLAG_GROUP_MASK		= KEY_FLAG_GROUP_RX_TX_DEFAULT,
 	KEY_FLAG_PMK_MASK		= KEY_FLAG_PMK,
 };
@@ -455,7 +468,7 @@ enum key_flag {
 static inline int check_key_flag(enum key_flag key_flag)
 {
 	return !!(!key_flag ||
-		  ((key_flag & KEY_FLAG_PAIRWISE) &&
+		  ((key_flag & (KEY_FLAG_PAIRWISE | KEY_FLAG_MODIFY)) &&
 		   (key_flag & ~KEY_FLAG_PAIRWISE_MASK)) ||
 		  ((key_flag & KEY_FLAG_GROUP) &&
 		   (key_flag & ~KEY_FLAG_GROUP_MASK)) ||

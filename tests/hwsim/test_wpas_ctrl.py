@@ -17,12 +17,13 @@ import hostapd
 import hwsim_utils
 from hwsim import HWSimRadio
 from wpasupplicant import WpaSupplicant
-from utils import alloc_fail, fail_test
+from utils import *
 from test_wpas_ap import wait_ap_ready
 
 @remote_compatible
 def test_wpas_ctrl_network(dev):
     """wpa_supplicant ctrl_iface network set/get"""
+    skip_without_tkip(dev[0])
     id = dev[0].add_network()
 
     if "FAIL" not in dev[0].request("SET_NETWORK " + str(id)):
@@ -985,6 +986,16 @@ def test_wpas_ctrl_get_capability(dev):
     res = dev[0].get_capability("key_mgmt")
     if "WPA-PSK" not in res or "WPA-EAP" not in res:
         raise Exception("Unexpected GET_CAPABILITY key_mgmt response: " + str(res))
+
+    res = dev[0].get_capability("key_mgmt iftype=STATION")
+    if "WPA-PSK" not in res or "WPA-EAP" not in res:
+        raise Exception("Unexpected GET_CAPABILITY key_mgmt iftype=STATION response: " + str(res))
+
+    iftypes = [ "STATION", "AP_VLAN", "AP", "P2P_GO", "P2P_CLIENT",
+                "P2P_DEVICE", "MESH", "IBSS", "NAN", "UNKNOWN" ]
+    for i in iftypes:
+        res = dev[0].get_capability("key_mgmt iftype=" + i)
+        logger.info("GET_CAPABILITY key_mgmt iftype=%s: %s" % (i, res))
 
     res = dev[0].get_capability("proto")
     if "WPA" not in res or "RSN" not in res:

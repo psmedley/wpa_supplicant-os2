@@ -1,1 +1,15 @@
+.config
 *.service
+eapol_test.exe
+nfc_pw_token.exe
+preauth_test.exe
+wpa_cli.exe
+wpa_passphrase.exe
+wpa_supplicant.exe
+wpa_priv.exe
+wpa_gui/Makefile
+wpa_gui/wpa_gui.exe
+wpa_gui-qt4/Makefile
+wpa_gui-qt4/wpa_gui.exe
+libwpa_test1.exe
+libwpa_test2.exe

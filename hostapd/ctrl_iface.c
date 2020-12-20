@@ -47,6 +47,7 @@
 #include "ap/ap_config.h"
 #include "ap/ieee802_1x.h"
 #include "ap/wpa_auth.h"
+#include "ap/pmksa_cache_auth.h"
 #include "ap/ieee802_11.h"
 #include "ap/sta_info.h"
 #include "ap/wps_hostapd.h"
@@ -59,6 +60,7 @@
 #include "ap/neighbor_db.h"
 #include "ap/rrm.h"
 #include "ap/dpp_hostapd.h"
+#include "ap/dfs.h"
 #include "wps/wps_defs.h"
 #include "wps/wps.h"
 #include "fst/fst_ctrl_iface.h"
@@ -1295,6 +1297,14 @@ static int hostapd_ctrl_iface_get_config(struct hostapd_data *hapd,
 		pos += ret;
 	}
 
+	if ((hapd->conf->wpa & WPA_PROTO_RSN) && hapd->conf->extended_key_id) {
+		ret = os_snprintf(pos, end - pos, "extended_key_id=%d\n",
+				  hapd->conf->extended_key_id);
+		if (os_snprintf_error(end - pos, ret))
+			return pos - buf;
+		pos += ret;
+	}
+
 	return pos - buf;
 }
 
@@ -1337,21 +1347,29 @@ static void hostapd_disassoc_deny_mac(struct hostapd_data *hapd)
 
 
 static int hostapd_ctrl_iface_set_band(struct hostapd_data *hapd,
-				       const char *band)
+				       const char *bands)
 {
 	union wpa_event_data event;
-	enum set_band setband;
+	u32 setband_mask = WPA_SETBAND_AUTO;
 
-	if (os_strcmp(band, "AUTO") == 0)
-		setband = WPA_SETBAND_AUTO;
-	else if (os_strcmp(band, "5G") == 0)
-		setband = WPA_SETBAND_5G;
-	else if (os_strcmp(band, "2G") == 0)
-		setband = WPA_SETBAND_2G;
-	else
-		return -1;
+	/*
+	 * For example:
+	 *  SET setband 2G,6G
+	 *  SET setband 5G
+	 *  SET setband AUTO
+	 */
+	if (!os_strstr(bands, "AUTO")) {
+		if (os_strstr(bands, "5G"))
+			setband_mask |= WPA_SETBAND_5G;
+		if (os_strstr(bands, "6G"))
+			setband_mask |= WPA_SETBAND_6G;
+		if (os_strstr(bands, "2G"))
+			setband_mask |= WPA_SETBAND_2G;
+		if (setband_mask == WPA_SETBAND_AUTO)
+			return -1;
+	}
 
-	if (hostapd_drv_set_band(hapd, setband) == 0) {
+	if (hostapd_drv_set_band(hapd, setband_mask) == 0) {
 		os_memset(&event, 0, sizeof(event));
 		event.channel_list_changed.initiator = REGDOM_SET_BY_USER;
 		event.channel_list_changed.type = REGDOM_TYPE_UNKNOWN;
@@ -1419,6 +1437,8 @@ static int hostapd_ctrl_iface_set(struct hostapd_data *hapd, char *cmd)
 		hapd->dpp_ignore_netaccesskey_mismatch = atoi(value);
 	} else if (os_strcasecmp(cmd, "dpp_test") == 0) {
 		dpp_test = atoi(value);
+	} else if (os_strcasecmp(cmd, "dpp_version_override") == 0) {
+		dpp_version_override = atoi(value);
 #endif /* CONFIG_DPP */
 #endif /* CONFIG_TESTING_OPTIONS */
 #ifdef CONFIG_MBO
@@ -1467,7 +1487,32 @@ static int hostapd_ctrl_iface_set(struct hostapd_data *hapd, char *cmd)
 			   os_strcmp(cmd, "sae_pwe") == 0) {
 			if (hapd->started)
 				hostapd_setup_sae_pt(hapd->conf);
+		} else if (os_strcasecmp(cmd, "transition_disable") == 0) {
+			wpa_auth_set_transition_disable(hapd->wpa_auth,
+							hapd->conf->transition_disable);
 		}
+
+#ifdef CONFIG_TESTING_OPTIONS
+		if (os_strcmp(cmd, "ft_rsnxe_used") == 0)
+			wpa_auth_set_ft_rsnxe_used(hapd->wpa_auth,
+						   hapd->conf->ft_rsnxe_used);
+		else if (os_strcmp(cmd, "oci_freq_override_eapol_m3") == 0)
+			wpa_auth_set_ocv_override_freq(
+				hapd->wpa_auth, WPA_AUTH_OCV_OVERRIDE_EAPOL_M3,
+				atoi(value));
+		else if (os_strcmp(cmd, "oci_freq_override_eapol_g1") == 0)
+			wpa_auth_set_ocv_override_freq(
+				hapd->wpa_auth, WPA_AUTH_OCV_OVERRIDE_EAPOL_G1,
+				atoi(value));
+		else if (os_strcmp(cmd, "oci_freq_override_ft_assoc") == 0)
+			wpa_auth_set_ocv_override_freq(
+				hapd->wpa_auth, WPA_AUTH_OCV_OVERRIDE_FT_ASSOC,
+				atoi(value));
+		else if (os_strcmp(cmd, "oci_freq_override_fils_assoc") == 0)
+			wpa_auth_set_ocv_override_freq(
+				hapd->wpa_auth,
+				WPA_AUTH_OCV_OVERRIDE_FILS_ASSOC, atoi(value));
+#endif /* CONFIG_TESTING_OPTIONS */
 	}
 
 	return ret;
@@ -1885,7 +1930,7 @@ static void hostapd_data_test_rx(void *ctx, const u8 *src_addr, const u8 *buf,
 	if (ip.ip_hl != 5 || ip.ip_v != 4 ||
 	    ntohs(ip.ip_len) > HWSIM_IP_LEN) {
 		wpa_printf(MSG_DEBUG,
-			   "test data: RX - ignore unexpect IP header");
+			   "test data: RX - ignore unexpected IP header");
 		return;
 	}
 
@@ -2148,6 +2193,32 @@ static int hostapd_ctrl_reset_pn(struct hostapd_data *hapd, const char *cmd)
 	if (hwaddr_aton(cmd, addr))
 		return -1;
 
+	if (is_broadcast_ether_addr(addr) && os_strstr(cmd, " BIGTK")) {
+		if (hapd->last_bigtk_alg == WPA_ALG_NONE)
+			return -1;
+
+		wpa_printf(MSG_INFO, "TESTING: Reset BIPN for BIGTK");
+
+		/* First, use a zero key to avoid any possible duplicate key
+		 * avoidance in the driver. */
+		if (hostapd_drv_set_key(hapd->conf->iface, hapd,
+					hapd->last_bigtk_alg,
+					broadcast_ether_addr,
+					hapd->last_bigtk_key_idx, 0, 1, NULL, 0,
+					zero, hapd->last_bigtk_len,
+					KEY_FLAG_GROUP_TX_DEFAULT) < 0)
+			return -1;
+
+		/* Set the previously configured key to reset its TSC */
+		return hostapd_drv_set_key(hapd->conf->iface, hapd,
+					   hapd->last_bigtk_alg,
+					   broadcast_ether_addr,
+					   hapd->last_bigtk_key_idx, 0, 1, NULL,
+					   0, hapd->last_bigtk,
+					   hapd->last_bigtk_len,
+					   KEY_FLAG_GROUP_TX_DEFAULT);
+	}
+
 	if (is_broadcast_ether_addr(addr) && os_strstr(cmd, "IGTK")) {
 		if (hapd->last_igtk_alg == WPA_ALG_NONE)
 			return -1;
@@ -2394,6 +2465,19 @@ static int hostapd_ctrl_resend_group_m1(struct hostapd_data *hapd,
 }
 
 
+static int hostapd_ctrl_get_pmksa_pmk(struct hostapd_data *hapd, const u8 *addr,
+				      char *buf, size_t buflen)
+{
+	struct rsn_pmksa_cache_entry *pmksa;
+
+	pmksa = wpa_auth_pmksa_get(hapd->wpa_auth, addr, NULL);
+	if (!pmksa)
+		return -1;
+
+	return wpa_snprintf_hex(buf, buflen, pmksa->pmk, pmksa->pmk_len);
+}
+
+
 static int hostapd_ctrl_get_pmk(struct hostapd_data *hapd, const char *cmd,
 				char *buf, size_t buflen)
 {
@@ -2409,13 +2493,13 @@ static int hostapd_ctrl_get_pmk(struct hostapd_data *hapd, const char *cmd,
 	if (!sta || !sta->wpa_sm) {
 		wpa_printf(MSG_DEBUG, "No STA WPA state machine for " MACSTR,
 			   MAC2STR(addr));
-		return -1;
+		return hostapd_ctrl_get_pmksa_pmk(hapd, addr, buf, buflen);
 	}
 	pmk = wpa_auth_get_pmk(sta->wpa_sm, &pmk_len);
-	if (!pmk) {
+	if (!pmk || !pmk_len) {
 		wpa_printf(MSG_DEBUG, "No PMK stored for " MACSTR,
 			   MAC2STR(addr));
-		return -1;
+		return hostapd_ctrl_get_pmksa_pmk(hapd, addr, buf, buflen);
 	}
 
 	return wpa_snprintf_hex(buf, buflen, pmk, pmk_len);
@@ -2424,17 +2508,174 @@ static int hostapd_ctrl_get_pmk(struct hostapd_data *hapd, const char *cmd,
 #endif /* CONFIG_TESTING_OPTIONS */
 
 
+#ifdef NEED_AP_MLME
+static int hostapd_ctrl_check_freq_params(struct hostapd_freq_params *params)
+{
+	switch (params->bandwidth) {
+	case 0:
+		/* bandwidth not specified: use 20 MHz by default */
+		/* fall-through */
+	case 20:
+		if (params->center_freq1 &&
+		    params->center_freq1 != params->freq)
+			return -1;
+
+		if (params->center_freq2 || params->sec_channel_offset)
+			return -1;
+		break;
+	case 40:
+		if (params->center_freq2 || !params->sec_channel_offset)
+			return -1;
+
+		if (!params->center_freq1)
+			break;
+		switch (params->sec_channel_offset) {
+		case 1:
+			if (params->freq + 10 != params->center_freq1)
+				return -1;
+			break;
+		case -1:
+			if (params->freq - 10 != params->center_freq1)
+				return -1;
+			break;
+		default:
+			return -1;
+		}
+		break;
+	case 80:
+		if (!params->center_freq1 || !params->sec_channel_offset)
+			return 1;
+
+		switch (params->sec_channel_offset) {
+		case 1:
+			if (params->freq - 10 != params->center_freq1 &&
+			    params->freq + 30 != params->center_freq1)
+				return 1;
+			break;
+		case -1:
+			if (params->freq + 10 != params->center_freq1 &&
+			    params->freq - 30 != params->center_freq1)
+				return -1;
+			break;
+		default:
+			return -1;
+		}
+
+		/* Adjacent and overlapped are not allowed for 80+80 */
+		if (params->center_freq2 &&
+		    params->center_freq1 - params->center_freq2 <= 80 &&
+		    params->center_freq2 - params->center_freq1 <= 80)
+			return 1;
+		break;
+	case 160:
+		if (!params->center_freq1 || params->center_freq2 ||
+		    !params->sec_channel_offset)
+			return -1;
+
+		switch (params->sec_channel_offset) {
+		case 1:
+			if (params->freq + 70 != params->center_freq1 &&
+			    params->freq + 30 != params->center_freq1 &&
+			    params->freq - 10 != params->center_freq1 &&
+			    params->freq - 50 != params->center_freq1)
+				return -1;
+			break;
+		case -1:
+			if (params->freq + 50 != params->center_freq1 &&
+			    params->freq + 10 != params->center_freq1 &&
+			    params->freq - 30 != params->center_freq1 &&
+			    params->freq - 70 != params->center_freq1)
+				return -1;
+			break;
+		default:
+			return -1;
+		}
+		break;
+	default:
+		return -1;
+	}
+
+	return 0;
+}
+#endif /* NEED_AP_MLME */
+
+
 static int hostapd_ctrl_iface_chan_switch(struct hostapd_iface *iface,
 					  char *pos)
 {
 #ifdef NEED_AP_MLME
 	struct csa_settings settings;
 	int ret;
+	int dfs_range = 0;
 	unsigned int i;
+	int bandwidth;
+	u8 chan;
 
 	ret = hostapd_parse_csa_settings(pos, &settings);
 	if (ret)
 		return ret;
+
+	ret = hostapd_ctrl_check_freq_params(&settings.freq_params);
+	if (ret) {
+		wpa_printf(MSG_INFO,
+			   "chanswitch: invalid frequency settings provided");
+		return ret;
+	}
+
+	switch (settings.freq_params.bandwidth) {
+	case 40:
+		bandwidth = CHAN_WIDTH_40;
+		break;
+	case 80:
+		if (settings.freq_params.center_freq2)
+			bandwidth = CHAN_WIDTH_80P80;
+		else
+			bandwidth = CHAN_WIDTH_80;
+		break;
+	case 160:
+		bandwidth = CHAN_WIDTH_160;
+		break;
+	default:
+		bandwidth = CHAN_WIDTH_20;
+		break;
+	}
+
+	if (settings.freq_params.center_freq1)
+		dfs_range += hostapd_is_dfs_overlap(
+			iface, bandwidth, settings.freq_params.center_freq1);
+	else
+		dfs_range += hostapd_is_dfs_overlap(
+			iface, bandwidth, settings.freq_params.freq);
+
+	if (settings.freq_params.center_freq2)
+		dfs_range += hostapd_is_dfs_overlap(
+			iface, bandwidth, settings.freq_params.center_freq2);
+
+	if (dfs_range) {
+		ret = ieee80211_freq_to_chan(settings.freq_params.freq, &chan);
+		if (ret == NUM_HOSTAPD_MODES) {
+			wpa_printf(MSG_ERROR,
+				   "Failed to get channel for (freq=%d, sec_channel_offset=%d, bw=%d)",
+				   settings.freq_params.freq,
+				   settings.freq_params.sec_channel_offset,
+				   settings.freq_params.bandwidth);
+			return -1;
+		}
+
+		settings.freq_params.channel = chan;
+
+		wpa_printf(MSG_DEBUG,
+			   "DFS/CAC to (channel=%u, freq=%d, sec_channel_offset=%d, bw=%d, center_freq1=%d)",
+			   settings.freq_params.channel,
+			   settings.freq_params.freq,
+			   settings.freq_params.sec_channel_offset,
+			   settings.freq_params.bandwidth,
+			   settings.freq_params.center_freq1);
+
+		/* Perform CAC and switch channel */
+		hostapd_switch_channel_fallback(iface, &settings.freq_params);
+		return 0;
+	}
 
 	for (i = 0; i < iface->num_bss; i++) {
 
@@ -2474,13 +2715,17 @@ static int hostapd_ctrl_iface_vendor(struct hostapd_data *hapd, char *cmd,
 				     char *buf, size_t buflen)
 {
 	int ret;
-	char *pos;
+	char *pos, *temp = NULL;
 	u8 *data = NULL;
 	unsigned int vendor_id, subcmd;
+	enum nested_attr nested_attr_flag = NESTED_ATTR_UNSPECIFIED;
 	struct wpabuf *reply;
 	size_t data_len = 0;
 
-	/* cmd: <vendor id> <subcommand id> [<hex formatted data>] */
+	/**
+	 * cmd: <vendor id> <subcommand id> [<hex formatted data>]
+	 * [nested=<0|1>]
+	 */
 	vendor_id = strtoul(cmd, &pos, 16);
 	if (!isblank((unsigned char) *pos))
 		return -EINVAL;
@@ -2490,7 +2735,9 @@ static int hostapd_ctrl_iface_vendor(struct hostapd_data *hapd, char *cmd,
 	if (*pos != '\0') {
 		if (!isblank((unsigned char) *pos++))
 			return -EINVAL;
-		data_len = os_strlen(pos);
+
+		temp = os_strchr(pos, ' ');
+		data_len = temp ? (size_t) (temp - pos) : os_strlen(pos);
 	}
 
 	if (data_len) {
@@ -2507,6 +2754,11 @@ static int hostapd_ctrl_iface_vendor(struct hostapd_data *hapd, char *cmd,
 		}
 	}
 
+	pos = os_strstr(cmd, "nested=");
+	if (pos)
+		nested_attr_flag = atoi(pos + 7) ? NESTED_ATTR_USED :
+			NESTED_ATTR_NOT_USED;
+
 	reply = wpabuf_alloc((buflen - 1) / 2);
 	if (!reply) {
 		os_free(data);
@@ -2514,7 +2766,7 @@ static int hostapd_ctrl_iface_vendor(struct hostapd_data *hapd, char *cmd,
 	}
 
 	ret = hostapd_drv_vendor_cmd(hapd, vendor_id, subcmd, data, data_len,
-				     reply);
+				     nested_attr_flag, reply);
 
 	if (ret == 0)
 		ret = wpa_snprintf_hex(buf, buflen, wpabuf_head_u8(reply),
@@ -2925,6 +3177,34 @@ static int hostapd_ctrl_driver_flags(struct hostapd_iface *iface, char *buf,
 		if (iface->drv_flags & (1LLU << i)) {
 			ret = os_snprintf(pos, end - pos, "%s\n",
 					  driver_flag_to_string(1LLU << i));
+			if (os_snprintf_error(end - pos, ret))
+				return -1;
+			pos += ret;
+		}
+	}
+
+	return pos - buf;
+}
+
+
+static int hostapd_ctrl_driver_flags2(struct hostapd_iface *iface, char *buf,
+				      size_t buflen)
+{
+	int ret, i;
+	char *pos, *end;
+
+	ret = os_snprintf(buf, buflen, "%016llX:\n",
+			  (long long unsigned) iface->drv_flags2);
+	if (os_snprintf_error(buflen, ret))
+		return -1;
+
+	pos = buf + ret;
+	end = buf + buflen;
+
+	for (i = 0; i < 64; i++) {
+		if (iface->drv_flags2 & (1LLU << i)) {
+			ret = os_snprintf(pos, end - pos, "%s\n",
+					  driver_flag2_to_string(1LLU << i));
 			if (os_snprintf_error(end - pos, ret))
 				return -1;
 			pos += ret;
@@ -3347,6 +3627,9 @@ static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 	} else if (os_strcmp(buf, "DRIVER_FLAGS") == 0) {
 		reply_len = hostapd_ctrl_driver_flags(hapd->iface, reply,
 						      reply_size);
+	} else if (os_strcmp(buf, "DRIVER_FLAGS2") == 0) {
+		reply_len = hostapd_ctrl_driver_flags2(hapd->iface, reply,
+						       reply_size);
 	} else if (os_strcmp(buf, "TERMINATE") == 0) {
 		eloop_terminate();
 	} else if (os_strncmp(buf, "ACCEPT_ACL ", 11) == 0) {
@@ -3455,6 +3738,11 @@ static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 		reply_len = dpp_bootstrap_info(hapd->iface->interfaces->dpp,
 					       atoi(buf + 19),
 			reply, reply_size);
+	} else if (os_strncmp(buf, "DPP_BOOTSTRAP_SET ", 18) == 0) {
+		if (dpp_bootstrap_set(hapd->iface->interfaces->dpp,
+				      atoi(buf + 18),
+				      os_strchr(buf + 18, ' ')) < 0)
+			reply_len = -1;
 	} else if (os_strncmp(buf, "DPP_AUTH_INIT ", 14) == 0) {
 		if (hostapd_dpp_auth_init(hapd, buf + 13) < 0)
 			reply_len = -1;
@@ -3498,6 +3786,21 @@ static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 	} else if (os_strncmp(buf, "DPP_PKEX_REMOVE ", 16) == 0) {
 		if (hostapd_dpp_pkex_remove(hapd, buf + 16) < 0)
 			reply_len = -1;
+#ifdef CONFIG_DPP2
+	} else if (os_strncmp(buf, "DPP_CONTROLLER_START ", 21) == 0) {
+		if (hostapd_dpp_controller_start(hapd, buf + 20) < 0)
+			reply_len = -1;
+	} else if (os_strcmp(buf, "DPP_CONTROLLER_START") == 0) {
+		if (hostapd_dpp_controller_start(hapd, NULL) < 0)
+			reply_len = -1;
+	} else if (os_strcmp(buf, "DPP_CONTROLLER_STOP") == 0) {
+		dpp_controller_stop(hapd->iface->interfaces->dpp);
+	} else if (os_strncmp(buf, "DPP_CHIRP ", 10) == 0) {
+		if (hostapd_dpp_chirp(hapd, buf + 9) < 0)
+			reply_len = -1;
+	} else if (os_strcmp(buf, "DPP_STOP_CHIRP") == 0) {
+		hostapd_dpp_chirp_stop(hapd);
+#endif /* CONFIG_DPP2 */
 #endif /* CONFIG_DPP */
 #ifdef RADIUS_SERVER
 	} else if (os_strncmp(buf, "DAC_REQUEST ", 12) == 0) {
@@ -3985,6 +4288,11 @@ static void hostapd_ctrl_iface_flush(struct hapd_interfaces *interfaces)
 #ifdef CONFIG_TESTING_OPTIONS
 #ifdef CONFIG_DPP
 	dpp_test = DPP_TEST_DISABLED;
+#ifdef CONFIG_DPP2
+	dpp_version_override = 2;
+#else /* CONFIG_DPP2 */
+	dpp_version_override = 1;
+#endif /* CONFIG_DPP2 */
 #endif /* CONFIG_DPP */
 #endif /* CONFIG_TESTING_OPTIONS */
 

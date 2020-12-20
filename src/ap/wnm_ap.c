@@ -103,6 +103,15 @@ static int ieee802_11_send_wnmsleep_resp(struct hostapd_data *hapd,
 			os_free(wnmtfs_ie);
 			return -1;
 		}
+#ifdef CONFIG_TESTING_OPTIONS
+		if (hapd->conf->oci_freq_override_wnm_sleep) {
+			wpa_printf(MSG_INFO,
+				   "TEST: Override OCI frequency %d -> %u MHz",
+				   ci.frequency,
+				   hapd->conf->oci_freq_override_wnm_sleep);
+			ci.frequency = hapd->conf->oci_freq_override_wnm_sleep;
+		}
+#endif /* CONFIG_TESTING_OPTIONS */
 
 		oci_ie_len = OCV_OCI_EXTENDED_LEN;
 		oci_ie = os_zalloc(oci_ie_len);
@@ -317,8 +326,9 @@ static void ieee802_11_rx_wnmsleep_req(struct hostapd_data *hapd,
 
 		if (ocv_verify_tx_params(oci_ie, oci_ie_len, &ci,
 					 channel_width_to_int(ci.chanwidth),
-					 ci.seg1_idx) != 0) {
-			wpa_msg(hapd, MSG_WARNING, "WNM: %s", ocv_errorstr);
+					 ci.seg1_idx) != OCI_SUCCESS) {
+			wpa_msg(hapd, MSG_WARNING, "WNM: OCV failed: %s",
+				ocv_errorstr);
 			return;
 		}
 	}
@@ -522,6 +532,30 @@ static void ieee802_11_rx_bss_trans_mgmt_resp(struct hostapd_data *hapd,
 }
 
 
+static void wnm_beacon_protection_failure(struct hostapd_data *hapd,
+					  const u8 *addr)
+{
+	struct sta_info *sta;
+
+	if (!hapd->conf->beacon_prot)
+		return;
+
+	sta = ap_get_sta(hapd, addr);
+	if (!sta || !(sta->flags & WLAN_STA_AUTHORIZED)) {
+		wpa_printf(MSG_DEBUG, "Station " MACSTR
+			   " not found for received WNM-Notification Request",
+			   MAC2STR(addr));
+		return;
+	}
+
+	hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
+		       HOSTAPD_LEVEL_INFO,
+		       "Beacon protection failure reported");
+	wpa_msg(hapd->msg_ctx, MSG_INFO, WPA_EVENT_UNPROT_BEACON "reporter="
+		MACSTR, MAC2STR(addr));
+}
+
+
 static void ieee802_11_rx_wnm_notification_req(struct hostapd_data *hapd,
 					       const u8 *addr, const u8 *buf,
 					       size_t len)
@@ -540,8 +574,14 @@ static void ieee802_11_rx_wnm_notification_req(struct hostapd_data *hapd,
 		   MAC2STR(addr), dialog_token, type);
 	wpa_hexdump(MSG_MSGDUMP, "WNM: Notification Request subelements",
 		    buf, len);
-	if (type == WLAN_EID_VENDOR_SPECIFIC)
+	switch (type) {
+	case WNM_NOTIF_TYPE_BEACON_PROTECTION_FAILURE:
+		wnm_beacon_protection_failure(hapd, addr);
+		break;
+	case WNM_NOTIF_TYPE_VENDOR_SPECIFIC:
 		mbo_ap_wnm_notification_req(hapd, addr, buf, len);
+		break;
+	}
 }
 
 

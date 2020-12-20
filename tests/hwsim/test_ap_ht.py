@@ -12,26 +12,8 @@ import struct
 
 import hostapd
 from wpasupplicant import WpaSupplicant
-from utils import HwsimSkip, alloc_fail, parse_ie, clear_regdom
+from utils import *
 import hwsim_utils
-from test_ap_csa import csa_supported
-
-def clear_scan_cache(apdev):
-    ifname = apdev['ifname']
-    hostapd.cmd_execute(apdev, ['ifconfig', ifname, 'up'])
-    hostapd.cmd_execute(apdev, ['iw', ifname, 'scan', 'trigger', 'freq', '2412',
-                                'flush'])
-    time.sleep(0.1)
-    hostapd.cmd_execute(apdev, ['ifconfig', ifname, 'down'])
-
-def set_world_reg(apdev0=None, apdev1=None, dev0=None):
-    if apdev0:
-        hostapd.cmd_execute(apdev0, ['iw', 'reg', 'set', '00'])
-    if apdev1:
-        hostapd.cmd_execute(apdev1, ['iw', 'reg', 'set', '00'])
-    if dev0:
-        dev0.cmd_execute(['iw', 'reg', 'set', '00'])
-    time.sleep(0.1)
 
 def test_ap_ht40_scan(dev, apdev):
     """HT40 co-ex scan"""
@@ -72,6 +54,18 @@ def test_ap_ht40_scan(dev, apdev):
     dev[0].connect("test-ht40", key_mgmt="NONE", scan_freq=freq)
     sta = hapd.get_sta(dev[0].own_addr())
     logger.info("hostapd STA: " + str(sta))
+
+    res = dev[0].request("SIGNAL_POLL")
+    logger.info("STA SIGNAL_POLL:\n" + res.strip())
+    sig = res.splitlines()
+    if "WIDTH=40 MHz" not in sig:
+        raise Exception("Not a 40 MHz connection")
+
+    if 'supp_op_classes' not in sta or len(sta['supp_op_classes']) < 2:
+        raise Exception("No Supported Operating Classes information for STA")
+    opclass = int(sta['supp_op_classes'][0:2], 16)
+    if opclass != 84:
+        raise Exception("Unexpected Current Operating Class from STA: %d" % opclass)
 
 def test_ap_ht_wifi_generation(dev, apdev):
     """HT and wifi_generation"""
@@ -891,6 +885,13 @@ def test_ap_require_ht(dev, apdev):
                    disable_max_amsdu="1", ampdu_factor="2",
                    ampdu_density="1", disable_ht40="1", disable_sgi="1",
                    disable_ldpc="1", rx_stbc="2", tx_stbc="1")
+
+    sta = hapd.get_sta(dev[0].own_addr())
+    if 'supp_op_classes' not in sta or len(sta['supp_op_classes']) < 2:
+        raise Exception("No Supported Operating Classes information for STA")
+    opclass = int(sta['supp_op_classes'][0:2], 16)
+    if opclass != 81:
+        raise Exception("Unexpected Current Operating Class from STA: %d" % opclass)
 
 def test_ap_ht_stbc(dev, apdev):
     """HT STBC overrides"""

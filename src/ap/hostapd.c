@@ -76,6 +76,8 @@ int hostapd_for_each_interface(struct hapd_interfaces *interfaces,
 	int ret;
 
 	for (i = 0; i < interfaces->count; i++) {
+		if (!interfaces->iface[i])
+			continue;
 		ret = cb(interfaces->iface[i], ctx);
 		if (ret)
 			return ret;
@@ -352,7 +354,7 @@ static int hostapd_broadcast_wep_set(struct hostapd_data *hapd)
 #endif /* CONFIG_WEP */
 
 
-static void hostapd_free_hapd_data(struct hostapd_data *hapd)
+void hostapd_free_hapd_data(struct hostapd_data *hapd)
 {
 	os_free(hapd->probereq_cb);
 	hapd->probereq_cb = NULL;
@@ -432,10 +434,16 @@ static void hostapd_free_hapd_data(struct hostapd_data *hapd)
 #ifdef CONFIG_MESH
 	wpabuf_free(hapd->mesh_pending_auth);
 	hapd->mesh_pending_auth = NULL;
+	/* handling setup failure is already done */
+	hapd->setup_complete_cb = NULL;
 #endif /* CONFIG_MESH */
 
 	hostapd_clean_rrm(hapd);
 	fils_hlp_deinit(hapd);
+
+#ifdef CONFIG_OCV
+	eloop_cancel_timeout(hostapd_ocv_check_csa_sa_query, hapd, NULL);
+#endif /* CONFIG_OCV */
 
 #ifdef CONFIG_SAE
 	{
@@ -490,7 +498,7 @@ static void sta_track_deinit(struct hostapd_iface *iface)
 }
 
 
-static void hostapd_cleanup_iface_partial(struct hostapd_iface *iface)
+void hostapd_cleanup_iface_partial(struct hostapd_iface *iface)
 {
 	wpa_printf(MSG_DEBUG, "%s(%p)", __func__, iface);
 #ifdef NEED_AP_MLME
@@ -618,7 +626,7 @@ static int hostapd_flush_old_stations(struct hostapd_data *hapd, u16 reason)
 }
 
 
-static void hostapd_bss_deinit_no_free(struct hostapd_data *hapd)
+void hostapd_bss_deinit_no_free(struct hostapd_data *hapd)
 {
 	hostapd_free_stas(hapd);
 	hostapd_flush_old_stations(hapd, WLAN_REASON_DEAUTH_LEAVING);
@@ -1175,12 +1183,12 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 #endif /* CONFIG_MESH */
 
 	if (flush_old_stations)
-		hostapd_flush_old_stations(hapd,
-					   WLAN_REASON_PREV_AUTH_NOT_VALID);
+		hostapd_flush(hapd);
 	hostapd_set_privacy(hapd, 0);
 
 #ifdef CONFIG_WEP
-	hostapd_broadcast_wep_clear(hapd);
+	if (!hostapd_drv_nl80211(hapd))
+		hostapd_broadcast_wep_clear(hapd);
 	if (hostapd_setup_encryption(conf->iface, hapd))
 		return -1;
 #endif /* CONFIG_WEP */
@@ -1368,6 +1376,21 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 
 	if (!conf->start_disabled && ieee802_11_set_beacon(hapd) < 0)
 		return -1;
+
+	if (flush_old_stations && !conf->start_disabled &&
+	    conf->broadcast_deauth) {
+		u8 addr[ETH_ALEN];
+
+		/* Should any previously associated STA not have noticed that
+		 * the AP had stopped and restarted, send one more
+		 * deauthentication notification now that the AP is ready to
+		 * operate. */
+		wpa_dbg(hapd->msg_ctx, MSG_DEBUG,
+			"Deauthenticate all stations at BSS start");
+		os_memset(addr, 0xff, ETH_ALEN);
+		hostapd_drv_sta_deauth(hapd, addr,
+				       WLAN_REASON_PREV_AUTH_NOT_VALID);
+	}
 
 	if (hapd->wpa_auth && wpa_init_keys(hapd->wpa_auth) < 0)
 		return -1;
@@ -1772,7 +1795,7 @@ static void fst_hostapd_update_mb_ie_cb(void *ctx, const u8 *addr,
 
 
 static const u8 * fst_hostapd_get_sta(struct fst_get_peer_ctx **get_ctx,
-				      Boolean mb_only)
+				      bool mb_only)
 {
 	struct sta_info *s = (struct sta_info *) *get_ctx;
 
@@ -1794,7 +1817,7 @@ static const u8 * fst_hostapd_get_sta(struct fst_get_peer_ctx **get_ctx,
 
 static const u8 * fst_hostapd_get_peer_first(void *ctx,
 					     struct fst_get_peer_ctx **get_ctx,
-					     Boolean mb_only)
+					     bool mb_only)
 {
 	struct hostapd_data *hapd = ctx;
 
@@ -1806,7 +1829,7 @@ static const u8 * fst_hostapd_get_peer_first(void *ctx,
 
 static const u8 * fst_hostapd_get_peer_next(void *ctx,
 					    struct fst_get_peer_ctx **get_ctx,
-					    Boolean mb_only)
+					    bool mb_only)
 {
 	return fst_hostapd_get_sta(get_ctx, mb_only);
 }
@@ -1894,6 +1917,13 @@ static int hostapd_owe_iface_iter2(struct hostapd_iface *iface, void *ctx)
 
 		if (!bss->conf->owe_transition_ifname[0])
 			continue;
+		if (bss->iface->state != HAPD_IFACE_ENABLED) {
+			wpa_printf(MSG_DEBUG,
+				   "OWE: Interface %s state %s - defer beacon update",
+				   bss->conf->iface,
+				   hostapd_state_text(bss->iface->state));
+			continue;
+		}
 		res = hostapd_owe_trans_get_info(bss);
 		if (res == 0)
 			continue;
@@ -2128,6 +2158,13 @@ dfs_offload:
 	if (hapd->setup_complete_cb)
 		hapd->setup_complete_cb(hapd->setup_complete_cb_ctx);
 
+#ifdef CONFIG_MESH
+	if (delay_apply_cfg && !iface->mconf) {
+		wpa_printf(MSG_ERROR, "Error while completing mesh init");
+		goto fail;
+	}
+#endif /* CONFIG_MESH */
+
 	wpa_printf(MSG_DEBUG, "%s: Setup of interface done.",
 		   iface->bss[0]->conf->iface);
 	if (iface->interfaces && iface->interfaces->terminate_on_error > 0)
@@ -2271,7 +2308,7 @@ int hostapd_setup_interface(struct hostapd_iface *iface)
 	ret = setup_interface(iface);
 	if (ret) {
 		wpa_printf(MSG_ERROR, "%s: Unable to setup interface.",
-			   iface->bss[0]->conf->iface);
+			   iface->conf ? iface->conf->bss[0]->iface : "N/A");
 		return -1;
 	}
 
@@ -2653,6 +2690,12 @@ int hostapd_enable_iface(struct hostapd_iface *hapd_iface)
 {
 	size_t j;
 
+	if (!hapd_iface)
+		return -1;
+
+	if (hapd_iface->enable_iface_cb)
+		return hapd_iface->enable_iface_cb(hapd_iface);
+
 	if (hapd_iface->bss[0]->drv_priv != NULL) {
 		wpa_printf(MSG_ERROR, "Interface %s already enabled",
 			   hapd_iface->conf->bss[0]->iface);
@@ -2713,6 +2756,9 @@ int hostapd_disable_iface(struct hostapd_iface *hapd_iface)
 
 	if (hapd_iface == NULL)
 		return -1;
+
+	if (hapd_iface->disable_iface_cb)
+		return hapd_iface->disable_iface_cb(hapd_iface);
 
 	if (hapd_iface->bss[0]->drv_priv == NULL) {
 		wpa_printf(MSG_INFO, "Interface %s already disabled",
@@ -3134,6 +3180,7 @@ void hostapd_new_assoc_sta(struct hostapd_data *hapd, struct sta_info *sta,
 
 	hostapd_prune_associations(hapd, sta->addr);
 	ap_sta_clear_disconnect_timeouts(hapd, sta);
+	sta->post_csa_sa_query = 0;
 
 #ifdef CONFIG_P2P
 	if (sta->p2p_ie == NULL && !sta->no_p2p_set) {
@@ -3645,3 +3692,25 @@ void hostapd_periodic_iface(struct hostapd_iface *iface)
 #endif /* CONFIG_NO_RADIUS */
 	}
 }
+
+
+#ifdef CONFIG_OCV
+void hostapd_ocv_check_csa_sa_query(void *eloop_ctx, void *timeout_ctx)
+{
+	struct hostapd_data *hapd = eloop_ctx;
+	struct sta_info *sta;
+
+	wpa_printf(MSG_DEBUG, "OCV: Post-CSA SA Query initiation check");
+
+	for (sta = hapd->sta_list; sta; sta = sta->next) {
+		if (!sta->post_csa_sa_query)
+			continue;
+
+		wpa_printf(MSG_DEBUG, "OCV: OCVC STA " MACSTR
+			   " did not start SA Query after CSA - disconnect",
+			   MAC2STR(sta->addr));
+		ap_sta_disconnect(hapd, sta, sta->addr,
+				  WLAN_REASON_PREV_AUTH_NOT_VALID);
+	}
+}
+#endif /* CONFIG_OCV */

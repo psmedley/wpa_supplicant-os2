@@ -436,6 +436,7 @@ int os_strncmp(const char *s1, const char *s2, size_t n)
 }
 
 
+/* 20201220 AB ToDo: still necessary ? */
 char * os_strncpy(char *dest, const char *src, size_t n)
 {
 	char *d = dest;

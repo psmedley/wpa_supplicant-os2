@@ -1,18 +1,5 @@
-all: libutils.a
-
-clean:
-	rm -f *~ *.o *.d *.gcno *.gcda *.gcov libutils.a
-
-install:
-	@echo Nothing to be made.
-
-
-include ../lib.rules
-
 #CFLAGS += -DWPA_TRACE
-ifdef CONFIG_IPV6
 CFLAGS += -DCONFIG_IPV6
-endif
 CFLAGS += -DCONFIG_DEBUG_FILE
 
 LIB_OBJS= \
@@ -39,7 +26,4 @@ LIB_OBJS += edit.o
 
 #LIB_OBJS += pcsc_funcs.o
 
-libutils.a: $(LIB_OBJS)
-	$(AR) crT $@ $?
-
--include $(OBJS:%.o=%.d)
+include ../lib.rules

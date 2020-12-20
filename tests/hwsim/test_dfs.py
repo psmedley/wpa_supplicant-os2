@@ -135,10 +135,9 @@ def test_dfs(dev, apdev):
     finally:
         clear_regdom(hapd, dev)
 
-def test_dfs_etsi(dev, apdev, params):
-    """DFS and uniform spreading requirement for ETSI [long]"""
-    if not params['long']:
-        raise HwsimSkip("Skip test case with long duration due to --long not specified")
+@long_duration_test
+def test_dfs_etsi(dev, apdev):
+    """DFS and uniform spreading requirement for ETSI"""
     try:
         hapd = None
         hapd = start_dfs_ap(apdev[0])
@@ -450,10 +449,9 @@ def test_dfs_radar_ht40minus(dev, apdev):
         clear_regdom(hapd, dev)
         dev[0].request("STA_AUTOCONNECT 1")
 
-def test_dfs_ht40_minus(dev, apdev, params):
-    """DFS CAC functionality on channel 104 HT40- [long]"""
-    if not params['long']:
-        raise HwsimSkip("Skip test case with long duration due to --long not specified")
+@long_duration_test
+def test_dfs_ht40_minus(dev, apdev):
+    """DFS CAC functionality on channel 104 HT40-"""
     try:
         hapd = None
         hapd = start_dfs_ap(apdev[0], ht40minus=True, channel=104)
@@ -505,10 +503,9 @@ def test_dfs_cac_restart_on_enable(dev, apdev):
     finally:
         clear_regdom(hapd, dev)
 
-def test_dfs_rrm(dev, apdev, params):
-    """DFS with RRM [long]"""
-    if not params['long']:
-        raise HwsimSkip("Skip test case with long duration due to --long not specified")
+@long_duration_test
+def test_dfs_rrm(dev, apdev):
+    """DFS with RRM"""
     try:
         hapd = None
         hapd = start_dfs_ap(apdev[0], country="US", rrm_beacon_report=True)
@@ -534,10 +531,9 @@ def test_dfs_rrm(dev, apdev, params):
     finally:
         clear_regdom(hapd, dev)
 
-def test_dfs_radar_vht80_downgrade(dev, apdev, params):
-    """DFS channel bandwidth downgrade from VHT80 to VHT40 [long]"""
-    if not params['long']:
-        raise HwsimSkip("Skip test case with long duration due to --long not specified")
+@long_duration_test
+def test_dfs_radar_vht80_downgrade(dev, apdev):
+    """DFS channel bandwidth downgrade from VHT80 to VHT40"""
     try:
         # Start with 80 MHz channel 100 (5500 MHz) to find a radar
         hapd = None
@@ -606,5 +602,95 @@ def test_dfs_radar_vht80_downgrade(dev, apdev, params):
         sig = dev[0].request("SIGNAL_POLL").splitlines()
         if "FREQUENCY=5660" not in sig or "WIDTH=40 MHz" not in sig:
             raise Exception("Unexpected SIGNAL_POLL value: " + str(sig))
+    finally:
+        clear_regdom(hapd, dev)
+
+@long_duration_test
+def test_dfs_chan_switch(dev, apdev):
+    """DFS channel switch"""
+    try:
+        hapd = None
+        hapd = start_dfs_ap(apdev[0], country="US")
+
+        ev = wait_dfs_event(hapd, "DFS-CAC-COMPLETED", 70)
+        if "success=1" not in ev:
+            raise Exception("CAC failed")
+        if "freq=5260" not in ev:
+            raise Exception("Unexpected DFS freq result")
+        ev = hapd.wait_event(["AP-ENABLED"], timeout=5)
+        if not ev:
+            raise Exception("AP setup timed out")
+        freq = hapd.get_status_field("freq")
+        if freq != "5260":
+            raise Exception("Unexpected frequency")
+
+        dev[0].connect("dfs", key_mgmt="NONE", scan_freq="5260 5280")
+        dev[0].wait_regdom(country_ie=True)
+        hwsim_utils.test_connectivity(dev[0], hapd)
+
+        if "OK" not in hapd.request("CHAN_SWITCH 5 5280 ht"):
+            raise Exception("CHAN_SWITCH failed")
+        # This results in BSS going down before restart, so the STA is expected
+        # to report disconnection.
+        dev[0].wait_disconnected()
+        ev = wait_dfs_event(hapd, "DFS-CAC-START", 5)
+        if "freq=5280" not in ev:
+            raise Exception("Unexpected channel: " + ev)
+        ev = wait_dfs_event(hapd, "DFS-CAC-COMPLETED", 70)
+        if "success=1" not in ev:
+            raise Exception("CAC failed")
+        if "freq=5280" not in ev:
+            raise Exception("Unexpected DFS freq result")
+        ev = hapd.wait_event(["AP-ENABLED"], timeout=5)
+        if not ev:
+            raise Exception("AP setup timed out")
+        freq = hapd.get_status_field("freq")
+        if freq != "5280":
+            raise Exception("Unexpected frequency")
+
+        dev[0].wait_connected(timeout=30)
+        hwsim_utils.test_connectivity(dev[0], hapd)
+    finally:
+        clear_regdom(hapd, dev)
+
+@long_duration_test
+def test_dfs_no_available_channel(dev, apdev):
+    """DFS and no available channel after radar detection"""
+    try:
+        hapd = None
+        hapd = start_dfs_ap(apdev[0], chanlist="56")
+
+        ev = hapd.wait_event(["AP-ENABLED"], timeout=70)
+        if not ev:
+            raise Exception("AP2 setup timed out")
+
+        dfs_simulate_radar(hapd)
+        ev = wait_dfs_event(hapd, "DFS-RADAR-DETECTED", 5)
+        if "freq=5260 ht_enabled=1 chan_offset=0 chan_width=1" not in ev:
+            raise Exception("Unexpected DFS radar detection freq from AP")
+
+        ev = wait_dfs_event(hapd, "DFS-NEW-CHANNEL", 5)
+        if "freq=5280 chan=56" not in ev:
+            raise Exception("Unexpected DFS new freq: " + ev)
+        ev = wait_dfs_event(hapd, "DFS-CAC-START", 5)
+        if "freq=5280" not in ev:
+            raise Exception("Unexpected channel: " + ev)
+        ev = wait_dfs_event(hapd, "DFS-CAC-COMPLETED", 70)
+        if "success=1" not in ev:
+            raise Exception("CAC failed")
+        if "freq=5280" not in ev:
+            raise Exception("Unexpected DFS freq result")
+        ev = hapd.wait_event(["AP-ENABLED"], timeout=5)
+        if not ev:
+            raise Exception("AP setup timed out")
+
+        dfs_simulate_radar(hapd)
+        ev = wait_dfs_event(hapd, "DFS-RADAR-DETECTED", 5)
+        if "freq=5280 ht_enabled=1 chan_offset=0 chan_width=1" not in ev:
+            raise Exception("Unexpected DFS radar detection freq from AP [2]")
+
+        ev = hapd.wait_event(["AP-DISABLED"], timeout=10)
+        if ev is None:
+            raise Exception("AP was not disabled")
     finally:
         clear_regdom(hapd, dev)

@@ -15,6 +15,7 @@
 #include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
 #include "common/ocv.h"
+#include "common/wpa_ctrl.h"
 #include "drivers/driver.h"
 #include "wpa.h"
 #include "wpa_i.h"
@@ -50,17 +51,11 @@ int wpa_derive_ptk_ft(struct wpa_sm *sm, const unsigned char *src_addr,
 			      sm->r0kh_id, sm->r0kh_id_len, sm->own_addr,
 			      sm->pmk_r0, sm->pmk_r0_name, use_sha384) < 0)
 		return -1;
-	wpa_hexdump_key(MSG_DEBUG, "FT: PMK-R0", sm->pmk_r0, sm->pmk_r0_len);
-	wpa_hexdump(MSG_DEBUG, "FT: PMKR0Name",
-		    sm->pmk_r0_name, WPA_PMK_NAME_LEN);
 	sm->pmk_r1_len = sm->pmk_r0_len;
 	if (wpa_derive_pmk_r1(sm->pmk_r0, sm->pmk_r0_len, sm->pmk_r0_name,
 			      sm->r1kh_id, sm->own_addr, sm->pmk_r1,
 			      sm->pmk_r1_name) < 0)
 		return -1;
-	wpa_hexdump_key(MSG_DEBUG, "FT: PMK-R1", sm->pmk_r1, sm->pmk_r1_len);
-	wpa_hexdump(MSG_DEBUG, "FT: PMKR1Name", sm->pmk_r1_name,
-		    WPA_PMK_NAME_LEN);
 	return wpa_pmk_r1_to_ptk(sm->pmk_r1, sm->pmk_r1_len, sm->snonce, anonce,
 				 sm->own_addr, sm->bssid, sm->pmk_r1_name, ptk,
 				 ptk_name, sm->key_mgmt, sm->pairwise_cipher);
@@ -162,6 +157,7 @@ int wpa_sm_set_ft_params(struct wpa_sm *sm, const u8 *ies, size_t ies_len)
  * @ric_ies: Optional IE(s), e.g., WMM TSPEC(s), for RIC-Request or %NULL
  * @ric_ies_len: Length of ric_ies buffer in octets
  * @ap_mdie: Mobility Domain IE from the target AP
+ * @omit_rsnxe: Whether RSNXE is omitted from Reassociation Request frame
  * Returns: Pointer to buffer with IEs or %NULL on failure
  *
  * Caller is responsible for freeing the returned buffer with os_free();
@@ -171,16 +167,16 @@ static u8 * wpa_ft_gen_req_ies(struct wpa_sm *sm, size_t *len,
 			       const u8 *kck, size_t kck_len,
 			       const u8 *target_ap,
 			       const u8 *ric_ies, size_t ric_ies_len,
-			       const u8 *ap_mdie)
+			       const u8 *ap_mdie, int omit_rsnxe)
 {
 	size_t buf_len;
 	u8 *buf, *pos, *ftie_len, *ftie_pos, *fte_mic, *elem_count;
 	struct rsn_mdie *mdie;
 	struct rsn_ie_hdr *rsnie;
-	u16 capab;
 	int mdie_len;
 	u8 rsnxe[10];
 	size_t rsnxe_len;
+	int rsnxe_used;
 	int res;
 
 	sm->ft_completed = 0;
@@ -256,14 +252,7 @@ static u8 * wpa_ft_gen_req_ies(struct wpa_sm *sm, size_t *len,
 	pos += RSN_SELECTOR_LEN;
 
 	/* RSN Capabilities */
-	capab = 0;
-	if (sm->mfp)
-		capab |= WPA_CAPABILITY_MFPC;
-	if (sm->mfp == 2)
-		capab |= WPA_CAPABILITY_MFPR;
-	if (sm->ocv)
-		capab |= WPA_CAPABILITY_OCVC;
-	WPA_PUT_LE16(pos, capab);
+	WPA_PUT_LE16(pos, rsn_supp_capab(sm));
 	pos += 2;
 
 	/* PMKID Count */
@@ -309,10 +298,20 @@ static u8 * wpa_ft_gen_req_ies(struct wpa_sm *sm, size_t *len,
 	ftie_pos = pos;
 	*pos++ = WLAN_EID_FAST_BSS_TRANSITION;
 	ftie_len = pos++;
+	rsnxe_used = wpa_key_mgmt_sae(sm->key_mgmt) && anonce &&
+		(sm->sae_pwe == 1 || sm->sae_pwe == 2);
+#ifdef CONFIG_TESTING_OPTIONS
+	if (anonce && sm->ft_rsnxe_used) {
+		rsnxe_used = sm->ft_rsnxe_used == 1;
+		wpa_printf(MSG_DEBUG, "TESTING: FT: Force RSNXE Used %d",
+			   rsnxe_used);
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
 	if (wpa_key_mgmt_sha384(sm->key_mgmt)) {
 		struct rsn_ftie_sha384 *ftie;
 
 		ftie = (struct rsn_ftie_sha384 *) pos;
+		ftie->mic_control[0] = !!rsnxe_used;
 		fte_mic = ftie->mic;
 		elem_count = &ftie->mic_control[1];
 		pos += sizeof(*ftie);
@@ -323,6 +322,7 @@ static u8 * wpa_ft_gen_req_ies(struct wpa_sm *sm, size_t *len,
 		struct rsn_ftie *ftie;
 
 		ftie = (struct rsn_ftie *) pos;
+		ftie->mic_control[0] = !!rsnxe_used;
 		fte_mic = ftie->mic;
 		elem_count = &ftie->mic_control[1];
 		pos += sizeof(*ftie);
@@ -353,6 +353,14 @@ static u8 * wpa_ft_gen_req_ies(struct wpa_sm *sm, size_t *len,
 			os_free(buf);
 			return NULL;
 		}
+#ifdef CONFIG_TESTING_OPTIONS
+		if (sm->oci_freq_override_ft_assoc) {
+			wpa_printf(MSG_INFO,
+				   "TEST: Override OCI KDE frequency %d -> %d MHz",
+				   ci.frequency, sm->oci_freq_override_ft_assoc);
+			ci.frequency = sm->oci_freq_override_ft_assoc;
+		}
+#endif /* CONFIG_TESTING_OPTIONS */
 
 		*pos++ = FTIE_SUBELEM_OCI;
 		*pos++ = OCV_OCI_LEN;
@@ -370,12 +378,16 @@ static u8 * wpa_ft_gen_req_ies(struct wpa_sm *sm, size_t *len,
 		pos += ric_ies_len;
 	}
 
-	res = wpa_gen_rsnxe(sm, rsnxe, sizeof(rsnxe));
-	if (res < 0) {
-		os_free(buf);
-		return NULL;
+	if (omit_rsnxe) {
+		rsnxe_len = 0;
+	} else {
+		res = wpa_gen_rsnxe(sm, rsnxe, sizeof(rsnxe));
+		if (res < 0) {
+			os_free(buf);
+			return NULL;
+		}
+		rsnxe_len = res;
 	}
-	rsnxe_len = res;
 
 	if (kck) {
 		/*
@@ -458,7 +470,7 @@ int wpa_ft_prepare_auth_request(struct wpa_sm *sm, const u8 *mdie)
 	}
 
 	ft_ies = wpa_ft_gen_req_ies(sm, &ft_ies_len, NULL, sm->pmk_r0_name,
-				    NULL, 0, sm->bssid, NULL, 0, mdie);
+				    NULL, 0, sm->bssid, NULL, 0, mdie, 0);
 	if (ft_ies) {
 		wpa_sm_update_ft_ies(sm, sm->mobility_domain,
 				     ft_ies, ft_ies_len);
@@ -632,9 +644,6 @@ int wpa_ft_process_response(struct wpa_sm *sm, const u8 *ies, size_t ies_len,
 			      sm->pmk_r1_name) < 0)
 		return -1;
 	sm->pmk_r1_len = sm->pmk_r0_len;
-	wpa_hexdump_key(MSG_DEBUG, "FT: PMK-R1", sm->pmk_r1, sm->pmk_r1_len);
-	wpa_hexdump(MSG_DEBUG, "FT: PMKR1Name",
-		    sm->pmk_r1_name, WPA_PMK_NAME_LEN);
 
 	bssid = target_ap;
 	if (wpa_pmk_r1_to_ptk(sm->pmk_r1, sm->pmk_r1_len, sm->snonce,
@@ -654,7 +663,8 @@ int wpa_ft_process_response(struct wpa_sm *sm, const u8 *ies, size_t ies_len,
 				    sm->pmk_r1_name,
 				    kck, kck_len, bssid,
 				    ric_ies, ric_ies_len,
-				    parse.mdie ? parse.mdie - 2 : NULL);
+				    parse.mdie ? parse.mdie - 2 : NULL,
+				    !sm->ap_rsnxe);
 	if (ft_ies) {
 		wpa_sm_update_ft_ies(sm, sm->mobility_domain,
 				     ft_ies, ft_ies_len);
@@ -942,6 +952,7 @@ int wpa_ft_validate_reassoc_resp(struct wpa_sm *sm, const u8 *ies,
 	int use_sha384 = wpa_key_mgmt_sha384(sm->key_mgmt);
 	const u8 *anonce, *snonce, *fte_mic;
 	u8 fte_elem_count;
+	int own_rsnxe_used, rsnxe_used;
 
 	wpa_hexdump(MSG_DEBUG, "FT: Response IEs", ies, ies_len);
 
@@ -980,6 +991,7 @@ int wpa_ft_validate_reassoc_resp(struct wpa_sm *sm, const u8 *ies,
 
 		anonce = ftie->anonce;
 		snonce = ftie->snonce;
+		rsnxe_used = ftie->mic_control[0] & 0x01;
 		fte_elem_count = ftie->mic_control[1];
 		fte_mic = ftie->mic;
 	} else {
@@ -993,6 +1005,7 @@ int wpa_ft_validate_reassoc_resp(struct wpa_sm *sm, const u8 *ies,
 
 		anonce = ftie->anonce;
 		snonce = ftie->snonce;
+		rsnxe_used = ftie->mic_control[0] & 0x01;
 		fte_elem_count = ftie->mic_control[1];
 		fte_mic = ftie->mic;
 	}
@@ -1090,6 +1103,58 @@ int wpa_ft_validate_reassoc_resp(struct wpa_sm *sm, const u8 *ies,
 		return -1;
 	}
 
+	if (rsnxe_used && !sm->ap_rsnxe) {
+		wpa_printf(MSG_INFO,
+			   "FT: FTE indicated that AP uses RSNXE, but RSNXE was not included in Beacon/Probe Response frames");
+		return -1;
+	}
+
+	if (!sm->ap_rsn_ie) {
+		wpa_dbg(sm->ctx->msg_ctx, MSG_DEBUG,
+			"FT: No RSNE for this AP known - trying to get from scan results");
+		if (wpa_sm_get_beacon_ie(sm) < 0) {
+			wpa_msg(sm->ctx->msg_ctx, MSG_WARNING,
+				"FT: Could not find AP from the scan results");
+			return -1;
+		}
+		wpa_msg(sm->ctx->msg_ctx, MSG_DEBUG,
+			"FT: Found the current AP from updated scan results");
+	}
+
+	if (sm->ap_rsn_ie &&
+	    wpa_compare_rsn_ie(wpa_key_mgmt_ft(sm->key_mgmt),
+			       sm->ap_rsn_ie, sm->ap_rsn_ie_len,
+			       parse.rsn - 2, parse.rsn_len + 2)) {
+		wpa_msg(sm->ctx->msg_ctx, MSG_INFO,
+			"FT: RSNE mismatch between Beacon/ProbeResp and FT protocol Reassociation Response frame");
+		wpa_hexdump(MSG_INFO, "RSNE in Beacon/ProbeResp",
+			    sm->ap_rsn_ie, sm->ap_rsn_ie_len);
+		wpa_hexdump(MSG_INFO,
+			    "RSNE in FT protocol Reassociation Response frame",
+			    parse.rsn ? parse.rsn - 2 : NULL,
+			    parse.rsn ? parse.rsn_len + 2 : 0);
+		return -1;
+	}
+
+	own_rsnxe_used = wpa_key_mgmt_sae(sm->key_mgmt) &&
+		(sm->sae_pwe == 1 || sm->sae_pwe == 2);
+	if ((sm->ap_rsnxe && !parse.rsnxe && own_rsnxe_used) ||
+	    (!sm->ap_rsnxe && parse.rsnxe) ||
+	    (sm->ap_rsnxe && parse.rsnxe &&
+	     (sm->ap_rsnxe_len != 2 + parse.rsnxe_len ||
+	      os_memcmp(sm->ap_rsnxe, parse.rsnxe - 2,
+			sm->ap_rsnxe_len) != 0))) {
+		wpa_msg(sm->ctx->msg_ctx, MSG_INFO,
+			"FT: RSNXE mismatch between Beacon/ProbeResp and FT protocol Reassociation Response frame");
+		wpa_hexdump(MSG_INFO, "RSNXE in Beacon/ProbeResp",
+			    sm->ap_rsnxe, sm->ap_rsnxe_len);
+		wpa_hexdump(MSG_INFO,
+			    "RSNXE in FT protocol Reassociation Response frame",
+			    parse.rsnxe ? parse.rsnxe - 2 : NULL,
+			    parse.rsnxe ? parse.rsnxe_len + 2 : 0);
+		return -1;
+	}
+
 #ifdef CONFIG_OCV
 	if (wpa_sm_ocv_enabled(sm)) {
 		struct wpa_channel_info ci;
@@ -1102,8 +1167,10 @@ int wpa_ft_validate_reassoc_resp(struct wpa_sm *sm, const u8 *ies,
 
 		if (ocv_verify_tx_params(parse.oci, parse.oci_len, &ci,
 					 channel_width_to_int(ci.chanwidth),
-					 ci.seg1_idx) != 0) {
-			wpa_printf(MSG_WARNING, "%s", ocv_errorstr);
+					 ci.seg1_idx) != OCI_SUCCESS) {
+			wpa_msg(sm->ctx->msg_ctx, MSG_INFO, OCV_FAILURE
+				"addr=" MACSTR " frame=ft-assoc error=%s",
+				MAC2STR(sm->bssid), ocv_errorstr);
 			return -1;
 		}
 	}
@@ -1160,7 +1227,7 @@ int wpa_ft_start_over_ds(struct wpa_sm *sm, const u8 *target_ap,
 	}
 
 	ft_ies = wpa_ft_gen_req_ies(sm, &ft_ies_len, NULL, sm->pmk_r0_name,
-				    NULL, 0, target_ap, NULL, 0, mdie);
+				    NULL, 0, target_ap, NULL, 0, mdie, 0);
 	if (ft_ies) {
 		sm->over_the_ds_in_progress = 1;
 		os_memcpy(sm->target_ap, target_ap, ETH_ALEN);

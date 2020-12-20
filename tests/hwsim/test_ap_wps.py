@@ -41,11 +41,8 @@ import xml.etree.ElementTree as ET
 import hwsim_utils
 import hostapd
 from wpasupplicant import WpaSupplicant
-from utils import HwsimSkip, alloc_fail, fail_test, skip_with_fips
-from utils import wait_fail_trigger, clear_regdom
+from utils import *
 from test_ap_eap import int_eap_server_params
-from test_sae import check_sae_capab
-from test_wep import check_wep_capa
 
 def wps_start_ap(apdev, ssid="test-wps-conf"):
     params = {"ssid": ssid, "eap_server": "1", "wps_state": "2",
@@ -56,6 +53,7 @@ def wps_start_ap(apdev, ssid="test-wps-conf"):
 @remote_compatible
 def test_ap_wps_init(dev, apdev):
     """Initial AP configuration with first WPS Enrollee"""
+    skip_without_tkip(dev[0])
     ssid = "test-wps"
     hapd = hostapd.add_ap(apdev[0],
                           {"ssid": ssid, "eap_server": "1", "wps_state": "1"})
@@ -97,20 +95,27 @@ def test_ap_wps_init(dev, apdev):
     conf = hapd.request("GET_CONFIG")
     if "wps_state=configured" not in conf:
         raise Exception("AP not in WPS configured state")
-    if "wpa=3" not in conf:
-        raise Exception("AP not in WPA+WPA2 configuration")
-    if "rsn_pairwise_cipher=CCMP TKIP" not in conf:
-        raise Exception("Unexpected rsn_pairwise_cipher")
-    if "wpa_pairwise_cipher=CCMP TKIP" not in conf:
-        raise Exception("Unexpected wpa_pairwise_cipher")
-    if "group_cipher=TKIP" not in conf:
-        raise Exception("Unexpected group_cipher")
+    if "wpa=2" in conf:
+        if "rsn_pairwise_cipher=CCMP" not in conf:
+            raise Exception("Unexpected rsn_pairwise_cipher")
+        if "group_cipher=CCMP" not in conf:
+            raise Exception("Unexpected group_cipher")
+    else:
+        if "wpa=3" not in conf:
+            raise Exception("AP not in WPA+WPA2 configuration")
+        if "rsn_pairwise_cipher=CCMP TKIP" not in conf:
+            raise Exception("Unexpected rsn_pairwise_cipher")
+        if "wpa_pairwise_cipher=CCMP TKIP" not in conf:
+            raise Exception("Unexpected wpa_pairwise_cipher")
+        if "group_cipher=TKIP" not in conf:
+            raise Exception("Unexpected group_cipher")
 
     if len(dev[0].list_networks()) != 3:
         raise Exception("Unexpected number of network blocks")
 
 def test_ap_wps_init_2ap_pbc(dev, apdev):
     """Initial two-radio AP configuration with first WPS PBC Enrollee"""
+    skip_without_tkip(dev[0])
     ssid = "test-wps"
     params = {"ssid": ssid, "eap_server": "1", "wps_state": "1"}
     hapd = hostapd.add_ap(apdev[0], params)
@@ -147,6 +152,7 @@ def test_ap_wps_init_2ap_pbc(dev, apdev):
 
 def test_ap_wps_init_2ap_pin(dev, apdev):
     """Initial two-radio AP configuration with first WPS PIN Enrollee"""
+    skip_without_tkip(dev[0])
     ssid = "test-wps"
     params = {"ssid": ssid, "eap_server": "1", "wps_state": "1"}
     hapd = hostapd.add_ap(apdev[0], params)
@@ -411,6 +417,7 @@ def test_ap_wps_conf_pin(dev, apdev):
 
 def test_ap_wps_conf_pin_mixed_mode(dev, apdev):
     """WPS PIN provisioning with configured AP (WPA+WPA2)"""
+    skip_without_tkip(dev[0])
     ssid = "test-wps-conf-pin-mixed"
     hapd = hostapd.add_ap(apdev[0],
                           {"ssid": ssid, "eap_server": "1", "wps_state": "2",
@@ -588,6 +595,7 @@ def test_ap_wps_reg_connect_zero_len_ap_pin(dev, apdev):
 
 def test_ap_wps_reg_connect_mixed_mode(dev, apdev):
     """WPS registrar using AP PIN to connect (WPA+WPA2)"""
+    skip_without_tkip(dev[0])
     ssid = "test-wps-reg-ap-pin"
     appin = "12345670"
     hostapd.add_ap(apdev[0],
@@ -786,11 +794,12 @@ def test_ap_wps_reg_config_ext_processing(dev, apdev):
 def test_ap_wps_reg_config_tkip(dev, apdev):
     """WPS registrar configuring AP to use TKIP and AP upgrading to TKIP+CCMP"""
     skip_with_fips(dev[0])
+    skip_without_tkip(dev[0])
     ssid = "test-wps-init-ap"
     appin = "12345670"
-    hostapd.add_ap(apdev[0],
-                   {"ssid": ssid, "eap_server": "1", "wps_state": "1",
-                    "ap_pin": appin})
+    hapd = hostapd.add_ap(apdev[0],
+                          {"ssid": ssid, "eap_server": "1", "wps_state": "1",
+                           "ap_pin": appin})
     logger.info("WPS configuration step")
     dev[0].flush_scan_cache()
     dev[0].request("SET wps_version_number 0x10")
@@ -811,8 +820,12 @@ def test_ap_wps_reg_config_tkip(dev, apdev):
         raise Exception("Not fully connected: wpa_state={} bssid={}".format(status['wpa_state'], status['bssid']))
     if status['ssid'] != new_ssid:
         raise Exception("Unexpected SSID")
-    if status['pairwise_cipher'] != 'CCMP' or status['group_cipher'] != 'TKIP':
+    if status['pairwise_cipher'] != 'CCMP':
         raise Exception("Unexpected encryption configuration")
+    if status['group_cipher'] != 'TKIP':
+        conf = hapd.request("GET_CONFIG")
+        if "group_cipher=CCMP" not in conf or status['group_cipher'] != 'CCMP':
+            raise Exception("Unexpected encryption configuration")
     if status['key_mgmt'] != 'WPA2-PSK':
         raise Exception("Unexpected key_mgmt")
 
@@ -1985,6 +1998,7 @@ def _test_ap_wps_er_learn_oom(dev, apdev):
 
 def test_ap_wps_fragmentation(dev, apdev):
     """WPS with fragmentation in EAP-WSC and mixed mode WPA+WPA2"""
+    skip_without_tkip(dev[0])
     ssid = "test-wps-fragmentation"
     appin = "12345670"
     hapd = hostapd.add_ap(apdev[0],
@@ -2458,6 +2472,7 @@ def test_ap_wps_pin_request_file(dev, apdev):
 
 def test_ap_wps_auto_setup_with_config_file(dev, apdev):
     """WPS auto-setup with configuration file"""
+    skip_without_tkip(dev[0])
     conffile = "/tmp/ap_wps_auto_setup_with_config_file.conf"
     ifname = apdev[0]['ifname']
     try:
@@ -2496,10 +2511,9 @@ def test_ap_wps_auto_setup_with_config_file(dev, apdev):
         except:
             pass
 
-def test_ap_wps_pbc_timeout(dev, apdev, params):
-    """wpa_supplicant PBC walk time and WPS ER SelReg timeout [long]"""
-    if not params['long']:
-        raise HwsimSkip("Skip test case with long duration due to --long not specified")
+@long_duration_test
+def test_ap_wps_pbc_timeout(dev, apdev):
+    """wpa_supplicant PBC walk time and WPS ER SelReg timeout"""
     ap_uuid = "27ea801a-9e5c-4e73-bd82-f89cbcd10d7e"
     hapd = add_ssdp_ap(apdev[0], ap_uuid)
 
@@ -3642,6 +3656,7 @@ def test_ap_wps_disabled(dev, apdev):
 
 def test_ap_wps_mixed_cred(dev, apdev):
     """WPS 2.0 STA merging mixed mode WPA/WPA2 credentials"""
+    skip_without_tkip(dev[0])
     ssid = "test-wps-wep"
     params = {"ssid": ssid, "eap_server": "1", "wps_state": "2",
               "skip_cred_build": "1", "extra_cred": "wps-mixed-cred"}
@@ -10134,6 +10149,7 @@ def test_ap_wps_pbc_in_m1(dev, apdev):
 
 def test_ap_wps_pbc_mac_addr_change(dev, apdev, params):
     """WPS M1 with MAC address change"""
+    skip_without_tkip(dev[0])
     ssid = "test-wps-mac-addr-change"
     hapd = hostapd.add_ap(apdev[0],
                           {"ssid": ssid, "eap_server": "1", "wps_state": "1"})
@@ -10284,6 +10300,8 @@ def run_ap_wps_conf_pin_cipher(dev, apdev, cipher):
 
 def test_ap_wps_and_sae(dev, apdev):
     """Initial AP configuration with first WPS Enrollee and adding SAE"""
+    skip_without_tkip(dev[0])
+    skip_without_tkip(dev[1])
     try:
         run_ap_wps_and_sae(dev, apdev)
     finally:
@@ -10401,16 +10419,14 @@ def test_ap_wps_appl_ext(dev, apdev):
     dev[0].request("WPS_PIN %s %s" % (apdev[0]['bssid'], pin))
     dev[0].wait_connected(timeout=30)
 
-def test_ap_wps_pbc_ap_timeout(dev, apdev, params):
-    """WPS PBC timeout on AP [long]"""
-    if not params['long']:
-        raise HwsimSkip("Skip test case with long duration due to --long not specified")
+@long_duration_test
+def test_ap_wps_pbc_ap_timeout(dev, apdev):
+    """WPS PBC timeout on AP"""
     run_ap_wps_ap_timeout(dev, apdev, "WPS_PBC")
 
-def test_ap_wps_pin_ap_timeout(dev, apdev, params):
-    """WPS PIN timeout on AP [long]"""
-    if not params['long']:
-        raise HwsimSkip("Skip test case with long duration due to --long not specified")
+@long_duration_test
+def test_ap_wps_pin_ap_timeout(dev, apdev):
+    """WPS PIN timeout on AP"""
     run_ap_wps_ap_timeout(dev, apdev, "WPS_PIN any 12345670 10")
 
 def run_ap_wps_ap_timeout(dev, apdev, cmd):

@@ -147,13 +147,13 @@ static u16 copy_supp_rates(struct wpa_supplicant *wpa_s,
 
 
 /* return true if elems from a neighbor match this MBSS */
-static Boolean matches_local(struct wpa_supplicant *wpa_s,
-			     struct ieee802_11_elems *elems)
+static bool matches_local(struct wpa_supplicant *wpa_s,
+			  struct ieee802_11_elems *elems)
 {
 	struct mesh_conf *mconf = wpa_s->ifmsh->mconf;
 
 	if (elems->mesh_config_len < 5)
-		return FALSE;
+		return false;
 
 	return (mconf->meshid_len == elems->mesh_id_len &&
 		os_memcmp(mconf->meshid, elems->mesh_id,
@@ -167,17 +167,17 @@ static Boolean matches_local(struct wpa_supplicant *wpa_s,
 
 
 /* check if local link id is already used with another peer */
-static Boolean llid_in_use(struct wpa_supplicant *wpa_s, u16 llid)
+static bool llid_in_use(struct wpa_supplicant *wpa_s, u16 llid)
 {
 	struct sta_info *sta;
 	struct hostapd_data *hapd = wpa_s->ifmsh->bss[0];
 
 	for (sta = hapd->sta_list; sta; sta = sta->next) {
 		if (sta->my_lid == llid)
-			return TRUE;
+			return true;
 	}
 
-	return FALSE;
+	return false;
 }
 
 
@@ -533,11 +533,14 @@ static int mesh_mpm_plink_close(struct hostapd_data *hapd, struct sta_info *sta,
 	int reason = WLAN_REASON_MESH_PEERING_CANCELLED;
 
 	if (sta) {
+		if (sta->plink_state == PLINK_ESTAB)
+			hapd->num_plinks--;
 		wpa_mesh_set_plink_state(wpa_s, sta, PLINK_HOLDING);
 		mesh_mpm_send_plink_action(wpa_s, sta, PLINK_CLOSE, reason);
 		wpa_printf(MSG_DEBUG, "MPM closing plink sta=" MACSTR,
 			   MAC2STR(sta->addr));
 		eloop_cancel_timeout(plink_timer, wpa_s, sta);
+		eloop_cancel_timeout(mesh_auth_timer, wpa_s, sta);
 		return 0;
 	}
 
@@ -1290,8 +1293,8 @@ void mesh_mpm_action_rx(struct wpa_supplicant *wpa_s,
 
 			if (ocv_verify_tx_params(elems.oci, elems.oci_len, &ci,
 						 tx_chanwidth, tx_seg1_idx) !=
-			    0) {
-				wpa_printf(MSG_WARNING, "MPM: %s",
+			    OCI_SUCCESS) {
+				wpa_printf(MSG_WARNING, "MPM: OCV failed: %s",
 					   ocv_errorstr);
 				return;
 			}

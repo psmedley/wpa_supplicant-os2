@@ -1633,7 +1633,8 @@ int wpa_derive_pmk_r0(const u8 *xxkey, size_t xxkey_len,
 	if (!use_sha384 && sha256_vector(2, addr, len, hash) < 0)
 		return -1;
 	os_memcpy(pmk_r0_name, hash, WPA_PMK_NAME_LEN);
-	os_memset(r0_key_data, 0, sizeof(r0_key_data));
+	wpa_hexdump(MSG_DEBUG, "FT: PMKR0Name", pmk_r0_name, WPA_PMK_NAME_LEN);
+	forced_memzero(r0_key_data, sizeof(r0_key_data));
 	return 0;
 }
 
@@ -1670,6 +1671,7 @@ int wpa_derive_pmk_r1_name(const u8 *pmk_r0_name, const u8 *r1kh_id,
 	if (!use_sha384 && sha256_vector(4, addr, len, hash) < 0)
 		return -1;
 	os_memcpy(pmk_r1_name, hash, WPA_PMK_NAME_LEN);
+	wpa_hexdump(MSG_DEBUG, "FT: PMKR1Name", pmk_r1_name, WPA_PMK_NAME_LEN);
 	return 0;
 }
 
@@ -1839,7 +1841,7 @@ int wpa_pmk_r1_to_ptk(const u8 *pmk_r1, size_t pmk_r1_len,
 	wpa_hexdump_key(MSG_DEBUG, "FT: TK", ptk->tk, ptk->tk_len);
 	wpa_hexdump(MSG_DEBUG, "FT: PTKName", ptk_name, WPA_PMK_NAME_LEN);
 
-	os_memset(tmp, 0, sizeof(tmp));
+	forced_memzero(tmp, sizeof(tmp));
 
 	return 0;
 }
@@ -2305,7 +2307,7 @@ enum wpa_alg wpa_cipher_to_alg(int cipher)
 	case WPA_CIPHER_TKIP:
 		return WPA_ALG_TKIP;
 	case WPA_CIPHER_AES_128_CMAC:
-		return WPA_ALG_IGTK;
+		return WPA_ALG_BIP_CMAC_128;
 	case WPA_CIPHER_BIP_GMAC_128:
 		return WPA_ALG_BIP_GMAC_128;
 	case WPA_CIPHER_BIP_GMAC_256:
@@ -2319,11 +2321,18 @@ enum wpa_alg wpa_cipher_to_alg(int cipher)
 
 int wpa_cipher_valid_pairwise(int cipher)
 {
+#ifdef CONFIG_NO_TKIP
+	return cipher == WPA_CIPHER_CCMP_256 ||
+		cipher == WPA_CIPHER_GCMP_256 ||
+		cipher == WPA_CIPHER_CCMP ||
+		cipher == WPA_CIPHER_GCMP;
+#else /* CONFIG_NO_TKIP */
 	return cipher == WPA_CIPHER_CCMP_256 ||
 		cipher == WPA_CIPHER_GCMP_256 ||
 		cipher == WPA_CIPHER_CCMP ||
 		cipher == WPA_CIPHER_GCMP ||
 		cipher == WPA_CIPHER_TKIP;
+#endif /* CONFIG_NO_TKIP */
 }
 
 
@@ -2476,8 +2485,10 @@ int wpa_parse_cipher(const char *value)
 			val |= WPA_CIPHER_CCMP;
 		else if (os_strcmp(start, "GCMP") == 0)
 			val |= WPA_CIPHER_GCMP;
+#ifndef CONFIG_NO_TKIP
 		else if (os_strcmp(start, "TKIP") == 0)
 			val |= WPA_CIPHER_TKIP;
+#endif /* CONFIG_NO_TKIP */
 #ifdef CONFIG_WEP
 		else if (os_strcmp(start, "WEP104") == 0)
 			val |= WPA_CIPHER_WEP104;
@@ -2646,10 +2657,9 @@ int fils_domain_name_hash(const char *domain, u8 *hash)
  * @pos: Pointer to the IE header
  * @end: Pointer to the end of the Key Data buffer
  * @ie: Pointer to parsed IE data
- * Returns: 0 on success, 1 if end mark is found, -1 on failure
  */
-static int wpa_parse_vendor_specific(const u8 *pos, const u8 *end,
-				     struct wpa_eapol_ie_parse *ie)
+static void wpa_parse_vendor_specific(const u8 *pos, const u8 *end,
+				      struct wpa_eapol_ie_parse *ie)
 {
 	unsigned int oui;
 
@@ -2657,7 +2667,7 @@ static int wpa_parse_vendor_specific(const u8 *pos, const u8 *end,
 		wpa_printf(MSG_MSGDUMP,
 			   "Too short vendor specific IE ignored (len=%u)",
 			   pos[1]);
-		return 1;
+		return;
 	}
 
 	oui = WPA_GET_BE24(&pos[2]);
@@ -2674,19 +2684,16 @@ static int wpa_parse_vendor_specific(const u8 *pos, const u8 *end,
 				    ie->wmm, ie->wmm_len);
 		}
 	}
-	return 0;
 }
 
 
 /**
  * wpa_parse_generic - Parse EAPOL-Key Key Data Generic IEs
  * @pos: Pointer to the IE header
- * @end: Pointer to the end of the Key Data buffer
  * @ie: Pointer to parsed IE data
- * Returns: 0 on success, 1 if end mark is found, -1 on failure
+ * Returns: 0 on success, 1 if end mark is found, 2 if KDE is not recognized
  */
-static int wpa_parse_generic(const u8 *pos, const u8 *end,
-			     struct wpa_eapol_ie_parse *ie)
+static int wpa_parse_generic(const u8 *pos, struct wpa_eapol_ie_parse *ie)
 {
 	if (pos[1] == 0)
 		return 1;
@@ -2708,11 +2715,18 @@ static int wpa_parse_generic(const u8 *pos, const u8 *end,
 		return 0;
 	}
 
-	if (1 + RSN_SELECTOR_LEN < end - pos &&
-	    pos[1] >= RSN_SELECTOR_LEN + PMKID_LEN &&
+	if (pos[1] >= RSN_SELECTOR_LEN + PMKID_LEN &&
 	    RSN_SELECTOR_GET(pos + 2) == RSN_KEY_DATA_PMKID) {
 		ie->pmkid = pos + 2 + RSN_SELECTOR_LEN;
 		wpa_hexdump(MSG_DEBUG, "WPA: PMKID in EAPOL-Key",
+			    pos, pos[1] + 2);
+		return 0;
+	}
+
+	if (pos[1] >= RSN_SELECTOR_LEN + 2 &&
+	    RSN_SELECTOR_GET(pos + 2) == RSN_KEY_DATA_KEYID) {
+		ie->key_id = pos + 2 + RSN_SELECTOR_LEN;
+		wpa_hexdump(MSG_DEBUG, "WPA: KeyID in EAPOL-Key",
 			    pos, pos[1] + 2);
 		return 0;
 	}
@@ -2779,7 +2793,26 @@ static int wpa_parse_generic(const u8 *pos, const u8 *end,
 		return 0;
 	}
 
-	return 0;
+	if (pos[1] >= RSN_SELECTOR_LEN + 1 &&
+	    RSN_SELECTOR_GET(pos + 2) == WFA_KEY_DATA_TRANSITION_DISABLE) {
+		ie->transition_disable = pos + 2 + RSN_SELECTOR_LEN;
+		ie->transition_disable_len = pos[1] - RSN_SELECTOR_LEN;
+		wpa_hexdump(MSG_DEBUG,
+			    "WPA: Transition Disable KDE in EAPOL-Key",
+			    pos, pos[1] + 2);
+		return 0;
+	}
+
+	if (pos[1] >= RSN_SELECTOR_LEN + 2 &&
+	    RSN_SELECTOR_GET(pos + 2) == WFA_KEY_DATA_DPP) {
+		ie->dpp_kde = pos + 2 + RSN_SELECTOR_LEN;
+		ie->dpp_kde_len = pos[1] - RSN_SELECTOR_LEN;
+		wpa_hexdump(MSG_DEBUG, "WPA: DPP KDE in EAPOL-Key",
+			    pos, pos[1] + 2);
+		return 0;
+	}
+
+	return 2;
 }
 
 
@@ -2887,21 +2920,19 @@ int wpa_parse_kde_ies(const u8 *buf, size_t len, struct wpa_eapol_ie_parse *ie)
 				ie->supp_oper_classes_len = pos[1];
 			}
 		} else if (*pos == WLAN_EID_VENDOR_SPECIFIC) {
-			ret = wpa_parse_generic(pos, end, ie);
-			if (ret < 0)
-				break;
-			if (ret > 0) {
+			ret = wpa_parse_generic(pos, ie);
+			if (ret == 1) {
+				/* end mark found */
 				ret = 0;
 				break;
 			}
 
-			ret = wpa_parse_vendor_specific(pos, end, ie);
-			if (ret < 0)
-				break;
-			if (ret > 0) {
-				ret = 0;
-				break;
+			if (ret == 2) {
+				/* not a known KDE */
+				wpa_parse_vendor_specific(pos, end, ie);
 			}
+
+			ret = 0;
 		} else {
 			wpa_hexdump(MSG_DEBUG,
 				    "WPA: Unrecognized EAPOL-Key Key Data IE",

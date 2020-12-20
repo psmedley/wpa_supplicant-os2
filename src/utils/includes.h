@@ -18,6 +18,7 @@
 
 #include <stdlib.h>
 #include <stddef.h>
+#include <stdbool.h>	/* 20201220 AB ToDo: does it exist? */	
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>

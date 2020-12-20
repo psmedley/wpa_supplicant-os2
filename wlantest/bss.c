@@ -178,14 +178,18 @@ void bss_update(struct wlantest *wt, struct wlantest_bss *bss,
 			  elems->osen_len + 2);
 	}
 
-	if (elems->rsn_ie == NULL) {
+	/* S1G does not include RSNE in beacon, so only clear it from
+	 * Probe Response frames. Note this assumes short beacons were dropped
+	 * due to missing SSID above.
+	 */
+	if (!elems->rsn_ie && (!elems->s1g_capab || beacon != 1)) {
 		if (bss->rsnie[0]) {
 			add_note(wt, MSG_INFO, "BSS " MACSTR
 				 " - RSN IE removed", MAC2STR(bss->bssid));
 			bss->rsnie[0] = 0;
 			update = 1;
 		}
-	} else {
+	} else if (elems->rsn_ie) {
 		if (bss->rsnie[0] == 0 ||
 		    os_memcmp(bss->rsnie, elems->rsn_ie - 2,
 			      elems->rsn_ie_len + 2) != 0) {
@@ -290,7 +294,7 @@ void bss_update(struct wlantest *wt, struct wlantest_bss *bss,
 		   "group=%s%s%s%s%s%s%s%s%s"
 		   "mgmt_group_cipher=%s%s%s%s%s"
 		   "key_mgmt=%s%s%s%s%s%s%s%s%s"
-		   "rsn_capab=%s%s%s%s%s%s",
+		   "rsn_capab=%s%s%s%s%s%s%s",
 		   MAC2STR(bss->bssid),
 		   bss->proto == 0 ? "OPEN " : "",
 		   bss->proto & WPA_PROTO_WPA ? "WPA " : "",
@@ -341,7 +345,9 @@ void bss_update(struct wlantest *wt, struct wlantest_bss *bss,
 		   bss->rsn_capab & WPA_CAPABILITY_MFPC ? "MFPC " : "",
 		   bss->rsn_capab & WPA_CAPABILITY_PEERKEY_ENABLED ?
 		   "PEERKEY " : "",
-		   bss->rsn_capab & WPA_CAPABILITY_OCVC ? "OCVC " : "");
+		   bss->rsn_capab & WPA_CAPABILITY_OCVC ? "OCVC " : "",
+		   bss->rsn_capab & WPA_CAPABILITY_EXT_KEY_ID_FOR_UNICAST ?
+		   "ExtKeyID " : "");
 }
 
 

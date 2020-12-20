@@ -197,15 +197,6 @@ struct hostapd_radius_attr {
 
 
 #define NUM_TX_QUEUES 4
-
-struct hostapd_tx_queue_params {
-	int aifs;
-	int cwmin;
-	int cwmax;
-	int burst; /* maximum burst time in 0.1 ms, i.e., 10 = 1 ms */
-};
-
-
 #define MAX_ROAMING_CONSORTIUM_LEN 15
 
 struct hostapd_roaming_consortium {
@@ -261,6 +252,7 @@ struct sae_password_entry {
 	u8 peer_addr[ETH_ALEN];
 	int vlan_id;
 	struct sae_pt *pt;
+	struct sae_pk *pk;
 };
 
 struct dpp_controller_conf {
@@ -354,6 +346,7 @@ struct hostapd_bss_config {
 			* algorithms, WPA_AUTH_ALG_{OPEN,SHARED,LEAP} */
 
 	int wpa; /* bitfield of WPA_PROTO_WPA, WPA_PROTO_RSN */
+	int extended_key_id;
 	int wpa_key_mgmt;
 	enum mfp_options ieee80211w;
 	int group_mgmt_cipher;
@@ -538,8 +531,9 @@ struct hostapd_bss_config {
 #define TDLS_PROHIBIT BIT(0)
 #define TDLS_PROHIBIT_CHAN_SWITCH BIT(1)
 	int tdls;
-	int disable_11n;
-	int disable_11ac;
+	bool disable_11n;
+	bool disable_11ac;
+	bool disable_11ax;
 
 	/* IEEE 802.11v */
 	int time_advertisement;
@@ -676,11 +670,26 @@ struct hostapd_bss_config {
 	u8 bss_load_test_set;
 	struct wpabuf *own_ie_override;
 	int sae_reflection_attack;
+	int sae_commit_status;
+	int sae_pk_omit;
+	int sae_pk_password_check_skip;
 	struct wpabuf *sae_commit_override;
 	struct wpabuf *rsne_override_eapol;
 	struct wpabuf *rsnxe_override_eapol;
+	struct wpabuf *rsne_override_ft;
+	struct wpabuf *rsnxe_override_ft;
 	struct wpabuf *gtk_rsc_override;
 	struct wpabuf *igtk_rsc_override;
+	int no_beacon_rsnxe;
+	int skip_prune_assoc;
+	int ft_rsnxe_used;
+	unsigned int oci_freq_override_eapol_m3;
+	unsigned int oci_freq_override_eapol_g1;
+	unsigned int oci_freq_override_saquery_req;
+	unsigned int oci_freq_override_saquery_resp;
+	unsigned int oci_freq_override_ft_assoc;
+	unsigned int oci_freq_override_fils_assoc;
+	unsigned int oci_freq_override_wnm_sleep;
 #endif /* CONFIG_TESTING_OPTIONS */
 
 #define MESH_ENABLED BIT(0)
@@ -736,6 +745,8 @@ struct hostapd_bss_config {
 	struct wpabuf *dpp_csign;
 #ifdef CONFIG_DPP2
 	struct dpp_controller_conf *dpp_controller;
+	int dpp_configurator_connectivity;
+	int dpp_pfs;
 #endif /* CONFIG_DPP2 */
 #endif /* CONFIG_DPP */
 
@@ -751,6 +762,8 @@ struct hostapd_bss_config {
 	int coloc_intf_reporting;
 
 	u8 send_probe_response;
+
+	u8 transition_disable;
 
 #define BACKHAUL_BSS 1
 #define FRONTHAUL_BSS 2
@@ -855,9 +868,9 @@ struct hostapd_bss_config {
  * struct he_phy_capabilities_info - HE PHY capabilities
  */
 struct he_phy_capabilities_info {
-	Boolean he_su_beamformer;
-	Boolean he_su_beamformee;
-	Boolean he_mu_beamformer;
+	bool he_su_beamformer;
+	bool he_su_beamformee;
+	bool he_mu_beamformer;
 };
 
 /**
@@ -1026,6 +1039,7 @@ struct hostapd_config {
 
 	int rssi_reject_assoc_rssi;
 	int rssi_reject_assoc_timeout;
+	int rssi_ignore_probe_request;
 
 #ifdef CONFIG_AIRTIME_POLICY
 	enum {
@@ -1130,6 +1144,8 @@ int hostapd_config_check(struct hostapd_config *conf, int full_config);
 void hostapd_set_security_params(struct hostapd_bss_config *bss,
 				 int full_config);
 int hostapd_sae_pw_id_in_use(struct hostapd_bss_config *conf);
+bool hostapd_sae_pk_in_use(struct hostapd_bss_config *conf);
+bool hostapd_sae_pk_exclusively(struct hostapd_bss_config *conf);
 int hostapd_setup_sae_pt(struct hostapd_bss_config *conf);
 
 #endif /* HOSTAPD_CONFIG_H */

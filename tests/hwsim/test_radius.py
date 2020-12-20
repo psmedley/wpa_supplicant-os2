@@ -18,10 +18,9 @@ import threading
 import time
 
 import hostapd
-from utils import HwsimSkip, require_under_vm, skip_with_fips, alloc_fail, fail_test, wait_fail_trigger
+from utils import *
 from test_ap_hs20 import build_dhcp_ack
 from test_ap_ft import ft_params1
-from test_wep import check_wep_capa
 
 def connect(dev, ssid, wait_connect=True):
     dev.connect(ssid, key_mgmt="WPA-EAP", scan_freq="2412",
@@ -761,7 +760,7 @@ def test_radius_das_disconnect(dev, apdev):
 
 def add_message_auth_req(req):
     req.authenticator = req.CreateAuthenticator()
-    hmac_obj = hmac.new(req.secret)
+    hmac_obj = hmac.new(req.secret, digestmod=hashlib.md5)
     hmac_obj.update(struct.pack("B", req.code))
     hmac_obj.update(struct.pack("B", req.id))
 
@@ -963,7 +962,7 @@ def test_radius_macacl_unreachable(dev, apdev):
     hapd.set("auth_server_port", "1812")
     hapd.disable()
     hapd.enable()
-    dev[0].wait_connected()
+    dev[0].wait_connected(timeout=20)
     dev[0].request("DISCONNECT")
     dev[0].wait_disconnected()
 
@@ -1047,7 +1046,7 @@ def test_radius_protocol(dev, apdev):
                     pw = b"incorrect"
                 else:
                     pw = reply.secret
-                hmac_obj = hmac.new(pw)
+                hmac_obj = hmac.new(pw, digestmod=hashlib.md5)
                 hmac_obj.update(struct.pack("B", reply.code))
                 hmac_obj.update(struct.pack("B", reply.id))
 
@@ -1390,7 +1389,7 @@ def test_radius_auth_force_invalid_client_addr(dev, apdev):
 
 def add_message_auth(req):
     req.authenticator = req.CreateAuthenticator()
-    hmac_obj = hmac.new(req.secret)
+    hmac_obj = hmac.new(req.secret, digestmod=hashlib.md5)
     hmac_obj.update(struct.pack("B", req.code))
     hmac_obj.update(struct.pack("B", req.id))
 
