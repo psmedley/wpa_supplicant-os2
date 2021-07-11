@@ -11,13 +11,6 @@
 
 #include "os.h"
 
-/* 20201220 AB ToDo: delete following 
-  #define _SOCKLEN_T_DECLARED		// 20200322 AB not needed when new libc is release
-  #define SOCKLEN_T int
-  typedef int socklen_t;
-#endif */ /* _SOCKLEN_T_DECLARED */
-
-
 #if defined(__OS2__)
 	#define VERSION_STR_POSTFIX " (OS/2, "__DATE__" "__TIME__", AB)"
 #endif /* __OS2__ */

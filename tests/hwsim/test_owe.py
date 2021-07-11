@@ -29,6 +29,10 @@ def test_owe(dev, apdev):
               "rsn_pairwise": "CCMP"}
     hapd = hostapd.add_ap(apdev[0], params)
     bssid = hapd.own_addr()
+    conf = hapd.request("GET_CONFIG")
+    if "key_mgmt=OWE" not in conf.splitlines():
+        logger.info("GET_CONFIG:\n" + conf)
+        raise Exception("GET_CONFIG did not report correct key_mgmt")
 
     dev[0].scan_for_bss(bssid, freq="2412")
     bss = dev[0].get_bss(bssid)
@@ -60,10 +64,12 @@ def test_owe_groups(dev, apdev):
     dev[0].scan_for_bss(bssid, freq="2412")
     for group in [19, 20, 21]:
         dev[0].connect("owe", key_mgmt="OWE", owe_group=str(group))
+        hapd.wait_sta()
         hwsim_utils.test_connectivity(dev[0], hapd)
         dev[0].request("REMOVE_NETWORK all")
         dev[0].wait_disconnected()
         dev[0].dump_monitor()
+        hapd.dump_monitor()
 
 def test_owe_pmksa_caching(dev, apdev):
     """Opportunistic Wireless Encryption and PMKSA caching"""
@@ -146,10 +152,12 @@ def test_owe_and_psk(dev, apdev):
 
     dev[0].scan_for_bss(bssid, freq="2412")
     dev[0].connect("owe+psk", psk="12345678")
+    hapd.wait_sta()
     hwsim_utils.test_connectivity(dev[0], hapd)
 
     dev[1].scan_for_bss(bssid, freq="2412")
     dev[1].connect("owe+psk", key_mgmt="OWE")
+    hapd.wait_sta()
     hwsim_utils.test_connectivity(dev[1], hapd)
 
 def test_owe_transition_mode(dev, apdev):
@@ -213,6 +221,7 @@ def run_owe_transition_mode(dev, apdev, adv_bssid0=None, adv_bssid1=None):
 
     id = dev[0].connect("owe-test", key_mgmt="OWE", ieee80211w="2",
                         scan_freq="2412")
+    hapd.wait_sta()
     hwsim_utils.test_connectivity(dev[0], hapd)
     val = dev[0].get_status_field("key_mgmt")
     if val != "OWE":
@@ -235,6 +244,7 @@ def run_owe_transition_mode(dev, apdev, adv_bssid0=None, adv_bssid1=None):
     dev[0].scan_for_bss(bssid, freq="2412")
     dev[0].select_network(id, 2412)
     dev[0].wait_connected()
+    hapd.wait_sta()
     hwsim_utils.test_connectivity(dev[0], hapd)
 
 def test_owe_transition_mode_ifname(dev, apdev):
@@ -916,3 +926,28 @@ def test_owe_transition_mode_disable(dev, apdev):
     dev[0].wait_disconnected()
     dev[0].request("RECONNECT")
     dev[0].wait_connected()
+
+def test_owe_sa_query(dev, apdev):
+    """Opportunistic Wireless Encryption - SA Query"""
+    if "OWE" not in dev[0].get_capability("key_mgmt"):
+        raise HwsimSkip("OWE not supported")
+    params = {"ssid": "owe",
+              "wpa": "2",
+              "ieee80211w": "2",
+              "wpa_key_mgmt": "OWE",
+              "rsn_pairwise": "CCMP"}
+    hapd = hostapd.add_ap(apdev[0], params)
+    bssid = hapd.own_addr()
+
+    dev[0].scan_for_bss(bssid, freq="2412")
+    dev[0].connect("owe", key_mgmt="OWE", owe_group="19", ieee80211w="2",
+                   scan_freq="2412")
+    hapd.wait_sta()
+
+    hapd.set("ext_mgmt_frame_handling", "1")
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected(timeout=10)
+    hapd.set("ext_mgmt_frame_handling", "0")
+    dev[0].request("PMKSA_FLUSH")
+    dev[0].request("REASSOCIATE")
+    dev[0].wait_connected(timeout=10, error="Timeout on re-connection")

@@ -685,6 +685,7 @@ E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\bldlvl.cmd
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\bldlvl.def
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\bss.c
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\bss.h
+E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\ChangeLog
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\config.c
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\config.h
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\config_file.c
@@ -853,300 +854,333 @@ E:\_work\ports\wpa_supplicant\trunk\hostap\wpadebug\res\raw\wpa_commands.txt
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpaspy\wpaspy.c
 [ASSOCIATION]
 [STATE]
-SCREEN: 3840 2160 549 75 3254 1934 0 0 N 0 0 0 0 2055 1841
-CWD: E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant
+SCREEN: 3840 2160 548 45 3254 1934 0 0 N 0 0 0 0 2165 1550
+CWD: E:\_work\ports\wpa_supplicant\trunk\hostap
 BUFFER: BN="P:\Util\VisualSlickEdit40\os2\vrestore.slk"
 BI: MA=1 254 1  TABS=1 9  WWS=3 IWT=0 ST=0 IN=0 BW=0 US=0 RO=0 SE=0 SN=0 BIN=0 MN=Fundamental	HM=0 MF=1
-VIEW: LN=.0 CL=1 LE=0 CX=1 CY=1 WI=5 BI=4 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.0 CL=1 LE=0 CX=1 CY=1 WI=5 BI=25 HT=0 HN=0 HF=0 HC=4
+BUFFER: BN="P:\Util\VisualSlickEdit40\os2\vrestore.slk"
+BI: MA=1 254 1  TABS=1 9  WWS=3 IWT=0 ST=0 IN=0 BW=0 US=0 RO=0 SE=1 SN=0 BIN=0 MN=Fundamental	HM=0 MF=0
+VIEW: LN=.0 CL=1 LE=0 CX=1 CY=1 WI=5 BI=17 HT=0 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\AcpiToolkit-3.23.3\h\actypes.h"
+BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=1 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=0
+VIEW: LN=.0 CL=1 LE=0 CX=1 CY=1 WI=5 BI=72 HT=0 HN=0 HF=0 HC=4
+BUFFER: BN="E:\C\INCLUDE\abtrace.h"
+BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=0
+VIEW: LN=.1797 CL=56 LE=0 CX=56 CY=45 WI=5 BI=28 HT=0 HN=0 HF=0 HC=4
+BUFFER: BN="E:\C\INCLUDE\ANDIDEF.H"
+BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=0
+VIEW: LN=.0 CL=1 LE=0 CX=1 CY=1 WI=5 BI=27 HT=0 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\m.cmd"
+BI: MA=1 74 1  TABS=1 3  WWS=0 IWT=0 ST=0 IN=2 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=Rexx	HM=0 MF=0
+VIEW: LN=.344 CL=36 LE=0 CX=36 CY=10 WI=5 BI=29 HT=0 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\make_ship.cmd"
+BI: MA=1 74 1  TABS=1 3  WWS=0 IWT=0 ST=0 IN=2 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=Rexx	HM=0 MF=0
+VIEW: LN=.0 CL=1 LE=0 CX=1 CY=1 WI=5 BI=30 HT=0 HN=0 HF=0 HC=4
+BUFFER: BN="P:\usr\include\QtCore\qplugin.h"
+BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=0
+VIEW: LN=.4196 CL=25 LE=0 CX=25 CY=41 WI=5 BI=31 HT=0 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\wpagui.cpp"
+BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=0
+VIEW: LN=.19784 CL=48 LE=0 CX=48 CY=58 WI=5 BI=32 HT=0 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\.config"
+BI: MA=1 120 1  TABS=1 5  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=Fundamental	HM=0 MF=0
+VIEW: LN=.9978 CL=29 LE=0 CX=29 CY=25 WI=5 BI=33 HT=0 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\Makefile"
+BI: MA=1 250 1  TABS=1 5  WWS=3 IWT=0 ST=0 IN=2 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=mak	HM=0 MF=0
+VIEW: LN=.4152 CL=1 LE=0 CX=1 CY=30 WI=5 BI=34 HT=0 HN=0 HF=0 HC=4
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_supplicant_i.h"
 BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=0
-VIEW: LN=.6994 CL=64 LE=0 CX=64 CY=7 WI=5 BI=60 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.6994 CL=64 LE=0 CX=64 CY=7 WI=5 BI=35 HT=0 HN=0 HF=0 HC=4
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\common\wpa_ctrl.c"
 BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=0
-VIEW: LN=.11236 CL=5 LE=0 CX=5 CY=18 WI=5 BI=59 HT=0 HN=0 HF=0 HC=4
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\os_os2.c"
-BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=624
-VIEW: LN=.5345 CL=13 LE=0 CX=13 CY=33 WI=5 BI=58 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.11236 CL=5 LE=0 CX=5 CY=18 WI=5 BI=36 HT=0 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_supplicant.c"
+BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=0
+VIEW: LN=.207471 CL=22 LE=0 CX=22 CY=22 WI=5 BI=37 HT=0 HN=0 HF=0 HC=4
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\l2_packet\l2_packet_freebsd.c"
 BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=0
-VIEW: LN=.4375 CL=13 LE=0 CX=13 CY=33 WI=5 BI=57 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.4375 CL=13 LE=0 CX=13 CY=33 WI=5 BI=38 HT=0 HN=0 HF=0 HC=4
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\PMPRINTF.H"
 BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=1 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=0
-VIEW: LN=.6136 CL=5 LE=0 CX=5 CY=41 WI=5 BI=56 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.6136 CL=5 LE=0 CX=5 CY=41 WI=5 BI=39 HT=0 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\out.log"
+BI: MA=1 120 1  TABS=1 5  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=Fundamental	HM=0 MF=0
+VIEW: LN=.56 CL=57 LE=0 CX=57 CY=0 WI=5 BI=40 HT=0 HN=0 HF=0 HC=4
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\vs_make.cmd"
 BI: MA=1 74 1  TABS=1 3  WWS=0 IWT=0 ST=0 IN=2 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=Rexx	HM=0 MF=0
-VIEW: LN=.424 CL=58 LE=0 CX=58 CY=11 WI=5 BI=54 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.424 CL=58 LE=0 CX=58 CY=11 WI=5 BI=42 HT=0 HN=0 HF=0 HC=4
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\bldlvl.cmd"
 BI: MA=1 74 1  TABS=1 3  WWS=0 IWT=0 ST=0 IN=2 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=Rexx	HM=0 MF=0
-VIEW: LN=.1650 CL=11 LE=0 CX=11 CY=32 WI=5 BI=53 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.1650 CL=11 LE=0 CX=11 CY=32 WI=5 BI=43 HT=0 HN=0 HF=0 HC=4
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\wpa_debug.h"
 BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=0
-VIEW: LN=.676 CL=5 LE=0 CX=5 CY=26 WI=5 BI=51 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.676 CL=5 LE=0 CX=5 CY=26 WI=5 BI=44 HT=0 HN=0 HF=0 HC=4
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\wmm.c"
 BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=0
-VIEW: LN=.0 CL=1 LE=0 CX=1 CY=1 WI=5 BI=50 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.0 CL=1 LE=0 CX=1 CY=1 WI=5 BI=45 HT=0 HN=0 HF=0 HC=4
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\packet32.c"
 BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=0
-VIEW: LN=.6224 CL=25 LE=0 CX=25 CY=28 WI=5 BI=49 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.6224 CL=25 LE=0 CX=25 CY=28 WI=5 BI=46 HT=0 HN=0 HF=0 HC=4
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\l2_packet\l2_packet_os2.c"
 BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=0
-VIEW: LN=.1201 CL=3 LE=0 CX=3 CY=14 WI=5 BI=48 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.1201 CL=3 LE=0 CX=3 CY=14 WI=5 BI=47 HT=0 HN=0 HF=0 HC=4
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\build_config.h"
 BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=0
-VIEW: LN=.962 CL=29 LE=0 CX=29 CY=29 WI=5 BI=46 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.962 CL=29 LE=0 CX=29 CY=29 WI=5 BI=49 HT=0 HN=0 HF=0 HC=4
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\priv_netlink.h"
 BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=0
-VIEW: LN=.2437 CL=3 LE=0 CX=3 CY=22 WI=5 BI=45 HT=0 HN=0 HF=0 HC=4
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\wpa_debug.c"
-BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=0
-VIEW: LN=.13621 CL=1 LE=0 CX=1 CY=63 WI=5 BI=47 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.2437 CL=3 LE=0 CX=3 CY=22 WI=5 BI=50 HT=0 HN=0 HF=0 HC=4
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\os_internal.c"
 BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=0
-VIEW: LN=.4840 CL=43 LE=0 CX=43 CY=24 WI=5 BI=44 HT=0 HN=0 HF=0 HC=4
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\main.c"
-BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=624
-VIEW: LN=.6047 CL=10 LE=0 CX=10 CY=47 WI=5 BI=43 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.4904 CL=43 LE=0 CX=43 CY=24 WI=5 BI=51 HT=0 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\os_os2.c"
+BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=0
+VIEW: LN=.5345 CL=13 LE=0 CX=13 CY=33 WI=5 BI=52 HT=0 HN=0 HF=0 HC=4
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wxwlan.cmd"
 BI: MA=1 74 1  TABS=1 3  WWS=0 IWT=0 ST=0 IN=2 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=Rexx	HM=0 MF=0
-VIEW: LN=.22 CL=23 LE=0 CX=23 CY=1 WI=5 BI=42 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.22 CL=23 LE=0 CX=23 CY=1 WI=5 BI=53 HT=0 HN=0 HF=0 HC=4
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\l2_packet\l2_packet_freebsd_old2.2.c"
 BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=0
-VIEW: LN=.1229 CL=1 LE=0 CX=1 CY=0 WI=5 BI=41 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.1229 CL=1 LE=0 CX=1 CY=0 WI=5 BI=54 HT=0 HN=0 HF=0 HC=4
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\common.c"
 BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=0
-VIEW: LN=.0 CL=1 LE=0 CX=1 CY=1 WI=5 BI=40 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.0 CL=1 LE=0 CX=1 CY=1 WI=5 BI=55 HT=0 HN=0 HF=0 HC=4
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\includes.h"
 BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=0
-VIEW: LN=.0 CL=1 LE=0 CX=1 CY=1 WI=5 BI=39 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.0 CL=1 LE=0 CX=1 CY=1 WI=5 BI=60 HT=0 HN=0 HF=0 HC=4
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\scan.c"
-BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=624
-VIEW: LN=.54755 CL=4 LE=0 CX=4 CY=26 WI=5 BI=55 HT=0 HN=0 HF=0 HC=4
+BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=0
+VIEW: LN=.54755 CL=4 LE=0 CX=4 CY=26 WI=5 BI=41 HT=0 HN=0 HF=0 HC=4
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\ctrl_iface.c"
 BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=0
-VIEW: LN=.0 CL=1 LE=0 CX=1 CY=1 WI=5 BI=38 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.0 CL=1 LE=0 CX=1 CY=1 WI=5 BI=56 HT=0 HN=0 HF=0 HC=4
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\os.h"
 BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=0
-VIEW: LN=.406 CL=45 LE=0 CX=45 CY=3 WI=5 BI=37 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.406 CL=45 LE=0 CX=45 CY=3 WI=5 BI=57 HT=0 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\ToDo.txt"
+BI: MA=1 120 1  TABS=1 3  WWS=3 IWT=0 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=txt	HM=0 MF=0
+VIEW: LN=.174 CL=32 LE=0 CX=32 CY=4 WI=5 BI=58 HT=0 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\common.h"
+BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=0
+VIEW: LN=.799 CL=66 LE=0 CX=66 CY=25 WI=5 BI=59 HT=0 HN=0 HF=0 HC=4
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\driver_i.h"
 BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=0
-VIEW: LN=.3679 CL=35 LE=0 CX=35 CY=0 WI=5 BI=35 HT=0 HN=0 HF=0 HC=4
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\ToDo.txt"
-BI: MA=1 120 1  TABS=1 3  WWS=3 IWT=0 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=txt	HM=0 MF=528
-VIEW: LN=.174 CL=32 LE=0 CX=32 CY=4 WI=5 BI=34 HT=0 HN=0 HF=0 HC=4
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\make_ship.cmd"
-BI: MA=1 74 1  TABS=1 3  WWS=0 IWT=0 ST=0 IN=2 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=Rexx	HM=0 MF=32
-VIEW: LN=.0 CL=1 LE=0 CX=1 CY=1 WI=5 BI=36 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.3679 CL=35 LE=0 CX=35 CY=0 WI=5 BI=61 HT=0 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\wpa_debug.c"
+BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=0
+VIEW: LN=.13621 CL=1 LE=0 CX=1 CY=63 WI=5 BI=48 HT=0 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\README.OS2"
+BI: MA=1 80 1  TABS=1 3  WWS=3 IWT=1 ST=0 IN=2 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=os2	HM=0 MF=0
+VIEW: LN=.4142 CL=24 LE=0 CX=24 CY=42 WI=5 BI=62 HT=0 HN=0 HF=0 HC=4
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\driver.h"
 BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=0
-VIEW: LN=.182169 CL=4 LE=0 CX=4 CY=42 WI=5 BI=33 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.182169 CL=4 LE=0 CX=4 CY=42 WI=5 BI=63 HT=0 HN=0 HF=0 HC=4
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\driver_ndis.c"
 BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=0
-VIEW: LN=.85326 CL=6 LE=0 CX=6 CY=32 WI=5 BI=32 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.85326 CL=6 LE=0 CX=6 CY=32 WI=5 BI=20 HT=0 HN=0 HF=0 HC=4
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\driver_genmac.c"
 BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=0
-VIEW: LN=.60073 CL=28 LE=0 CX=28 CY=41 WI=5 BI=31 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.60118 CL=28 LE=0 CX=28 CY=41 WI=5 BI=64 HT=0 HN=0 HF=0 HC=4
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\radius\radius_client.c"
 BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=0
-VIEW: LN=.682 CL=48 LE=0 CX=48 CY=21 WI=5 BI=30 HT=0 HN=0 HF=0 HC=4
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\README.OS2"
-BI: MA=1 80 1  TABS=1 3  WWS=3 IWT=1 ST=0 IN=2 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=os2	HM=0 MF=528
-VIEW: LN=.4142 CL=24 LE=0 CX=24 CY=42 WI=5 BI=29 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.682 CL=48 LE=0 CX=48 CY=21 WI=5 BI=21 HT=0 HN=0 HF=0 HC=4
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\drivers.c"
 BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=0
-VIEW: LN=.1344 CL=28 LE=0 CX=28 CY=37 WI=5 BI=28 HT=0 HN=0 HF=0 HC=4
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_supplicant.c"
-BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=624
-VIEW: LN=.207471 CL=22 LE=0 CX=22 CY=22 WI=5 BI=27 HT=0 HN=0 HF=0 HC=4
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\common.h"
-BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=560
-VIEW: LN=.618 CL=95 LE=0 CX=95 CY=24 WI=5 BI=26 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.1344 CL=28 LE=0 CX=28 CY=37 WI=5 BI=65 HT=0 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\main.c"
+BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=0
+VIEW: LN=.6047 CL=10 LE=0 CX=10 CY=47 WI=5 BI=66 HT=0 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\hostapd\defconfig"
+BI: MA=1 120 1  TABS=1 5  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=Fundamental	HM=0 MF=0
+VIEW: LN=.1613 CL=18 LE=0 CX=18 CY=50 WI=5 BI=67 HT=0 HN=0 HF=0 HC=4
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\out2.log"
 BI: MA=1 120 1  TABS=1 5  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=Fundamental	HM=0 MF=0
-VIEW: LN=.342 CL=44 LE=0 CX=44 CY=3 WI=5 BI=62 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.188 CL=44 LE=0 CX=44 CY=3 WI=5 BI=68 HT=0 HN=0 HF=0 HC=4
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_supplicant.conf"
 BI: MA=1 120 1  TABS=1 5  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=Fundamental	HM=0 MF=0
-VIEW: LN=.13878 CL=2 LE=0 CX=2 CY=50 WI=5 BI=24 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.13878 CL=2 LE=0 CX=2 CY=26 WI=5 BI=69 HT=0 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\ChangeLog"
+BI: MA=1 120 1  TABS=1 5  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=Fundamental	HM=0 MF=0
+VIEW: LN=.0 CL=1 LE=0 CX=1 CY=1 WI=5 BI=70 HT=0 HN=0 HF=0 HC=4
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\README"
 BI: MA=1 120 1  TABS=1 5  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=Fundamental	HM=0 MF=0
-VIEW: LN=.13559 CL=1 LE=0 CX=1 CY=21 WI=5 BI=23 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.13559 CL=1 LE=0 CX=1 CY=21 WI=5 BI=71 HT=0 HN=0 HF=0 HC=4
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\drivers.mak"
 BI: MA=1 250 1  TABS=1 5  WWS=3 IWT=0 ST=0 IN=2 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=mak	HM=0 MF=0
-VIEW: LN=.2325 CL=7 LE=0 CX=7 CY=28 WI=5 BI=22 HT=0 HN=0 HF=0 HC=4
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\m.cmd"
-BI: MA=1 74 1  TABS=1 3  WWS=0 IWT=0 ST=0 IN=2 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=Rexx	HM=0 MF=0
-VIEW: LN=.344 CL=36 LE=0 CX=36 CY=10 WI=5 BI=21 HT=0 HN=0 HF=0 HC=4
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\out.log"
-BI: MA=1 120 1  TABS=1 5  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=Fundamental	HM=0 MF=0
-VIEW: LN=.0 CL=57 LE=0 CX=57 CY=1 WI=5 BI=20 HT=0 HN=0 HF=0 HC=4
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\hostapd\defconfig"
-BI: MA=1 120 1  TABS=1 5  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=Fundamental	HM=0 MF=528
-VIEW: LN=.1613 CL=18 LE=0 CX=18 CY=50 WI=5 BI=52 HT=0 HN=0 HF=0 HC=4
-BUFFER: BN="P:\usr\include\QtCore\qplugin.h"
-BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=0
-VIEW: LN=.4196 CL=25 LE=0 CX=25 CY=41 WI=5 BI=19 HT=0 HN=0 HF=0 HC=4
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\wpagui.cpp"
-BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=0
-VIEW: LN=.19784 CL=48 LE=0 CX=48 CY=58 WI=5 BI=18 HT=0 HN=0 HF=0 HC=4
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\Makefile"
-BI: MA=1 250 1  TABS=1 5  WWS=3 IWT=0 ST=0 IN=2 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=mak	HM=0 MF=528
-VIEW: LN=.1363 CL=23 LE=0 CX=23 CY=27 WI=5 BI=61 HT=0 HN=0 HF=0 HC=4
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\.config"
-BI: MA=1 120 1  TABS=1 5  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=0 SE=1 SN=0 BIN=0 MN=Fundamental	HM=0 MF=528
-VIEW: LN=.9950 CL=29 LE=0 CX=29 CY=25 WI=5 BI=25 HT=0 HN=0 HF=0 HC=4
-WINDOW: 26 27 1387 1242 -1 -1 N  WF=0 WT=36 "System VIO,6,0,1"
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\make_ship.cmd"
-VIEW: LN=.0 CL=1 LE=0 CX=7 CY=1 WI=180 BI=36 HT=0 HN=0 HF=0 HC=4
-WINDOW: 72 3 1073 706 278 2419 N  WF=0 WT=58 "System VIO,6,0,1"
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\driver_i.h"
-VIEW: LN=.3679 CL=35 LE=0 CX=41 CY=0 WI=113 BI=35 HT=0 HN=0 HF=0 HC=4
-WINDOW: 0 0 870 891 -1 -1 N  WF=0 WT=13 "System VIO,6,0,1"
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\common.h"
-VIEW: LN=.664 CL=66 LE=0 CX=72 CY=25 WI=122 BI=26 HT=0 HN=0 HF=0 HC=4
-WINDOW: 845 746 723 308 -1 -1 N  WF=0 WT=44 "System VIO,6,0,1"
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\ToDo.txt"
-VIEW: LN=.174 CL=32 LE=0 CX=38 CY=4 WI=114 BI=34 HT=0 HN=0 HF=0 HC=4
-WINDOW: 344 24 664 878 81 2419 N  WF=0 WT=20 "System VIO,6,0,1"
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\os.h"
-VIEW: LN=.406 CL=45 LE=0 CX=51 CY=3 WI=111 BI=37 HT=0 HN=0 HF=0 HC=4
-WINDOW: 0 0 819 830 -1 -1 N  WF=0 WT=24 "System VIO,6,0,1"
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\ctrl_iface.c"
-VIEW: LN=.0 CL=1 LE=0 CX=7 CY=1 WI=110 BI=38 HT=0 HN=0 HF=0 HC=4
-WINDOW: 0 0 842 919 -1 -1 N  WF=0 WT=28 "System VIO,6,0,1"
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\scan.c"
-VIEW: LN=.54755 CL=4 LE=0 CX=10 CY=26 WI=109 BI=55 HT=0 HN=0 HF=0 HC=4
-WINDOW: 48 50 896 886 -1 -1 N  WF=0 WT=26 "System VIO,6,0,1"
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\includes.h"
-VIEW: LN=.0 CL=1 LE=0 CX=7 CY=1 WI=108 BI=39 HT=0 HN=0 HF=0 HC=4
-WINDOW: 24 25 1068 729 -1 -1 N  WF=0 WT=25 "System VIO,6,0,1"
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\common.c"
-VIEW: LN=.0 CL=1 LE=0 CX=7 CY=1 WI=107 BI=40 HT=0 HN=0 HF=0 HC=4
-WINDOW: 845 80 513 700 81 2487 N  WF=0 WT=34 "System VIO,6,0,1"
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\l2_packet\l2_packet_freebsd_old2.2.c"
-VIEW: LN=.1229 CL=1 LE=0 CX=7 CY=0 WI=106 BI=41 HT=0 HN=0 HF=0 HC=4
-WINDOW: 758 108 646 825 -1 -1 N  WF=0 WT=50 "System VIO,6,0,1"
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wxwlan.cmd"
-VIEW: LN=.22 CL=23 LE=0 CX=29 CY=1 WI=105 BI=42 HT=0 HN=0 HF=0 HC=4
-WINDOW: 239 1 939 1065 -1 -1 N  WF=0 WT=3 "System VIO,6,0,1"
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\os_os2.c"
-VIEW: LN=.5345 CL=13 LE=0 CX=19 CY=33 WI=88 BI=58 HT=0 HN=0 HF=0 HC=4
-WINDOW: 845 -2 708 1078 -1 -1 N  WF=0 WT=60 "System VIO,6,0,1"
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\os_internal.c"
-VIEW: LN=.4840 CL=43 LE=0 CX=49 CY=24 WI=103 BI=44 HT=0 HN=0 HF=0 HC=4
-WINDOW: 728 5 836 1039 -1 -1 N  WF=0 WT=59 "System VIO,6,0,1"
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\wpa_debug.c"
-VIEW: LN=.13621 CL=1 LE=0 CX=7 CY=63 WI=102 BI=47 HT=0 HN=0 HF=0 HC=4
-WINDOW: 0 0 1068 729 -1 -1 N  WF=0 WT=6 "System VIO,6,0,1"
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\priv_netlink.h"
-VIEW: LN=.2437 CL=3 LE=0 CX=9 CY=22 WI=101 BI=45 HT=0 HN=0 HF=0 HC=4
-WINDOW: 739 19 822 729 -1 -1 N  WF=0 WT=33 "System VIO,6,0,1"
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\build_config.h"
-VIEW: LN=.962 CL=29 LE=0 CX=35 CY=29 WI=100 BI=46 HT=0 HN=0 HF=0 HC=4
-WINDOW: 820 -4 761 1033 -1 -1 N  WF=0 WT=1 "System VIO,6,0,1"
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\wpa_debug.c"
-VIEW: LN=.2800 CL=5 LE=0 CX=11 CY=32 WI=99 BI=47 HT=0 HN=0 HF=0 HC=4
-WINDOW: 43 4 955 1013 -1 -1 N  WF=0 WT=2 "System VIO,6,0,1"
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\l2_packet\l2_packet_os2.c"
-VIEW: LN=.1201 CL=3 LE=0 CX=9 CY=14 WI=98 BI=48 HT=0 HN=0 HF=0 HC=4
-WINDOW: 828 60 722 896 -1 -1 N  WF=0 WT=12 "System VIO,6,0,1"
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\packet32.c"
-VIEW: LN=.6224 CL=25 LE=0 CX=31 CY=28 WI=97 BI=49 HT=0 HN=0 HF=0 HC=4
-WINDOW: 612 44 871 762 -1 -1 N  WF=0 WT=41 "System VIO,6,0,1"
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\wmm.c"
-VIEW: LN=.0 CL=1 LE=0 CX=7 CY=1 WI=96 BI=50 HT=0 HN=0 HF=0 HC=4
-WINDOW: 661 33 781 981 -1 -1 N  WF=0 WT=14 "System VIO,6,0,1"
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\wpa_debug.h"
-VIEW: LN=.676 CL=5 LE=0 CX=11 CY=26 WI=95 BI=51 HT=0 HN=0 HF=0 HC=4
-WINDOW: 96 100 1068 729 -1 -1 N  WF=0 WT=32 "System VIO,6,0,1"
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\bldlvl.cmd"
-VIEW: LN=.1650 CL=11 LE=0 CX=17 CY=32 WI=93 BI=53 HT=0 HN=0 HF=0 HC=4
-WINDOW: 743 141 667 752 478 3000 N  WF=0 WT=21 "System VIO,6,0,1"
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\vs_make.cmd"
-VIEW: LN=.424 CL=58 LE=0 CX=64 CY=11 WI=92 BI=54 HT=0 HN=0 HF=0 HC=4
-WINDOW: 401 97 979 729 -1 -1 N  WF=0 WT=16 "System VIO,6,0,1"
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\scan.c"
-VIEW: LN=.57305 CL=3 LE=0 CX=9 CY=29 WI=91 BI=55 HT=0 HN=0 HF=0 HC=4
-WINDOW: 341 590 1387 1242 -1 -1 N  WF=0 WT=42 "System VIO,6,0,1"
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\out.log"
-VIEW: LN=.0 CL=57 LE=0 CX=63 CY=0 WI=129 BI=20 HT=0 HN=0 HF=0 HC=4
-WINDOW: 725 -2 785 952 869 2726 N  WF=0 WT=40 "System VIO,6,0,1"
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\PMPRINTF.H"
-VIEW: LN=.6136 CL=5 LE=0 CX=11 CY=41 WI=90 BI=56 HT=0 HN=0 HF=0 HC=4
-WINDOW: 741 3 797 1056 -1 -1 N  WF=0 WT=15 "System VIO,6,0,1"
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\l2_packet\l2_packet_freebsd.c"
-VIEW: LN=.4375 CL=13 LE=0 CX=19 CY=33 WI=89 BI=57 HT=0 HN=0 HF=0 HC=4
-WINDOW: 0 0 1068 729 -1 -1 N  WF=0 WT=30 "System VIO,6,0,1"
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_supplicant.c"
-VIEW: LN=.207471 CL=22 LE=0 CX=28 CY=22 WI=121 BI=27 HT=0 HN=0 HF=0 HC=4
-WINDOW: 0 0 970 765 -1 -1 N  WF=0 WT=18 "System VIO,6,0,1"
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\common\wpa_ctrl.c"
-VIEW: LN=.11236 CL=5 LE=0 CX=11 CY=18 WI=87 BI=59 HT=0 HN=0 HF=0 HC=4
-WINDOW: 845 48 617 957 -1 -1 N  WF=0 WT=19 "System VIO,6,0,1"
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_supplicant_i.h"
-VIEW: LN=.6994 CL=64 LE=0 CX=70 CY=7 WI=86 BI=60 HT=0 HN=0 HF=0 HC=4
-WINDOW: 670 280 1302 964 -1 -1 N  WF=0 WT=35 "System VIO,6,0,1"
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\Makefile"
-VIEW: LN=.4152 CL=1 LE=0 CX=7 CY=30 WI=132 BI=61 HT=0 HN=0 HF=0 HC=4
-WINDOW: 45 184 1068 1444 81 2648 N  WF=0 WT=22 "System VIO,6,0,1"
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\.config"
-VIEW: LN=.9950 CL=29 LE=0 CX=35 CY=25 WI=133 BI=25 HT=0 HN=0 HF=0 HC=4
-WINDOW: 558 59 1387 1242 -1 -1 N  WF=0 WT=43 "System VIO,6,0,1"
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\wpagui.cpp"
-VIEW: LN=.19784 CL=48 LE=0 CX=54 CY=58 WI=131 BI=18 HT=0 HN=0 HF=0 HC=4
-WINDOW: 78 81 1387 1242 -1 -1 N  WF=0 WT=45 "System VIO,6,0,1"
-BUFFER: BN="P:\usr\include\QtCore\qplugin.h"
-VIEW: LN=.4196 CL=25 LE=0 CX=31 CY=41 WI=130 BI=19 HT=0 HN=0 HF=0 HC=4
-WINDOW: 102 379 748 811 -1 -1 N  WF=0 WT=8 "System VIO,6,0,1"
-BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\m.cmd"
-VIEW: LN=.344 CL=36 LE=0 CX=42 CY=10 WI=128 BI=21 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.2325 CL=7 LE=0 CX=7 CY=28 WI=5 BI=74 HT=0 HN=0 HF=0 HC=4
+BUFFER: BN="E:\_work\ACPI-toolkit\h\actypes.h"
+BI: MA=1 74 1  TABS=1 3  WWS=1 IWT=1 ST=0 IN=1 BW=0 US=10000 RO=1 SE=1 SN=0 BIN=0 MN=C	HM=0 MF=560
+VIEW: LN=.0 CL=1 LE=0 CX=1 CY=1 WI=5 BI=73 HT=0 HN=0 HF=0 HC=4
 WINDOW: 273 0 968 887 -1 -1 N  WF=0 WT=11 "System VIO,6,0,1"
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\drivers.mak"
-VIEW: LN=.2325 CL=7 LE=0 CX=13 CY=28 WI=127 BI=22 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.2325 CL=7 LE=0 CX=13 CY=28 WI=93 BI=74 HT=0 HN=0 HF=0 HC=4
 WINDOW: 72 75 1068 729 -1 -1 N  WF=0 WT=37 "System VIO,6,0,1"
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\README"
-VIEW: LN=.13559 CL=1 LE=0 CX=7 CY=21 WI=126 BI=23 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.13559 CL=1 LE=0 CX=7 CY=21 WI=94 BI=71 HT=0 HN=0 HF=0 HC=4
 WINDOW: 0 0 1068 729 -1 -1 N  WF=0 WT=17 "System VIO,6,0,1"
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\README"
-VIEW: LN=.13559 CL=1 LE=0 CX=7 CY=21 WI=125 BI=23 HT=0 HN=0 HF=0 HC=4
-WINDOW: 184 47 924 845 1263 2419 N  WF=0 WT=9 "System VIO,6,0,1"
+VIEW: LN=.13559 CL=1 LE=0 CX=7 CY=21 WI=95 BI=71 HT=0 HN=0 HF=0 HC=4
+WINDOW: 0 0 1387 1242 -1 -1 N  WF=0 WT=46 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\ChangeLog"
+VIEW: LN=.0 CL=1 LE=0 CX=7 CY=1 WI=96 BI=70 HT=0 HN=0 HF=0 HC=4
+WINDOW: 184 47 1134 1538 1263 3275 N  WF=0 WT=9 "System VIO,6,0,1"
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_supplicant.conf"
-VIEW: LN=.13878 CL=2 LE=0 CX=8 CY=50 WI=124 BI=24 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.13878 CL=2 LE=0 CX=8 CY=26 WI=97 BI=69 HT=0 HN=0 HF=0 HC=4
 WINDOW: 661 547 1387 1242 -1 -1 N  WF=0 WT=38 "System VIO,6,0,1"
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\out2.log"
-VIEW: LN=.342 CL=44 LE=0 CX=50 CY=3 WI=123 BI=62 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.188 CL=44 LE=0 CX=50 CY=3 WI=98 BI=68 HT=0 HN=0 HF=0 HC=4
 WINDOW: 0 0 963 1242 -1 -1 N  WF=0 WT=27 "System VIO,6,0,1"
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\hostapd\defconfig"
-VIEW: LN=.1613 CL=18 LE=0 CX=24 CY=50 WI=94 BI=52 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.1613 CL=18 LE=0 CX=24 CY=50 WI=99 BI=67 HT=0 HN=0 HF=0 HC=4
 WINDOW: 61 33 849 913 -1 -1 N  WF=0 WT=7 "System VIO,6,0,1"
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\main.c"
-VIEW: LN=.6047 CL=10 LE=0 CX=16 CY=47 WI=104 BI=43 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.6047 CL=10 LE=0 CX=16 CY=47 WI=100 BI=66 HT=0 HN=0 HF=0 HC=4
 WINDOW: 527 34 862 810 -1 -1 N  WF=0 WT=29 "System VIO,6,0,1"
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\drivers.c"
-VIEW: LN=.1344 CL=28 LE=0 CX=34 CY=37 WI=120 BI=28 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.1344 CL=28 LE=0 CX=34 CY=37 WI=101 BI=65 HT=0 HN=0 HF=0 HC=4
 WINDOW: 0 0 800 1002 -1 -1 N  WF=0 WT=10 "System VIO,6,0,1"
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\radius\radius_client.c"
-VIEW: LN=.682 CL=48 LE=0 CX=54 CY=21 WI=118 BI=30 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.682 CL=48 LE=0 CX=54 CY=21 WI=102 BI=21 HT=0 HN=0 HF=0 HC=4
 WINDOW: 99 -3 825 1021 -1 -1 N  WF=0 WT=5 "System VIO,6,0,1"
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\driver_genmac.c"
-VIEW: LN=.60073 CL=28 LE=0 CX=34 CY=41 WI=117 BI=31 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.60118 CL=28 LE=0 CX=34 CY=41 WI=103 BI=64 HT=0 HN=0 HF=0 HC=4
 WINDOW: 621 2 731 1018 -1 -1 N  WF=0 WT=23 "System VIO,6,0,1"
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\driver_ndis.c"
-VIEW: LN=.85326 CL=6 LE=0 CX=12 CY=32 WI=116 BI=32 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.85326 CL=6 LE=0 CX=12 CY=32 WI=104 BI=20 HT=0 HN=0 HF=0 HC=4
 WINDOW: 72 75 1068 729 -1 -1 N  WF=0 WT=31 "System VIO,6,0,1"
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\driver.h"
-VIEW: LN=.182169 CL=4 LE=0 CX=10 CY=42 WI=115 BI=33 HT=0 HN=0 HF=0 HC=4
-WINDOW: 581 76 849 1030 280 2932 N  WF=0 WT=39 "System VIO,6,0,1"
+VIEW: LN=.182169 CL=4 LE=0 CX=10 CY=42 WI=105 BI=63 HT=0 HN=0 HF=0 HC=4
+WINDOW: 581 76 849 1030 280 3788 N  WF=0 WT=39 "System VIO,6,0,1"
 BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\README.OS2"
-VIEW: LN=.4142 CL=24 LE=0 CX=30 CY=42 WI=119 BI=29 HT=0 HN=0 HF=0 HC=4
+VIEW: LN=.4142 CL=24 LE=0 CX=30 CY=42 WI=106 BI=62 HT=0 HN=0 HF=0 HC=4
+WINDOW: 728 5 836 1039 -1 -1 N  WF=0 WT=59 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\wpa_debug.c"
+VIEW: LN=.13621 CL=1 LE=0 CX=7 CY=63 WI=107 BI=48 HT=0 HN=0 HF=0 HC=4
+WINDOW: 72 3 1073 706 278 3275 N  WF=0 WT=58 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\driver_i.h"
+VIEW: LN=.3679 CL=35 LE=0 CX=41 CY=0 WI=108 BI=61 HT=0 HN=0 HF=0 HC=4
+WINDOW: 0 0 870 891 -1 -1 N  WF=0 WT=13 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\common.h"
+VIEW: LN=.799 CL=66 LE=0 CX=72 CY=25 WI=109 BI=59 HT=0 HN=0 HF=0 HC=4
+WINDOW: 845 746 723 308 -1 -1 N  WF=0 WT=44 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\ToDo.txt"
+VIEW: LN=.174 CL=32 LE=0 CX=38 CY=4 WI=110 BI=58 HT=0 HN=0 HF=0 HC=4
+WINDOW: 344 24 664 878 81 3275 N  WF=0 WT=20 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\os.h"
+VIEW: LN=.406 CL=45 LE=0 CX=51 CY=3 WI=111 BI=57 HT=0 HN=0 HF=0 HC=4
+WINDOW: 0 0 819 830 -1 -1 N  WF=0 WT=24 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\ctrl_iface.c"
+VIEW: LN=.0 CL=1 LE=0 CX=7 CY=1 WI=112 BI=56 HT=0 HN=0 HF=0 HC=4
+WINDOW: 0 0 842 919 -1 -1 N  WF=0 WT=28 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\scan.c"
+VIEW: LN=.54755 CL=4 LE=0 CX=10 CY=26 WI=113 BI=41 HT=0 HN=0 HF=0 HC=4
+WINDOW: 48 50 896 886 -1 -1 N  WF=0 WT=26 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\includes.h"
+VIEW: LN=.0 CL=1 LE=0 CX=7 CY=1 WI=114 BI=60 HT=0 HN=0 HF=0 HC=4
+WINDOW: 24 25 1068 729 -1 -1 N  WF=0 WT=25 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\common.c"
+VIEW: LN=.0 CL=1 LE=0 CX=7 CY=1 WI=115 BI=55 HT=0 HN=0 HF=0 HC=4
+WINDOW: 845 80 513 700 81 3343 N  WF=0 WT=34 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\l2_packet\l2_packet_freebsd_old2.2.c"
+VIEW: LN=.1229 CL=1 LE=0 CX=7 CY=0 WI=116 BI=54 HT=0 HN=0 HF=0 HC=4
+WINDOW: 758 108 646 825 -1 -1 N  WF=0 WT=50 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wxwlan.cmd"
+VIEW: LN=.22 CL=23 LE=0 CX=29 CY=1 WI=117 BI=53 HT=0 HN=0 HF=0 HC=4
+WINDOW: 239 1 939 1065 -1 -1 N  WF=0 WT=3 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\os_os2.c"
+VIEW: LN=.5345 CL=13 LE=0 CX=19 CY=33 WI=118 BI=52 HT=0 HN=0 HF=0 HC=4
+WINDOW: 845 -2 708 1078 -1 -1 N  WF=0 WT=60 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\os_internal.c"
+VIEW: LN=.4904 CL=43 LE=0 CX=49 CY=24 WI=119 BI=51 HT=0 HN=0 HF=0 HC=4
+WINDOW: 0 0 1068 729 -1 -1 N  WF=0 WT=6 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\priv_netlink.h"
+VIEW: LN=.2437 CL=3 LE=0 CX=9 CY=22 WI=120 BI=50 HT=0 HN=0 HF=0 HC=4
+WINDOW: 739 19 822 729 -1 -1 N  WF=0 WT=33 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\build_config.h"
+VIEW: LN=.962 CL=29 LE=0 CX=35 CY=29 WI=121 BI=49 HT=0 HN=0 HF=0 HC=4
+WINDOW: 820 -4 761 1033 -1 -1 N  WF=0 WT=1 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\wpa_debug.c"
+VIEW: LN=.2800 CL=5 LE=0 CX=11 CY=32 WI=122 BI=48 HT=0 HN=0 HF=0 HC=4
+WINDOW: 43 4 955 1013 -1 -1 N  WF=0 WT=2 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\l2_packet\l2_packet_os2.c"
+VIEW: LN=.1201 CL=3 LE=0 CX=9 CY=14 WI=123 BI=47 HT=0 HN=0 HF=0 HC=4
+WINDOW: 828 60 722 896 -1 -1 N  WF=0 WT=12 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\drivers\packet32.c"
+VIEW: LN=.6224 CL=25 LE=0 CX=31 CY=28 WI=124 BI=46 HT=0 HN=0 HF=0 HC=4
+WINDOW: 612 44 871 762 -1 -1 N  WF=0 WT=41 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\ap\wmm.c"
+VIEW: LN=.0 CL=1 LE=0 CX=7 CY=1 WI=125 BI=45 HT=0 HN=0 HF=0 HC=4
+WINDOW: 661 33 781 981 -1 -1 N  WF=0 WT=14 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\wpa_debug.h"
+VIEW: LN=.676 CL=5 LE=0 CX=11 CY=26 WI=126 BI=44 HT=0 HN=0 HF=0 HC=4
+WINDOW: 96 100 1068 729 -1 -1 N  WF=0 WT=32 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\bldlvl.cmd"
+VIEW: LN=.1650 CL=11 LE=0 CX=17 CY=32 WI=127 BI=43 HT=0 HN=0 HF=0 HC=4
+WINDOW: 743 141 667 752 478 3856 N  WF=0 WT=21 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\vs_make.cmd"
+VIEW: LN=.424 CL=58 LE=0 CX=64 CY=11 WI=128 BI=42 HT=0 HN=0 HF=0 HC=4
+WINDOW: 401 97 979 729 -1 -1 N  WF=0 WT=16 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\scan.c"
+VIEW: LN=.57305 CL=3 LE=0 CX=9 CY=29 WI=129 BI=41 HT=0 HN=0 HF=0 HC=4
+WINDOW: 341 590 1387 1242 -1 -1 N  WF=0 WT=42 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\out.log"
+VIEW: LN=.56 CL=57 LE=0 CX=63 CY=0 WI=130 BI=40 HT=0 HN=0 HF=0 HC=4
+WINDOW: 725 -2 785 952 869 3582 N  WF=0 WT=40 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\utils\PMPRINTF.H"
+VIEW: LN=.6136 CL=5 LE=0 CX=11 CY=41 WI=131 BI=39 HT=0 HN=0 HF=0 HC=4
+WINDOW: 741 3 797 1056 -1 -1 N  WF=0 WT=15 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\l2_packet\l2_packet_freebsd.c"
+VIEW: LN=.4375 CL=13 LE=0 CX=19 CY=33 WI=132 BI=38 HT=0 HN=0 HF=0 HC=4
+WINDOW: 0 0 1068 729 -1 -1 N  WF=0 WT=30 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_supplicant.c"
+VIEW: LN=.207471 CL=22 LE=0 CX=28 CY=22 WI=133 BI=37 HT=0 HN=0 HF=0 HC=4
+WINDOW: 0 0 970 765 -1 -1 N  WF=0 WT=18 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\src\common\wpa_ctrl.c"
+VIEW: LN=.11236 CL=5 LE=0 CX=11 CY=18 WI=134 BI=36 HT=0 HN=0 HF=0 HC=4
+WINDOW: 845 48 617 957 -1 -1 N  WF=0 WT=19 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_supplicant_i.h"
+VIEW: LN=.6994 CL=64 LE=0 CX=70 CY=7 WI=135 BI=35 HT=0 HN=0 HF=0 HC=4
+WINDOW: 309 4 1302 964 -1 -1 N  WF=0 WT=4 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\Makefile"
+VIEW: LN=.4152 CL=1 LE=0 CX=7 CY=30 WI=136 BI=34 HT=0 HN=0 HF=0 HC=4
+WINDOW: 45 184 1068 1444 81 3504 N  WF=0 WT=22 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\.config"
+VIEW: LN=.9978 CL=29 LE=0 CX=35 CY=25 WI=137 BI=33 HT=0 HN=0 HF=0 HC=4
+WINDOW: 558 59 1387 1242 -1 -1 N  WF=0 WT=43 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\wpagui.cpp"
+VIEW: LN=.19784 CL=48 LE=0 CX=54 CY=58 WI=138 BI=32 HT=0 HN=0 HF=0 HC=4
+WINDOW: 78 81 1387 1242 -1 -1 N  WF=0 WT=45 "System VIO,6,0,1"
+BUFFER: BN="P:\usr\include\QtCore\qplugin.h"
+VIEW: LN=.4196 CL=25 LE=0 CX=31 CY=41 WI=139 BI=31 HT=0 HN=0 HF=0 HC=4
+WINDOW: 26 27 1387 1242 -1 -1 N  WF=0 WT=36 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\make_ship.cmd"
+VIEW: LN=.0 CL=1 LE=0 CX=7 CY=1 WI=140 BI=30 HT=0 HN=0 HF=0 HC=4
+WINDOW: 102 379 748 811 -1 -1 N  WF=0 WT=8 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\m.cmd"
+VIEW: LN=.344 CL=36 LE=0 CX=42 CY=10 WI=141 BI=29 HT=0 HN=0 HF=0 HC=4
+WINDOW: 259 527 1461 1242 -1 -1 N  WF=0 WT=48 "System VIO,6,0,1"
+BUFFER: BN="E:\C\INCLUDE\ANDIDEF.H"
+VIEW: LN=.0 CL=1 LE=0 CX=7 CY=1 WI=142 BI=27 HT=0 HN=0 HF=0 HC=4
+WINDOW: 0 0 1461 1242 -1 -1 N  WF=0 WT=47 "System VIO,6,0,1"
+BUFFER: BN="E:\C\INCLUDE\abtrace.h"
+VIEW: LN=.1797 CL=56 LE=0 CX=62 CY=45 WI=143 BI=28 HT=0 HN=0 HF=0 HC=4
+WINDOW: 52 54 1461 1242 -1 -1 N  WF=0 WT=49 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\AcpiToolkit-3.23.3\h\actypes.h"
+VIEW: LN=.0 CL=1 LE=0 CX=7 CY=1 WI=144 BI=72 HT=0 HN=0 HF=0 HC=4
+WINDOW: 872 62 1461 1242 -1 -1 N  WF=0 WT=51 "System VIO,6,0,1"
+BUFFER: BN="E:\_work\ACPI-toolkit\h\actypes.h"
+VIEW: LN=.0 CL=1 LE=0 CX=7 CY=1 WI=92 BI=73 HT=0 HN=0 HF=0 HC=4
 FILEHIST: 9
-E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\main.c
-E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\Makefile
-E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\m.cmd
-E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\out.log
-E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\out2.log
-E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_gui-qt4\wpagui.cpp
 P:\usr\include\QtCore\qplugin.h
 E:\_work\ports\wpa_supplicant\trunk\hostap\hostapd\defconfig
 E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\make_ship.cmd
+E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\ChangeLog
+E:\_work\ports\wpa_supplicant\trunk\hostap\wpa_supplicant\wpa_supplicant.conf
+E:\C\INCLUDE\abtrace.h
+E:\C\INCLUDE\ANDIDEF.H
+E:\_work\AcpiToolkit-3.23.3\h\actypes.h
+E:\_work\ACPI-toolkit\h\actypes.h
 PRINTER: 2
 PRINTER: 2
 PRINTER: 2

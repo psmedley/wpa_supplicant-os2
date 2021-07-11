@@ -186,7 +186,6 @@ static struct wpabuf * sme_auth_build_sae_commit(struct wpa_supplicant *wpa_s,
 	if (!use_pt &&
 	    sae_prepare_commit(wpa_s->own_addr, bssid,
 			       (u8 *) password, os_strlen(password),
-			       ssid->sae_password_id,
 			       &wpa_s->sme.sae) < 0) {
 		wpa_printf(MSG_DEBUG, "SAE: Could not pick PWE");
 		return NULL;
@@ -941,6 +940,8 @@ static void sme_auth_start_cb(struct wpa_radio_work *work, int deinit)
 	struct wpa_connect_work *cwork = work->ctx;
 	struct wpa_supplicant *wpa_s = work->wpa_s;
 
+	wpa_s->roam_in_progress = false;
+
 	if (deinit) {
 		if (work->started)
 			wpa_s->connect_work = NULL;
@@ -981,6 +982,11 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 		return;
 	}
 
+	if (wpa_s->roam_in_progress) {
+		wpa_dbg(wpa_s, MSG_DEBUG,
+			"SME: Reject sme_authenticate() in favor of explicit roam request");
+		return;
+	}
 	if (radio_work_pending(wpa_s, "sme-connect")) {
 		/*
 		 * The previous sme-connect work might no longer be valid due to
@@ -1881,12 +1887,10 @@ pfs_fail:
 #endif /* CONFIG_DPP2 */
 
 	wpa_s->mscs_setup_done = false;
-	if (wpa_s->current_bss && wpa_s->robust_av.valid_config) {
+	if (wpa_bss_ext_capab(wpa_s->current_bss, WLAN_EXT_CAPAB_MSCS) &&
+	    wpa_s->robust_av.valid_config) {
 		struct wpabuf *mscs_ie;
 		size_t mscs_ie_len, buf_len, *wpa_ie_len, max_ie_len;
-
-		if (!wpa_bss_ext_capab(wpa_s->current_bss, WLAN_EXT_CAPAB_MSCS))
-			goto mscs_fail;
 
 		buf_len = 3 +	/* MSCS descriptor IE header */
 			  1 +	/* Request type */
@@ -2885,11 +2889,17 @@ static void sme_process_sa_query_response(struct wpa_supplicant *wpa_s,
 }
 
 
-void sme_sa_query_rx(struct wpa_supplicant *wpa_s, const u8 *sa,
+void sme_sa_query_rx(struct wpa_supplicant *wpa_s, const u8 *da, const u8 *sa,
 		     const u8 *data, size_t len)
 {
 	if (len < 1 + WLAN_SA_QUERY_TR_ID_LEN)
 		return;
+	if (is_multicast_ether_addr(da)) {
+		wpa_printf(MSG_DEBUG,
+			   "IEEE 802.11: Ignore group-addressed SA Query frame (A1=" MACSTR " A2=" MACSTR ")",
+			   MAC2STR(da), MAC2STR(sa));
+		return;
+	}
 
 	wpa_dbg(wpa_s, MSG_DEBUG, "SME: Received SA Query frame from "
 		MACSTR " (trans_id %02x%02x)", MAC2STR(sa), data[1], data[2]);

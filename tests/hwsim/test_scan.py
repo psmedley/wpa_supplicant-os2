@@ -729,7 +729,7 @@ def test_scan_setband(dev, apdev):
         if hapd2:
             hapd2.request("DISABLE")
         subprocess.call(['iw', 'reg', 'set', '00'])
-        for i in devs:
+        for d in devs:
             d.request("SET setband AUTO")
             d.flush_scan_cache()
 
@@ -1989,6 +1989,9 @@ def test_scan_ssid_list(dev, apdev):
                 break
     finally:
         dev[0].request("VENDOR_ELEM_REMOVE 14 *")
+        hapd.disable()
+        dev[0].flush_scan_cache(freq=2432)
+        dev[0].flush_scan_cache()
 
     if not found:
         raise Exception("AP not found in scan results")
@@ -2014,6 +2017,9 @@ def test_scan_short_ssid_list(dev, apdev):
                 break
     finally:
         dev[0].request("VENDOR_ELEM_REMOVE 14 *")
+        hapd.disable()
+        dev[0].flush_scan_cache(freq=2432)
+        dev[0].flush_scan_cache()
 
     if not found:
         raise Exception("AP not found in scan results")

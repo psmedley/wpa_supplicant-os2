@@ -168,6 +168,11 @@ def test_ap_wpa2_psk_file_keyid(dev, apdev, params):
 
     check_disconnect(dev, [True, True, False])
 
+    with open(psk_file, 'w') as f:
+        f.write('broken\n')
+    if "FAIL" not in hapd.request("RELOAD_WPA_PSK"):
+        raise Exception("RELOAD_WPA_PSK succeeded with invalid file")
+
 @remote_compatible
 def test_ap_wpa2_psk_mem(dev, apdev):
     """WPA2-PSK AP with passphrase only in memory"""
@@ -232,6 +237,9 @@ def test_ap_wpa2_ptk_rekey_blocked_ap(dev, apdev):
     params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
     params['wpa_deny_ptk0_rekey'] = "2"
     hapd = hostapd.add_ap(apdev[0], params)
+    conf = hapd.request("GET_CONFIG").splitlines()
+    if "wpa_deny_ptk0_rekey=2" not in conf:
+        raise Exception("wpa_deny_ptk0_rekey value not in GET_CONFIG")
     dev[0].connect(ssid, psk=passphrase, wpa_ptk_rekey="1", scan_freq="2412")
     ev = dev[0].wait_event(["WPA: Key negotiation completed",
                             "CTRL-EVENT-DISCONNECTED"])
@@ -491,6 +499,42 @@ def test_ap_wpa2_gtk_rekey_request(dev, apdev):
     if ev is None:
         raise Exception("GTK rekey timed out")
     hwsim_utils.test_connectivity(dev[0], hapd)
+
+def test_ap_wpa2_gtk_rekey_failure(dev, apdev):
+    """WPA2-PSK AP and GTK rekey failure"""
+    ssid = "test-wpa2-psk"
+    passphrase = 'qwertyuiop'
+    params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
+    hapd = hostapd.add_ap(apdev[0], params)
+    dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
+    with fail_test(hapd, 1, "wpa_group_config_group_keys"):
+        if "OK" not in hapd.request("REKEY_GTK"):
+            raise Exception("REKEY_GTK failed")
+        wait_fail_trigger(hapd, "GET_FAIL")
+    ev = dev[0].wait_event(["WPA: Group rekeying completed"], timeout=2)
+    if ev is None:
+        raise Exception("GTK rekey timed out")
+    dev[0].wait_disconnected()
+
+def test_ap_wpa2_gtk_rekey_request(dev, apdev):
+    """WPA2-PSK AP and GTK rekey request from multiple stations"""
+    ssid = "test-wpa2-psk"
+    passphrase = 'qwertyuiop'
+    params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
+    hapd = hostapd.add_ap(apdev[0], params)
+    for i in range(3):
+        dev[i].connect(ssid, psk=passphrase, scan_freq="2412")
+        hapd.wait_sta()
+    for i in range(3):
+        if "OK" not in dev[i].request("KEY_REQUEST 0 0"):
+            raise Exception("KEY_REQUEST failed")
+    for i in range(3):
+        ev = dev[i].wait_event(["WPA: Group rekeying completed"], timeout=2)
+        if ev is None:
+            raise Exception("GTK rekey timed out")
+    time.sleep(1)
+    for i in range(3):
+        hwsim_utils.test_connectivity(dev[i], hapd)
 
 @remote_compatible
 def test_ap_wpa_gtk_rekey(dev, apdev):

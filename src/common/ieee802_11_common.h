@@ -116,6 +116,7 @@ struct ieee802_11_elems {
 	const u8 *he_6ghz_band_cap;
 	const u8 *sae_pk;
 	const u8 *s1g_capab;
+	const u8 *pasn_params;
 
 	u8 ssid_len;
 	u8 supp_rates_len;
@@ -169,6 +170,7 @@ struct ieee802_11_elems {
 	u8 he_operation_len;
 	u8 short_ssid_list_len;
 	u8 sae_pk_len;
+	u8 pasn_params_len;
 
 	struct mb_ies_info mb_ies;
 	struct frag_ies_info frag_ies;
@@ -267,6 +269,9 @@ int ieee802_11_parse_candidate_list(const char *pos, u8 *nei_rep,
 				    size_t nei_rep_len);
 
 int ieee802_11_ext_capab(const u8 *ie, unsigned int capab);
+bool ieee802_11_rsnx_capab_len(const u8 *rsnxe, size_t rsnxe_len,
+			       unsigned int capab);
+bool ieee802_11_rsnx_capab(const u8 *rsnxe, unsigned int capab);
 int op_class_to_bandwidth(u8 op_class);
 int op_class_to_ch_width(u8 op_class);
 

@@ -303,6 +303,10 @@ static int ieee802_11_parse_extension(const u8 *pos, size_t elen,
 			break;
 		elems->he_6ghz_band_cap = pos;
 		break;
+	case WLAN_EID_EXT_PASN_PARAMS:
+		elems->pasn_params = pos;
+		elems->pasn_params_len = elen;
+		break;
 	default:
 		if (show_errors) {
 			wpa_printf(MSG_MSGDUMP,
@@ -875,7 +879,7 @@ enum hostapd_hw_mode ieee80211_freq_to_chan(int freq, u8 *channel)
 
 /**
  * ieee80211_freq_to_channel_ext - Convert frequency into channel info
- * for HT40 and VHT. DFS channels are not covered.
+ * for HT40, VHT, and HE. DFS channels are not covered.
  * @freq: Frequency (MHz) to convert
  * @sec_channel: 0 = non-HT40, 1 = sec. channel above, -1 = sec. channel below
  * @chanwidth: VHT/EDMG channel width (CHANWIDTH_*)
@@ -986,8 +990,8 @@ enum hostapd_hw_mode ieee80211_freq_to_channel_ext(unsigned int freq,
 		return HOSTAPD_MODE_IEEE80211A;
 	}
 
-	/* 5 GHz, channels 149..169 */
-	if (freq >= 5745 && freq <= 5845) {
+	/* 5 GHz, channels 149..177 */
+	if (freq >= 5745 && freq <= 5885) {
 		if ((freq - 5000) % 5)
 			return NUM_HOSTAPD_MODES;
 
@@ -1417,22 +1421,22 @@ static int ieee80211_chan_to_freq_global(u8 op_class, u8 chan)
 			return -1;
 		return 5000 + 5 * chan;
 	case 124: /* channels 149,153,157,161 */
-	case 126: /* channels 149,157; 40 MHz */
-	case 127: /* channels 153,161; 40 MHz */
 		if (chan < 149 || chan > 161)
 			return -1;
 		return 5000 + 5 * chan;
-	case 125: /* channels 149,153,157,161,165,169 */
-		if (chan < 149 || chan > 169)
+	case 125: /* channels 149,153,157,161,165,169,173,177 */
+	case 126: /* channels 149,157,165,173; 40 MHz */
+	case 127: /* channels 153,161,169,177; 40 MHz */
+		if (chan < 149 || chan > 177)
 			return -1;
 		return 5000 + 5 * chan;
-	case 128: /* center freqs 42, 58, 106, 122, 138, 155; 80 MHz */
-	case 130: /* center freqs 42, 58, 106, 122, 138, 155; 80 MHz */
-		if (chan < 36 || chan > 161)
+	case 128: /* center freqs 42, 58, 106, 122, 138, 155, 171; 80 MHz */
+	case 130: /* center freqs 42, 58, 106, 122, 138, 155, 171; 80 MHz */
+		if (chan < 36 || chan > 177)
 			return -1;
 		return 5000 + 5 * chan;
-	case 129: /* center freqs 50, 114; 160 MHz */
-		if (chan < 36 || chan > 128)
+	case 129: /* center freqs 50, 114, 163; 160 MHz */
+		if (chan < 36 || chan > 177)
 			return -1;
 		return 5000 + 5 * chan;
 	case 131: /* UHB channels, 20 MHz: 1, 5, 9.. */
@@ -1876,21 +1880,21 @@ const struct oper_class_map global_op_class[] = {
 	{ HOSTAPD_MODE_IEEE80211A, 122, 100, 132, 8, BW40PLUS, NO_P2P_SUPP },
 	{ HOSTAPD_MODE_IEEE80211A, 123, 104, 136, 8, BW40MINUS, NO_P2P_SUPP },
 	{ HOSTAPD_MODE_IEEE80211A, 124, 149, 161, 4, BW20, P2P_SUPP },
-	{ HOSTAPD_MODE_IEEE80211A, 125, 149, 169, 4, BW20, P2P_SUPP },
-	{ HOSTAPD_MODE_IEEE80211A, 126, 149, 157, 8, BW40PLUS, P2P_SUPP },
-	{ HOSTAPD_MODE_IEEE80211A, 127, 153, 161, 8, BW40MINUS, P2P_SUPP },
+	{ HOSTAPD_MODE_IEEE80211A, 125, 149, 177, 4, BW20, P2P_SUPP },
+	{ HOSTAPD_MODE_IEEE80211A, 126, 149, 173, 8, BW40PLUS, P2P_SUPP },
+	{ HOSTAPD_MODE_IEEE80211A, 127, 153, 177, 8, BW40MINUS, P2P_SUPP },
 
 	/*
-	 * IEEE P802.11ac/D7.0 Table E-4 actually talks about channel center
-	 * frequency index 42, 58, 106, 122, 138, 155 with channel spacing of
-	 * 80 MHz, but currently use the following definition for simplicity
+	 * IEEE P802.11ax/D8.0 Table E-4 actually talks about channel center
+	 * frequency index 42, 58, 106, 122, 138, 155, 171 with channel spacing
+	 * of 80 MHz, but currently use the following definition for simplicity
 	 * (these center frequencies are not actual channels, which makes
-	 * wpas_p2p_allow_channel() fail). wpas_p2p_verify_80mhz() should take
+	 * wpas_p2p_verify_channel() fail). wpas_p2p_verify_80mhz() should take
 	 * care of removing invalid channels.
 	 */
-	{ HOSTAPD_MODE_IEEE80211A, 128, 36, 161, 4, BW80, P2P_SUPP },
-	{ HOSTAPD_MODE_IEEE80211A, 129, 50, 114, 16, BW160, P2P_SUPP },
-	{ HOSTAPD_MODE_IEEE80211A, 131, 1, 233, 4, BW20, NO_P2P_SUPP },
+	{ HOSTAPD_MODE_IEEE80211A, 128, 36, 177, 4, BW80, P2P_SUPP },
+	{ HOSTAPD_MODE_IEEE80211A, 129, 36, 177, 4, BW160, P2P_SUPP },
+	{ HOSTAPD_MODE_IEEE80211A, 131, 1, 233, 4, BW20, P2P_SUPP },
 	{ HOSTAPD_MODE_IEEE80211A, 132, 1, 233, 8, BW40, NO_P2P_SUPP },
 	{ HOSTAPD_MODE_IEEE80211A, 133, 1, 233, 16, BW80, NO_P2P_SUPP },
 	{ HOSTAPD_MODE_IEEE80211A, 134, 1, 233, 32, BW160, NO_P2P_SUPP },
@@ -1911,7 +1915,7 @@ const struct oper_class_map global_op_class[] = {
 	 * the OneHundredAndThirty Delimiter value used in the Supported
 	 * Operating Classes element to indicate the end of the Operating
 	 * Classes field. */
-	{ HOSTAPD_MODE_IEEE80211A, 130, 36, 161, 4, BW80P80, P2P_SUPP },
+	{ HOSTAPD_MODE_IEEE80211A, 130, 36, 177, 4, BW80P80, P2P_SUPP },
 	{ -1, 0, 0, 0, 0, BW20, NO_P2P_SUPP }
 };
 
@@ -2228,6 +2232,9 @@ int oper_class_bw_to_int(const struct oper_class_map *map)
 
 int center_idx_to_bw_6ghz(u8 idx)
 {
+	/* Channel: 2 */
+	if (idx == 2)
+		return 0; /* 20 MHz */
 	/* channels: 1, 5, 9, 13... */
 	if ((idx & 0x3) == 0x1)
 		return 0; /* 20 MHz */
@@ -2396,6 +2403,35 @@ int ieee802_11_ext_capab(const u8 *ie, unsigned int capab)
 }
 
 
+bool ieee802_11_rsnx_capab_len(const u8 *rsnxe, size_t rsnxe_len,
+			       unsigned int capab)
+{
+	const u8 *end;
+	size_t flen, i;
+	u32 capabs = 0;
+
+	if (!rsnxe || rsnxe_len == 0)
+		return false;
+	end = rsnxe + rsnxe_len;
+	flen = (rsnxe[0] & 0x0f) + 1;
+	if (rsnxe + flen > end)
+		return false;
+	if (flen > 4)
+		flen = 4;
+	for (i = 0; i < flen; i++)
+		capabs |= rsnxe[i] << (8 * i);
+
+	return capabs & BIT(capab);
+}
+
+
+bool ieee802_11_rsnx_capab(const u8 *rsnxe, unsigned int capab)
+{
+	return ieee802_11_rsnx_capab_len(rsnxe ? rsnxe + 2 : NULL,
+					 rsnxe ? rsnxe[1] : 0, capab);
+}
+
+
 void hostapd_encode_edmg_chan(int edmg_enable, u8 edmg_channel,
 			      int primary_channel,
 			      struct ieee80211_edmg_config *edmg)
@@ -2493,16 +2529,16 @@ int op_class_to_bandwidth(u8 op_class)
 	case 123: /* channels 104-136; 40 MHz */
 		return 40;
 	case 124: /* channels 149,153,157,161 */
-	case 125: /* channels 149,153,157,161,165,169 */
+	case 125: /* channels 149,153,157,161,165,169,173,177 */
 		return 20;
-	case 126: /* channels 149,157; 40 MHz */
-	case 127: /* channels 153,161; 40 MHz */
+	case 126: /* channels 149,157,161,165,169,173; 40 MHz */
+	case 127: /* channels 153..177; 40 MHz */
 		return 40;
-	case 128: /* center freqs 42, 58, 106, 122, 138, 155; 80 MHz */
+	case 128: /* center freqs 42, 58, 106, 122, 138, 155, 171; 80 MHz */
 		return 80;
-	case 129: /* center freqs 50, 114; 160 MHz */
+	case 129: /* center freqs 50, 114, 163; 160 MHz */
 		return 160;
-	case 130: /* center freqs 42, 58, 106, 122, 138, 155; 80+80 MHz */
+	case 130: /* center freqs 42, 58, 106, 122, 138, 155, 171; 80+80 MHz */
 		return 80;
 	case 131: /* UHB channels, 20 MHz: 1, 5, 9.. */
 		return 20;
@@ -2554,16 +2590,16 @@ int op_class_to_ch_width(u8 op_class)
 	case 123: /* channels 104-136; 40 MHz */
 		return CHANWIDTH_USE_HT;
 	case 124: /* channels 149,153,157,161 */
-	case 125: /* channels 149,153,157,161,165,169 */
+	case 125: /* channels 149,153,157,161,165,169,171 */
 		return CHANWIDTH_USE_HT;
-	case 126: /* channels 149,157; 40 MHz */
-	case 127: /* channels 153,161; 40 MHz */
+	case 126: /* channels 149,157,165, 173; 40 MHz */
+	case 127: /* channels 153,161,169,177; 40 MHz */
 		return CHANWIDTH_USE_HT;
-	case 128: /* center freqs 42, 58, 106, 122, 138, 155; 80 MHz */
+	case 128: /* center freqs 42, 58, 106, 122, 138, 155, 171; 80 MHz */
 		return CHANWIDTH_80MHZ;
-	case 129: /* center freqs 50, 114; 160 MHz */
+	case 129: /* center freqs 50, 114, 163; 160 MHz */
 		return CHANWIDTH_160MHZ;
-	case 130: /* center freqs 42, 58, 106, 122, 138, 155; 80+80 MHz */
+	case 130: /* center freqs 42, 58, 106, 122, 138, 155, 171; 80+80 MHz */
 		return CHANWIDTH_80P80MHZ;
 	case 131: /* UHB channels, 20 MHz: 1, 5, 9.. */
 		return CHANWIDTH_USE_HT;

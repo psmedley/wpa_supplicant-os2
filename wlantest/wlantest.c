@@ -110,6 +110,8 @@ static void wlantest_deinit(struct wlantest *wt)
 	clear_notes(wt);
 	os_free(wt->decrypted);
 	wt->decrypted = NULL;
+	wpabuf_free(wt->tkip_frag.buf);
+	wt->tkip_frag.buf = NULL;
 }
 
 
@@ -320,6 +322,19 @@ size_t notes_len(struct wlantest *wt, size_t hdrlen)
 		len += os_strlen(wt->notes[i]);
 
 	return len;
+}
+
+
+void write_decrypted_note(struct wlantest *wt, const u8 *decrypted,
+			  const u8 *tk, size_t tk_len, int keyid)
+{
+	char tk_hex[65];
+
+	if (!decrypted)
+		return;
+
+	wpa_snprintf_hex(tk_hex, sizeof(tk_hex), tk, tk_len);
+	add_note(wt, MSG_EXCESSIVE, "TK[%d] %s", keyid, tk_hex);
 }
 
 

@@ -1,6 +1,6 @@
 /*
  * hostapd / Initialization and configuration
- * Copyright (c) 2002-2019, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2021, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -107,7 +107,8 @@ static void hostapd_reload_bss(struct hostapd_data *hapd)
 		return;
 
 	if (hapd->conf->wmm_enabled < 0)
-		hapd->conf->wmm_enabled = hapd->iconf->ieee80211n;
+		hapd->conf->wmm_enabled = hapd->iconf->ieee80211n |
+			hapd->iconf->ieee80211ax;
 
 #ifndef CONFIG_NO_RADIUS
 	radius_client_reconfig(hapd->radius, hapd->conf->radius);
@@ -392,6 +393,7 @@ void hostapd_free_hapd_data(struct hostapd_data *hapd)
 #ifdef CONFIG_DPP
 	hostapd_dpp_deinit(hapd);
 	gas_query_ap_deinit(hapd->gas);
+	hapd->gas = NULL;
 #endif /* CONFIG_DPP */
 
 	authsrv_deinit(hapd);
@@ -414,6 +416,7 @@ void hostapd_free_hapd_data(struct hostapd_data *hapd)
 	}
 
 	wpabuf_free(hapd->time_adv);
+	hapd->time_adv = NULL;
 
 #ifdef CONFIG_INTERWORKING
 	gas_serv_deinit(hapd);
@@ -429,6 +432,7 @@ void hostapd_free_hapd_data(struct hostapd_data *hapd)
 		       hapd->tmp_eap_user.identity_len);
 	bin_clear_free(hapd->tmp_eap_user.password,
 		       hapd->tmp_eap_user.password_len);
+	os_memset(&hapd->tmp_eap_user, 0, sizeof(hapd->tmp_eap_user));
 #endif /* CONFIG_SQLITE */
 
 #ifdef CONFIG_MESH
@@ -1170,7 +1174,8 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 	}
 
 	if (conf->wmm_enabled < 0)
-		conf->wmm_enabled = hapd->iconf->ieee80211n;
+		conf->wmm_enabled = hapd->iconf->ieee80211n |
+			hapd->iconf->ieee80211ax;
 
 #ifdef CONFIG_IEEE80211R_AP
 	if (is_zero_ether_addr(conf->r1_key_holder))
@@ -1669,6 +1674,26 @@ static int configured_fixed_chan_to_freq(struct hostapd_iface *iface)
 }
 
 
+static void hostapd_set_6ghz_sec_chan(struct hostapd_iface *iface)
+{
+	int bw, seg0;
+
+	if (!is_6ghz_op_class(iface->conf->op_class))
+		return;
+
+	seg0 = hostapd_get_oper_centr_freq_seg0_idx(iface->conf);
+	bw = center_idx_to_bw_6ghz(seg0);
+	/* Assign the secondary channel if absent in config for
+	 * bandwidths > 20 MHz */
+	if (bw > 20 && !iface->conf->secondary_channel) {
+		if (((iface->conf->channel - 1) / 4) % 2)
+			iface->conf->secondary_channel = -1;
+		else
+			iface->conf->secondary_channel = 1;
+	}
+}
+
+
 static int setup_interface2(struct hostapd_iface *iface)
 {
 	iface->wait_channel_update = 0;
@@ -1688,6 +1713,7 @@ static int setup_interface2(struct hostapd_iface *iface)
 
 			ch_width = op_class_to_ch_width(iface->conf->op_class);
 			hostapd_set_oper_chwidth(iface->conf, ch_width);
+			hostapd_set_6ghz_sec_chan(iface);
 		}
 
 		ret = hostapd_select_hw_mode(iface);
@@ -1701,6 +1727,9 @@ static int setup_interface2(struct hostapd_iface *iface)
 			return 0;
 		}
 		ret = hostapd_check_edmg_capab(iface);
+		if (ret < 0)
+			goto fail;
+		ret = hostapd_check_he_6ghz_capab(iface);
 		if (ret < 0)
 			goto fail;
 		ret = hostapd_check_ht_capab(iface);
@@ -2305,10 +2334,12 @@ int hostapd_setup_interface(struct hostapd_iface *iface)
 {
 	int ret;
 
+	if (!iface->conf)
+		return -1;
 	ret = setup_interface(iface);
 	if (ret) {
 		wpa_printf(MSG_ERROR, "%s: Unable to setup interface.",
-			   iface->conf ? iface->conf->bss[0]->iface : "N/A");
+			   iface->conf->bss[0]->iface);
 		return -1;
 	}
 
@@ -3557,15 +3588,23 @@ void hostapd_cleanup_cs_params(struct hostapd_data *hapd)
 }
 
 
-void hostapd_chan_switch_vht_config(struct hostapd_data *hapd, int vht_enabled)
+void hostapd_chan_switch_config(struct hostapd_data *hapd,
+				struct hostapd_freq_params *freq_params)
 {
-	if (vht_enabled)
+	if (freq_params->he_enabled)
+		hapd->iconf->ch_switch_he_config |= CH_SWITCH_HE_ENABLED;
+	else
+		hapd->iconf->ch_switch_he_config |= CH_SWITCH_HE_DISABLED;
+
+	if (freq_params->vht_enabled)
 		hapd->iconf->ch_switch_vht_config |= CH_SWITCH_VHT_ENABLED;
 	else
 		hapd->iconf->ch_switch_vht_config |= CH_SWITCH_VHT_DISABLED;
 
 	hostapd_logger(hapd, NULL, HOSTAPD_MODULE_IEEE80211,
-		       HOSTAPD_LEVEL_INFO, "CHAN_SWITCH VHT CONFIG 0x%x",
+		       HOSTAPD_LEVEL_INFO,
+		       "CHAN_SWITCH HE config 0x%x VHT config 0x%x",
+		       hapd->iconf->ch_switch_he_config,
 		       hapd->iconf->ch_switch_vht_config);
 }
 

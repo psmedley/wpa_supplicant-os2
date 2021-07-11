@@ -170,6 +170,7 @@ struct wlantest_bss {
 	u8 r0kh_id[FT_R0KH_ID_MAX_LEN];
 	size_t r0kh_id_len;
 	u8 r1kh_id[FT_R1KH_ID_LEN];
+	bool mesh;
 };
 
 struct wlantest_radius {
@@ -182,6 +183,14 @@ struct wlantest_radius {
 
 #define MAX_CTRL_CONNECTIONS 10
 #define MAX_NOTES 10
+
+struct tkip_frag {
+	struct wpabuf *buf;
+	u8 ra[ETH_ALEN];
+	u8 ta[ETH_ALEN];
+	u16 sn;
+	u8 fn;
+};
 
 struct wlantest {
 	int monitor_sock;
@@ -226,12 +235,16 @@ struct wlantest {
 
 	const char *write_file;
 	const char *pcapng_file;
+
+	struct tkip_frag tkip_frag;
 };
 
 void add_note(struct wlantest *wt, int level, const char *fmt, ...)
 PRINTF_FORMAT(3, 4);
 void clear_notes(struct wlantest *wt);
 size_t notes_len(struct wlantest *wt, size_t hdrlen);
+void write_decrypted_note(struct wlantest *wt, const u8 *decrypted,
+			  const u8 *tk, size_t tk_len, int keyid);
 
 int add_wep(struct wlantest *wt, const char *key);
 int read_cap_file(struct wlantest *wt, const char *fname);
@@ -301,8 +314,14 @@ u8 * ccmp_256_decrypt(const u8 *tk, const struct ieee80211_hdr *hdr,
 u8 * ccmp_256_encrypt(const u8 *tk, u8 *frame, size_t len, size_t hdrlen,
 		      u8 *qos, u8 *pn, int keyid, size_t *encrypted_len);
 
+enum michael_mic_result {
+	MICHAEL_MIC_OK,
+	MICHAEL_MIC_INCORRECT,
+	MICHAEL_MIC_NOT_VERIFIED
+};
 u8 * tkip_decrypt(const u8 *tk, const struct ieee80211_hdr *hdr,
-		  const u8 *data, size_t data_len, size_t *decrypted_len);
+		  const u8 *data, size_t data_len, size_t *decrypted_len,
+		  enum michael_mic_result *mic_res, struct tkip_frag *frag);
 u8 * tkip_encrypt(const u8 *tk, u8 *frame, size_t len, size_t hdrlen, u8 *qos,
 		  u8 *pn, int keyid, size_t *encrypted_len);
 void tkip_get_pn(u8 *pn, const u8 *data);

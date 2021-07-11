@@ -645,6 +645,12 @@ struct wpa_driver_scan_params {
 	 */
 	unsigned int oce_scan:1;
 
+	/**
+	 * p2p_include_6ghz - Include 6 GHz channels for P2P full scan
+	 *
+	 */
+	unsigned int p2p_include_6ghz:1;
+
 	/*
 	 * NOTE: Whenever adding new parameters here, please make sure
 	 * wpa_scan_clone_params() and wpa_scan_free_params() get updated with
@@ -1264,14 +1270,14 @@ struct wpa_driver_ap_params {
 	 *
 	 * This parameter can be used to set a specific Beacon frame data rate
 	 * for the BSS. The interpretation of this value depends on the
-	 * rate_type (legacy: in 100 kbps units, HT: HT-MCS, VHT: VHT-MCS). If
-	 * beacon_rate == 0 and rate_type == 0 (BEACON_RATE_LEGACY), the default
-	 * Beacon frame data rate is used.
+	 * rate_type (legacy: in 100 kbps units, HT: HT-MCS, VHT: VHT-MCS,
+	 * HE: HE-MCS). If beacon_rate == 0 and rate_type == 0
+	 * (BEACON_RATE_LEGACY), the default Beacon frame data rate is used.
 	 */
 	unsigned int beacon_rate;
 
 	/**
-	 * beacon_rate_type: Beacon data rate type (legacy/HT/VHT)
+	 * beacon_rate_type: Beacon data rate type (legacy/HT/VHT/HE)
 	 */
 	enum beacon_rate_type rate_type;
 
@@ -1483,19 +1489,36 @@ struct wpa_driver_ap_params {
 	const struct wpabuf *civic;
 
 	/**
-	 * he_spr - Whether Spatial Reuse is enabled
+	 * he_spr_ctrl - Spatial Reuse control field of SPR element
 	 */
-	 int he_spr;
+	u8 he_spr_ctrl;
+
+	/**
+	 * he_spr_non_srg_obss_pd_max_offset - Non-SRG Maximum TX power offset
+	 */
+	u8 he_spr_non_srg_obss_pd_max_offset;
 
 	/**
 	 * he_spr_srg_obss_pd_min_offset - Minimum TX power offset
 	 */
-	 int he_spr_srg_obss_pd_min_offset;
+	u8 he_spr_srg_obss_pd_min_offset;
 
 	/**
 	 * he_spr_srg_obss_pd_max_offset - Maximum TX power offset
 	 */
-	 int he_spr_srg_obss_pd_max_offset;
+	u8 he_spr_srg_obss_pd_max_offset;
+
+	/**
+	 * he_spr_bss_color_bitmap - BSS color values used by members of the
+	 * SRG.
+	 */
+	u8 he_spr_bss_color_bitmap[8];
+
+	/**
+	 * he_spr_partial_bssid_bitmap - Partial BSSID values used by members
+	 * of the SRG.
+	 */
+	u8 he_spr_partial_bssid_bitmap[8];
 
 	/**
 	 * he_bss_color - Whether the BSS Color is disabled
@@ -1524,6 +1547,41 @@ struct wpa_driver_ap_params {
 	 * 2 = both hunting-and-pecking loop and hash-to-element enabled
 	 */
 	int sae_pwe;
+
+	/**
+	 * FILS Discovery frame minimum interval in TUs
+	 */
+	u32 fd_min_int;
+
+	/**
+	 * FILS Discovery frame maximum interval in TUs (0 = FD frame disabled)
+	 */
+	u32 fd_max_int;
+
+	/**
+	 * FILS Discovery frame template data
+	 */
+	u8 *fd_frame_tmpl;
+
+	/**
+	 * FILS Discovery frame template length
+	 */
+	size_t fd_frame_tmpl_len;
+
+	/**
+	 * Unsolicited broadcast Probe Response interval in TUs
+	 */
+	unsigned int unsol_bcast_probe_resp_interval;
+
+	/**
+	 * Unsolicited broadcast Probe Response template data
+	 */
+	u8 *unsol_bcast_probe_resp_tmpl;
+
+	/**
+	 * Unsolicited broadcast Probe Response template length
+	 */
+	size_t unsol_bcast_probe_resp_tmpl_len;
 };
 
 struct wpa_driver_mesh_bss_params {
@@ -1950,6 +2008,23 @@ struct wpa_driver_capa {
 #define WPA_DRIVER_FLAGS2_CONTROL_PORT_RX	0x0000000000000001ULL
 /** Driver supports TX status reports for EAPOL frames through control port */
 #define WPA_DRIVER_FLAGS2_CONTROL_PORT_TX_STATUS 0x0000000000000002ULL
+/** Driver supports secure LTF */
+#define WPA_DRIVER_FLAGS2_SEC_LTF		0x0000000000000004ULL
+/** Driver supports secure RTT measurement exchange */
+#define WPA_DRIVER_FLAGS2_SEC_RTT		0x0000000000000008ULL
+/**
+ * Driver supports protection of range negotiation and measurement management
+ * frames
+ */
+#define WPA_DRIVER_FLAGS2_PROT_RANGE_NEG	0x0000000000000010ULL
+/** Driver supports Beacon frame TX rate configuration (HE rates) */
+#define WPA_DRIVER_FLAGS2_BEACON_RATE_HE	0x0000000000000020ULL
+/** Driver supports Beacon protection only in client mode */
+#define WPA_DRIVER_FLAGS2_BEACON_PROTECTION_CLIENT 0x0000000000000040ULL
+/** Driver supports Operating Channel Validation */
+#define WPA_DRIVER_FLAGS2_OCV			0x0000000000000080ULL
+/** Driver expects user space implementation of SME in AP mode */
+#define WPA_DRIVER_FLAGS2_AP_SME		0x0000000000000100ULL
 	u64 flags2;
 
 #define FULL_AP_CLIENT_STATE_SUPP(drv_flags) \
@@ -2323,6 +2398,7 @@ enum tdls_peer_capability {
 	TDLS_PEER_HT = BIT(0),
 	TDLS_PEER_VHT = BIT(1),
 	TDLS_PEER_WMM = BIT(2),
+	TDLS_PEER_HE = BIT(3),
 };
 
 /* valid info in the wmm_params struct */
@@ -4421,7 +4497,7 @@ struct wpa_driver_ops {
 	 * @bssids: List of temporarily disallowed BSSIDs
 	 */
 	int (*set_bssid_tmp_disallow)(void *priv, unsigned int num_bssid,
-				   const u8 *bssid);
+				      const u8 *bssid);
 
 	/**
 	 * update_connect_params - Update the connection parameters
@@ -4484,6 +4560,12 @@ struct wpa_driver_ops {
 	 * explicitly allow reception of broadcast Public Action frames.
 	 */
 	int (*dpp_listen)(void *priv, bool enable);
+
+#ifdef CONFIG_TESTING_OPTIONS
+	int (*register_frame)(void *priv, u16 type,
+			      const u8 *match, size_t match_len,
+			      bool multicast);
+#endif /* CONFIG_TESTING_OPTIONS */
 };
 
 /**

@@ -44,6 +44,7 @@ static void wpas_wps_ap_pin_timeout(void *eloop_data, void *user_ctx);
 #endif /* CONFIG_WPS */
 
 
+#ifdef CONFIG_P2P
 static bool is_chanwidth160_supported(struct hostapd_hw_modes *mode,
 				      struct hostapd_config *conf)
 {
@@ -63,6 +64,7 @@ static bool is_chanwidth160_supported(struct hostapd_hw_modes *mode,
 		return true;
 	return false;
 }
+#endif /* CONFIG_P2P */
 
 
 static void wpas_conf_ap_vht(struct wpa_supplicant *wpa_s,
@@ -107,13 +109,15 @@ static void wpas_conf_ap_vht(struct wpa_supplicant *wpa_s,
 	switch (hostapd_get_oper_chwidth(conf)) {
 	case CHANWIDTH_80MHZ:
 	case CHANWIDTH_80P80MHZ:
-		center_chan = wpas_p2p_get_vht80_center(wpa_s, mode, channel);
+		center_chan = wpas_p2p_get_vht80_center(wpa_s, mode, channel,
+							conf->op_class);
 		wpa_printf(MSG_DEBUG,
 			   "VHT center channel %u for 80 or 80+80 MHz bandwidth",
 			   center_chan);
 		break;
 	case CHANWIDTH_160MHZ:
-		center_chan = wpas_p2p_get_vht160_center(wpa_s, mode, channel);
+		center_chan = wpas_p2p_get_vht160_center(wpa_s, mode, channel,
+							 conf->op_class);
 		wpa_printf(MSG_DEBUG,
 			   "VHT center channel %u for 160 MHz bandwidth",
 			   center_chan);
@@ -125,15 +129,25 @@ static void wpas_conf_ap_vht(struct wpa_supplicant *wpa_s,
 		 * not supported.
 		 */
 		hostapd_set_oper_chwidth(conf, CHANWIDTH_160MHZ);
-		center_chan = wpas_p2p_get_vht160_center(wpa_s, mode, channel);
+		ieee80211_freq_to_channel_ext(ssid->frequency, 0,
+					      conf->vht_oper_chwidth,
+					      &conf->op_class,
+					      &conf->channel);
+		center_chan = wpas_p2p_get_vht160_center(wpa_s, mode, channel,
+							 conf->op_class);
 		if (center_chan && is_chanwidth160_supported(mode, conf)) {
 			wpa_printf(MSG_DEBUG,
 				   "VHT center channel %u for auto-selected 160 MHz bandwidth",
 				   center_chan);
 		} else {
 			hostapd_set_oper_chwidth(conf, CHANWIDTH_80MHZ);
+			ieee80211_freq_to_channel_ext(ssid->frequency, 0,
+						      conf->vht_oper_chwidth,
+						      &conf->op_class,
+						      &conf->channel);
 			center_chan = wpas_p2p_get_vht80_center(wpa_s, mode,
-								channel);
+								channel,
+								conf->op_class);
 			wpa_printf(MSG_DEBUG,
 				   "VHT center channel %u for auto-selected 80 MHz bandwidth",
 				   center_chan);
@@ -181,9 +195,15 @@ int wpa_supplicant_conf_ap_ht(struct wpa_supplicant *wpa_s,
 			      struct wpa_ssid *ssid,
 			      struct hostapd_config *conf)
 {
-	conf->hw_mode = ieee80211_freq_to_chan(ssid->frequency,
-					       &conf->channel);
-
+	conf->hw_mode = ieee80211_freq_to_channel_ext(ssid->frequency, 0,
+						      ssid->max_oper_chwidth,
+						      &conf->op_class,
+						      &conf->channel);
+	/* ssid->max_oper_chwidth is not valid in all cases, so fall back to the
+	 * less specific mechanism, if needed, at least for now */
+	if (conf->hw_mode == NUM_HOSTAPD_MODES)
+		conf->hw_mode = ieee80211_freq_to_chan(ssid->frequency,
+						       &conf->channel);
 	if (conf->hw_mode == NUM_HOSTAPD_MODES) {
 		wpa_printf(MSG_ERROR, "Unsupported AP mode frequency: %d MHz",
 			   ssid->frequency);
@@ -264,6 +284,16 @@ int wpa_supplicant_conf_ap_ht(struct wpa_supplicant *wpa_s,
 				wpa_printf(MSG_DEBUG,
 					   "HT secondary channel offset %d for P2P group",
 					   conf->secondary_channel);
+			} else if (ssid->p2p_group && conf->secondary_channel &&
+				   conf->hw_mode != HOSTAPD_MODE_IEEE80211A) {
+				/* This ended up trying to configure invalid
+				 * 2.4 GHz channels (e.g., HT40+ on channel 11)
+				 * in some cases, so clear the secondary channel
+				 * configuration now to avoid such cases that
+				 * would lead to group formation failures. */
+				wpa_printf(MSG_DEBUG,
+					   "Disable HT secondary channel for P2P group on 2.4 GHz");
+				conf->secondary_channel = 0;
 			}
 #endif /* CONFIG_P2P */
 
@@ -862,6 +892,8 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 	params.wpa_proto = ssid->proto;
 	if (ssid->key_mgmt & WPA_KEY_MGMT_PSK)
 		wpa_s->key_mgmt = WPA_KEY_MGMT_PSK;
+	else if (ssid->key_mgmt & WPA_KEY_MGMT_SAE)
+		wpa_s->key_mgmt = WPA_KEY_MGMT_SAE;
 	else
 		wpa_s->key_mgmt = WPA_KEY_MGMT_NONE;
 	params.key_mgmt_suite = wpa_s->key_mgmt;

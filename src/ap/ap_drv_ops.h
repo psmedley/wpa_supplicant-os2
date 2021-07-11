@@ -134,6 +134,7 @@ int hostapd_start_dfs_cac(struct hostapd_iface *iface,
 int hostapd_drv_do_acs(struct hostapd_data *hapd);
 int hostapd_drv_update_dh_ie(struct hostapd_data *hapd, const u8 *peer,
 			     u16 reason_code, const u8 *ie, size_t ielen);
+int hostapd_drv_dpp_listen(struct hostapd_data *hapd, bool enable);
 
 
 #include "drivers/driver.h"
@@ -391,5 +392,28 @@ hostapd_drv_set_band(struct hostapd_data *hapd, u32 band_mask)
 		return -1;
 	return hapd->driver->set_band(hapd->drv_priv, band_mask);
 }
+
+#ifdef ANDROID
+static inline int hostapd_drv_driver_cmd(struct hostapd_data *hapd,
+					 char *cmd, char *buf, size_t buf_len)
+{
+	if (!hapd->driver->driver_cmd)
+		return -1;
+	return hapd->driver->driver_cmd(hapd->drv_priv, cmd, buf, buf_len);
+}
+#endif /* ANDROID */
+
+#ifdef CONFIG_TESTING_OPTIONS
+static inline int
+hostapd_drv_register_frame(struct hostapd_data *hapd, u16 type,
+			   const u8 *match, size_t match_len,
+			   bool multicast)
+{
+	if (!hapd->driver || !hapd->drv_priv || !hapd->driver->register_frame)
+		return -1;
+	return hapd->driver->register_frame(hapd->drv_priv, type, match,
+					    match_len, multicast);
+}
+#endif /* CONFIG_TESTING_OPTIONS */
 
 #endif /* AP_DRV_OPS */

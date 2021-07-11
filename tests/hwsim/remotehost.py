@@ -9,6 +9,8 @@ import subprocess
 import threading
 import tempfile
 import os
+import traceback
+import select
 
 logger = logging.getLogger()
 
@@ -125,24 +127,24 @@ class Host():
 
         pid_file = t.name + ".pid"
 
-        if t.isAlive():
+        if t.is_alive():
             cmd = ["kill `cat " + pid_file + "`"]
             self.execute(cmd)
 
         # try again
-        self.wait_execute_complete(t, 5)
-        if t.isAlive():
+        self.thread_wait(t, 5)
+        if t.is_alive():
             cmd = ["kill `cat " + pid_file + "`"]
             self.execute(cmd)
 
         # try with -9
-        self.wait_execute_complete(t, 5)
-        if t.isAlive():
+        self.thread_wait(t, 5)
+        if t.is_alive():
             cmd = ["kill -9 `cat " + pid_file + "`"]
             self.execute(cmd)
 
-        self.wait_execute_complete(t, 5)
-        if t.isAlive():
+        self.thread_wait(t, 5)
+        if t.is_alive():
             raise Exception("thread still alive")
 
         self.execute(["rm", pid_file])
@@ -156,7 +158,7 @@ class Host():
             wait_str = str(wait) + "s"
 
         logger.debug(self.name + " thread_wait(" + wait_str + "): ")
-        if t.isAlive():
+        if t.is_alive():
             t.join(wait)
 
     def pending(self, s, timeout=0):
@@ -207,6 +209,7 @@ class Host():
                 if not self.pending(proc.stdout, timeout=remaining):
                     break
         except:
+            logger.debug(traceback.format_exc())
             pass
         return None
 

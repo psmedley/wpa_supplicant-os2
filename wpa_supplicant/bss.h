@@ -20,10 +20,20 @@ struct wpa_scan_res;
 #define WPA_BSS_ANQP_FETCH_TRIED	BIT(6)
 #define WPA_BSS_OWE_TRANSITION		BIT(7)
 
+#define WPA_BSS_FREQ_CHANGED_FLAG	BIT(0)
+#define WPA_BSS_SIGNAL_CHANGED_FLAG	BIT(1)
+#define WPA_BSS_PRIVACY_CHANGED_FLAG	BIT(2)
+#define WPA_BSS_MODE_CHANGED_FLAG	BIT(3)
+#define WPA_BSS_WPAIE_CHANGED_FLAG	BIT(4)
+#define WPA_BSS_RSNIE_CHANGED_FLAG	BIT(5)
+#define WPA_BSS_WPS_CHANGED_FLAG	BIT(6)
+#define WPA_BSS_RATES_CHANGED_FLAG	BIT(7)
+#define WPA_BSS_IES_CHANGED_FLAG	BIT(8)
+
 struct wpa_bss_anqp_elem {
 	struct dl_list list;
 	u16 infoid;
-	bool protected; /* received in a protected GAS response */
+	bool protected_response; /* received in a protected GAS response */
 	struct wpabuf *payload;
 };
 
@@ -120,6 +130,8 @@ static inline const u8 * wpa_bss_ie_ptr(const struct wpa_bss *bss)
 	return bss->ies;
 }
 
+void notify_bss_changes(struct wpa_supplicant *wpa_s, u32 changes,
+			const struct wpa_bss *bss);
 void wpa_bss_update_start(struct wpa_supplicant *wpa_s);
 void wpa_bss_update_scan_res(struct wpa_supplicant *wpa_s,
 			     struct wpa_scan_res *res,

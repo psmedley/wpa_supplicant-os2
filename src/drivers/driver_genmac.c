@@ -2248,7 +2248,7 @@ wpa_driver_genmac_get_interfaces(void *global_priv)
 
 
 static const char *ndis_drv_name = "genm";
-static const char *ndis_drv_desc = "OS//2 GENMAC driver";
+static const char *ndis_drv_desc = "OS/2 GENMAC driver";
 
 struct wpa_driver_ops wpa_driver_genmac_ops;
 

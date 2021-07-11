@@ -15,6 +15,7 @@
 #include "utils/eloop.h"
 #include "common/qca-vendor.h"
 #include "common/qca-vendor-attr.h"
+#include "common/brcm_vendor.h"
 #include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
 #include "driver_nl80211.h"
@@ -137,19 +138,45 @@ static const char * nl80211_command_to_string(enum nl80211_commands cmd)
 	C2S(NL80211_CMD_SET_QOS_MAP)
 	C2S(NL80211_CMD_ADD_TX_TS)
 	C2S(NL80211_CMD_DEL_TX_TS)
+	C2S(NL80211_CMD_GET_MPP)
+	C2S(NL80211_CMD_JOIN_OCB)
+	C2S(NL80211_CMD_LEAVE_OCB)
+	C2S(NL80211_CMD_CH_SWITCH_STARTED_NOTIFY)
+	C2S(NL80211_CMD_TDLS_CHANNEL_SWITCH)
+	C2S(NL80211_CMD_TDLS_CANCEL_CHANNEL_SWITCH)
 	C2S(NL80211_CMD_WIPHY_REG_CHANGE)
+	C2S(NL80211_CMD_ABORT_SCAN)
+	C2S(NL80211_CMD_START_NAN)
+	C2S(NL80211_CMD_STOP_NAN)
+	C2S(NL80211_CMD_ADD_NAN_FUNCTION)
+	C2S(NL80211_CMD_DEL_NAN_FUNCTION)
+	C2S(NL80211_CMD_CHANGE_NAN_CONFIG)
+	C2S(NL80211_CMD_NAN_MATCH)
+	C2S(NL80211_CMD_SET_MULTICAST_TO_UNICAST)
+	C2S(NL80211_CMD_UPDATE_CONNECT_PARAMS)
+	C2S(NL80211_CMD_SET_PMK)
+	C2S(NL80211_CMD_DEL_PMK)
 	C2S(NL80211_CMD_PORT_AUTHORIZED)
+	C2S(NL80211_CMD_RELOAD_REGDB)
 	C2S(NL80211_CMD_EXTERNAL_AUTH)
 	C2S(NL80211_CMD_STA_OPMODE_CHANGED)
 	C2S(NL80211_CMD_CONTROL_PORT_FRAME)
+	C2S(NL80211_CMD_GET_FTM_RESPONDER_STATS)
+	C2S(NL80211_CMD_PEER_MEASUREMENT_START)
+	C2S(NL80211_CMD_PEER_MEASUREMENT_RESULT)
+	C2S(NL80211_CMD_PEER_MEASUREMENT_COMPLETE)
+	C2S(NL80211_CMD_NOTIFY_RADAR)
 	C2S(NL80211_CMD_UPDATE_OWE_INFO)
+	C2S(NL80211_CMD_PROBE_MESH_LINK)
+	C2S(NL80211_CMD_SET_TID_CONFIG)
 	C2S(NL80211_CMD_UNPROT_BEACON)
 	C2S(NL80211_CMD_CONTROL_PORT_FRAME_TX_STATUS)
-
-	default:
-		return "NL80211_CMD_UNKNOWN";
+	C2S(NL80211_CMD_SET_SAR_SPECS)
+	C2S(__NL80211_CMD_AFTER_LAST)
 	}
 #undef C2S
+
+	return "NL80211_CMD_UNKNOWN";
 }
 
 
@@ -571,6 +598,13 @@ static void mlme_event_connect(struct wpa_driver_nl80211_data *drv,
 		event.assoc_info.fils_pmkid = nla_data(fils_pmkid);
 
 	wpa_supplicant_event(drv->ctx, EVENT_ASSOC, &event);
+
+	/* Avoid a race condition by stopping to ignore any following
+	 * disconnection events now that the driver has indicated it is
+	 * connected since that connection could have been triggered by a roam
+	 * operation that happened in parallel with the disconnection request.
+	 */
+	drv->ignore_next_local_disconnect = 0;
 }
 
 
@@ -630,8 +664,10 @@ static int calculate_chan_offset(int width, int freq, int cf1, int cf2)
 	case CHAN_WIDTH_160:
 		freq1 = cf1 - 70;
 		break;
-	case CHAN_WIDTH_UNKNOWN:
 	case CHAN_WIDTH_80P80:
+		freq1 = cf1 - 30;
+		break;
+	case CHAN_WIDTH_UNKNOWN:
 	case CHAN_WIDTH_2160:
 	case CHAN_WIDTH_4320:
 	case CHAN_WIDTH_6480:
@@ -693,6 +729,8 @@ static void mlme_event_ch_switch(struct wpa_driver_nl80211_data *drv,
 						    nla_get_u32(freq),
 						    nla_get_u32(cf1),
 						    cf2 ? nla_get_u32(cf2) : 0);
+		wpa_printf(MSG_DEBUG, "nl80211: Calculated channel offset: %d",
+			   chan_offset);
 	} else {
 		wpa_printf(MSG_WARNING, "nl80211: Unknown secondary channel information - following channel definition calculations may fail");
 	}
@@ -1291,7 +1329,7 @@ static void send_scan_event(struct wpa_driver_nl80211_data *drv, int aborted,
 	struct nlattr *nl;
 	int rem;
 	struct scan_info *info;
-#define MAX_REPORT_FREQS 50
+#define MAX_REPORT_FREQS 100
 	int freqs[MAX_REPORT_FREQS];
 	int num_freqs = 0;
 
@@ -1323,7 +1361,7 @@ static void send_scan_event(struct wpa_driver_nl80211_data *drv, int aborted,
 		}
 	}
 	if (tb[NL80211_ATTR_SCAN_FREQUENCIES]) {
-		char msg[300], *pos, *end;
+		char msg[500], *pos, *end;
 		int res;
 
 		pos = msg;
@@ -1937,7 +1975,7 @@ try_2_4_or_5:
 		return 2407 + 5 * chan;
 	if (chan == 14)
 		return 2484;
-	if (chan >= 36 && chan <= 169)
+	if (chan >= 36 && chan <= 177)
 		return 5000 + 5 * chan;
 
 	return 0;
@@ -2062,6 +2100,27 @@ static void qca_nl80211_key_mgmt_auth(struct wpa_driver_nl80211_data *drv,
 			   tb[QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_FILS_ERP_NEXT_SEQ_NUM],
 			   tb[QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_PMK],
 			   tb[QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_PMKID]);
+}
+
+
+static void
+qca_nl80211_key_mgmt_auth_handler(struct wpa_driver_nl80211_data *drv,
+				  const u8 *data, size_t len)
+{
+	if (!drv->roam_indication_done) {
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: Pending roam indication, delay processing roam+auth vendor event");
+		os_get_reltime(&drv->pending_roam_ind_time);
+
+		os_free(drv->pending_roam_data);
+		drv->pending_roam_data = os_memdup(data, len);
+		if (!drv->pending_roam_data)
+			return;
+		drv->pending_roam_data_len = len;
+		return;
+	}
+	drv->roam_indication_done = false;
+	qca_nl80211_key_mgmt_auth(drv, data, len);
 }
 
 
@@ -2214,7 +2273,7 @@ static void send_vendor_scan_event(struct wpa_driver_nl80211_data *drv,
 	}
 
 	if (tb[QCA_WLAN_VENDOR_ATTR_SCAN_FREQUENCIES]) {
-		char msg[300], *pos, *end;
+		char msg[500], *pos, *end;
 		int res;
 
 		pos = msg;
@@ -2322,7 +2381,7 @@ static void nl80211_vendor_event_qca(struct wpa_driver_nl80211_data *drv,
 		qca_nl80211_avoid_freq(drv, data, len);
 		break;
 	case QCA_NL80211_VENDOR_SUBCMD_KEY_MGMT_ROAM_AUTH:
-		qca_nl80211_key_mgmt_auth(drv, data, len);
+		qca_nl80211_key_mgmt_auth_handler(drv, data, len);
 		break;
 	case QCA_NL80211_VENDOR_SUBCMD_DO_ACS:
 		qca_nl80211_acs_select_ch(drv, data, len);
@@ -2351,6 +2410,87 @@ static void nl80211_vendor_event_qca(struct wpa_driver_nl80211_data *drv,
 		break;
 	}
 }
+
+
+#ifdef CONFIG_DRIVER_NL80211_BRCM
+
+static void brcm_nl80211_acs_select_ch(struct wpa_driver_nl80211_data *drv,
+				       const u8 *data, size_t len)
+{
+	struct nlattr *tb[BRCM_VENDOR_ATTR_ACS_LAST + 1];
+	union wpa_event_data event;
+
+	wpa_printf(MSG_DEBUG,
+		   "nl80211: BRCM ACS channel selection vendor event received");
+
+	if (nla_parse(tb, BRCM_VENDOR_ATTR_ACS_LAST, (struct nlattr *) data,
+		      len, NULL) ||
+	    !tb[BRCM_VENDOR_ATTR_ACS_PRIMARY_FREQ] ||
+	    !tb[BRCM_VENDOR_ATTR_ACS_SECONDARY_FREQ])
+		return;
+
+	os_memset(&event, 0, sizeof(event));
+	if (tb[BRCM_VENDOR_ATTR_ACS_PRIMARY_FREQ])
+		event.acs_selected_channels.pri_freq =
+			nla_get_u32(tb[BRCM_VENDOR_ATTR_ACS_PRIMARY_FREQ]);
+	if (tb[BRCM_VENDOR_ATTR_ACS_SECONDARY_FREQ])
+		event.acs_selected_channels.sec_freq =
+			nla_get_u32(tb[BRCM_VENDOR_ATTR_ACS_SECONDARY_FREQ]);
+	if (tb[BRCM_VENDOR_ATTR_ACS_VHT_SEG0_CENTER_CHANNEL])
+		event.acs_selected_channels.vht_seg0_center_ch =
+			nla_get_u8(tb[BRCM_VENDOR_ATTR_ACS_VHT_SEG0_CENTER_CHANNEL]);
+	if (tb[BRCM_VENDOR_ATTR_ACS_VHT_SEG0_CENTER_CHANNEL])
+		event.acs_selected_channels.vht_seg1_center_ch =
+			nla_get_u8(tb[BRCM_VENDOR_ATTR_ACS_VHT_SEG1_CENTER_CHANNEL]);
+	if (tb[BRCM_VENDOR_ATTR_ACS_CHWIDTH])
+		event.acs_selected_channels.ch_width =
+			nla_get_u16(tb[BRCM_VENDOR_ATTR_ACS_CHWIDTH]);
+	if (tb[BRCM_VENDOR_ATTR_ACS_HW_MODE]) {
+		event.acs_selected_channels.hw_mode = nla_get_u8(tb[BRCM_VENDOR_ATTR_ACS_HW_MODE]);
+		if (event.acs_selected_channels.hw_mode == NUM_HOSTAPD_MODES ||
+		    event.acs_selected_channels.hw_mode ==
+		    HOSTAPD_MODE_IEEE80211ANY) {
+			wpa_printf(MSG_DEBUG,
+				   "nl80211: Invalid hw_mode %d in ACS selection event",
+				   event.acs_selected_channels.hw_mode);
+			return;
+		}
+	}
+
+	wpa_printf(MSG_DEBUG,
+		   "nl80211: ACS Results: PCH: %d SCH: %d BW: %d VHT0: %d VHT1: %d HW_MODE: %d",
+		   event.acs_selected_channels.pri_freq,
+		   event.acs_selected_channels.sec_freq,
+		   event.acs_selected_channels.ch_width,
+		   event.acs_selected_channels.vht_seg0_center_ch,
+		   event.acs_selected_channels.vht_seg1_center_ch,
+		   event.acs_selected_channels.hw_mode);
+	wpa_supplicant_event(drv->ctx, EVENT_ACS_CHANNEL_SELECTED, &event);
+}
+
+
+static void nl80211_vendor_event_brcm(struct wpa_driver_nl80211_data *drv,
+				      u32 subcmd, u8 *data, size_t len)
+{
+	wpa_printf(MSG_DEBUG, "nl80211: Got BRCM vendor event %u", subcmd);
+	switch (subcmd) {
+	case BRCM_VENDOR_EVENT_PRIV_STR:
+	case BRCM_VENDOR_EVENT_HANGED:
+		/* Dump the event on to the console */
+		wpa_msg(NULL, MSG_INFO, "%s", data);
+		break;
+	case BRCM_VENDOR_EVENT_ACS:
+		brcm_nl80211_acs_select_ch(drv, data, len);
+		break;
+	default:
+		wpa_printf(MSG_DEBUG,
+			   "%s: Ignore unsupported BRCM vendor event %u",
+			   __func__, subcmd);
+		break;
+	}
+}
+
+#endif /* CONFIG_DRIVER_NL80211_BRCM */
 
 
 static void nl80211_vendor_event(struct wpa_driver_nl80211_data *drv,
@@ -2387,10 +2527,21 @@ static void nl80211_vendor_event(struct wpa_driver_nl80211_data *drv,
 		return;
 	}
 
+#ifdef ANDROID
+#ifdef ANDROID_LIB_EVENT
+       wpa_driver_nl80211_driver_event(drv, vendor_id, subcmd, data, len);
+#endif /* ANDROID_LIB_EVENT */
+#endif /* ANDROID */
+
 	switch (vendor_id) {
 	case OUI_QCA:
 		nl80211_vendor_event_qca(drv, subcmd, data, len);
 		break;
+#ifdef CONFIG_DRIVER_NL80211_BRCM
+	case OUI_BRCM:
+		nl80211_vendor_event_brcm(drv, subcmd, data, len);
+		break;
+#endif /* CONFIG_DRIVER_NL80211_BRCM */
 	default:
 		wpa_printf(MSG_DEBUG, "nl80211: Ignore unsupported vendor event");
 		break;
@@ -2714,17 +2865,36 @@ static void do_process_drv_event(struct i802_bss *bss, int cmd,
 	wpa_printf(MSG_DEBUG, "nl80211: Drv Event %d (%s) received for %s",
 		   cmd, nl80211_command_to_string(cmd), bss->ifname);
 
+#ifdef CONFIG_DRIVER_NL80211_QCA
 	if (cmd == NL80211_CMD_ROAM &&
 	    (drv->capa.flags & WPA_DRIVER_FLAGS_KEY_MGMT_OFFLOAD)) {
+		if (drv->pending_roam_data) {
+			struct os_reltime now, age;
+
+			os_get_reltime(&now);
+			os_reltime_sub(&now, &drv->pending_roam_ind_time, &age);
+			if (age.sec == 0 && age.usec < 100000) {
+				wpa_printf(MSG_DEBUG,
+					   "nl80211: Process pending roam+auth vendor event");
+				qca_nl80211_key_mgmt_auth(
+					drv, drv->pending_roam_data,
+					drv->pending_roam_data_len);
+			}
+			os_free(drv->pending_roam_data);
+			drv->pending_roam_data = NULL;
+			return;
+		}
 		/*
 		 * Device will use roam+auth vendor event to indicate
 		 * roaming, so ignore the regular roam event.
 		 */
+		drv->roam_indication_done = true;
 		wpa_printf(MSG_DEBUG,
 			   "nl80211: Ignore roam event (cmd=%d), device will use vendor event roam+auth",
 			   cmd);
 		return;
 	}
+#endif /* CONFIG_DRIVER_NL80211_QCA */
 
 	if (drv->ap_scan_as_station != NL80211_IFTYPE_UNSPECIFIED &&
 	    (cmd == NL80211_CMD_NEW_SCAN_RESULTS ||

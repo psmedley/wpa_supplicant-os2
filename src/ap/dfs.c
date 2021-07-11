@@ -81,17 +81,17 @@ static int dfs_is_chan_allowed(struct hostapd_channel_data *chan, int n_chans)
 	 * We will also choose this first channel as the control one.
 	 */
 	int allowed_40[] = { 36, 44, 52, 60, 100, 108, 116, 124, 132, 149, 157,
-			     184, 192 };
+			     165, 173, 184, 192 };
 	/*
 	 * VHT80, valid channels based on center frequency:
-	 * 42, 58, 106, 122, 138, 155
+	 * 42, 58, 106, 122, 138, 155, 171
 	 */
-	int allowed_80[] = { 36, 52, 100, 116, 132, 149 };
+	int allowed_80[] = { 36, 52, 100, 116, 132, 149, 165 };
 	/*
 	 * VHT160 valid channels based on center frequency:
-	 * 50, 114
+	 * 50, 114, 163
 	 */
-	int allowed_160[] = { 36, 100 };
+	int allowed_160[] = { 36, 100, 149 };
 	int *allowed = allowed_40;
 	unsigned int i, allowed_no = 0;
 
@@ -1228,7 +1228,9 @@ int hostapd_is_dfs_required(struct hostapd_iface *iface)
 {
 	int n_chans, n_chans1, start_chan_idx, start_chan_idx1, res;
 
-	if (!iface->conf->ieee80211h || !iface->current_mode ||
+	if ((!(iface->drv_flags & WPA_DRIVER_FLAGS_DFS_OFFLOAD) &&
+	     !iface->conf->ieee80211h) ||
+	    !iface->current_mode ||
 	    iface->current_mode->mode != HOSTAPD_MODE_IEEE80211A)
 		return 0;
 
@@ -1279,6 +1281,8 @@ int hostapd_dfs_start_cac(struct hostapd_iface *iface, int freq,
  */
 int hostapd_handle_dfs_offload(struct hostapd_iface *iface)
 {
+	int dfs_res;
+
 	wpa_printf(MSG_DEBUG, "%s: iface->cac_started: %d",
 		   __func__, iface->cac_started);
 
@@ -1294,10 +1298,11 @@ int hostapd_handle_dfs_offload(struct hostapd_iface *iface)
 		return 1;
 	}
 
-	if (ieee80211_is_dfs(iface->freq, iface->hw_features,
-			     iface->num_hw_features)) {
-		wpa_printf(MSG_DEBUG, "%s: freq %d MHz requires DFS",
-			   __func__, iface->freq);
+	dfs_res = hostapd_is_dfs_required(iface);
+	if (dfs_res > 0) {
+		wpa_printf(MSG_DEBUG,
+			   "%s: freq %d MHz requires DFS for %d chans",
+			   __func__, iface->freq, dfs_res);
 		return 0;
 	}
 
@@ -1348,12 +1353,16 @@ int hostapd_is_dfs_overlap(struct hostapd_iface *iface, enum chan_width width,
 		if (!(chan->flag & HOSTAPD_CHAN_RADAR))
 			continue;
 
+		if ((chan->flag & HOSTAPD_CHAN_DFS_MASK) ==
+		    HOSTAPD_CHAN_DFS_AVAILABLE)
+			continue;
+
 		if (center_freq - chan->freq < half_width &&
 		    chan->freq - center_freq < half_width)
 			res++;
 	}
 
-	wpa_printf(MSG_DEBUG, "DFS: (%d, %d): in range: %s",
+	wpa_printf(MSG_DEBUG, "DFS CAC required: (%d, %d): in range: %s",
 		   center_freq - half_width, center_freq + half_width,
 		   res ? "yes" : "no");
 

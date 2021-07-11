@@ -52,6 +52,15 @@ def test_sae(dev, apdev):
     pmk_w = dev[0].get_pmk(id)
     if pmk_h != pmk_w:
         raise Exception("Fetched PMK does not match: hostapd %s, wpa_supplicant %s" % (pmk_h, pmk_w))
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+    pmk_h2 = hapd.request("GET_PMK " + dev[0].own_addr())
+    if pmk_h != pmk_h2:
+        raise Exception("Fetched PMK from PMKSA cache does not match: %s, %s" % (pmk_h, pmk_h2))
+    if "FAIL" not in hapd.request("GET_PMK foo"):
+        raise Exception("Invalid GET_PMK did not return failure")
+    if "FAIL" not in hapd.request("GET_PMK 02:ff:ff:ff:ff:ff"):
+        raise Exception("GET_PMK for unknown STA did not return failure")
 
 @remote_compatible
 def test_sae_password_ecc(dev, apdev):
@@ -326,6 +335,61 @@ def test_sae_and_psk2(dev, apdev):
     dev[0].request("SET sae_groups ")
     dev[0].connect("test-psk", psk="12345678", key_mgmt="SAE WPA-PSK",
                    scan_freq="2412")
+
+def test_sae_wpa3_roam(dev, apdev):
+    """SAE and WPA3-Personal transition mode roaming"""
+    check_sae_capab(dev[0])
+
+    # WPA3-Personal only AP
+    params = hostapd.wpa2_params(ssid="test", passphrase="12345678")
+    params['ieee80211w'] = '2'
+    params['wpa_key_mgmt'] = 'SAE'
+    hapd0 = hostapd.add_ap(apdev[0], params)
+
+    # WPA2-Personal only AP
+    params = hostapd.wpa2_params(ssid="test", passphrase="12345678")
+    hapd1 = hostapd.add_ap(apdev[1], params)
+
+    dev[0].set("sae_groups", "")
+    dev[0].connect("test", psk="12345678", key_mgmt="SAE WPA-PSK",
+                   ieee80211w="1", scan_freq="2412")
+    bssid = dev[0].get_status_field('bssid')
+
+    # Disable the current AP to force roam to the other one
+    if bssid == apdev[0]['bssid']:
+        hapd0.disable()
+    else:
+        hapd1.disable()
+    dev[0].wait_connected()
+
+    # Disable the current AP to force roam to the other (previous) one
+    if bssid == apdev[0]['bssid']:
+        hapd0.enable()
+        hapd1.disable()
+    else:
+        hapd1.enable()
+        hapd0.disable()
+    dev[0].wait_connected()
+
+    # Force roam to an AP in WPA3-Personal transition mode
+    if bssid == apdev[0]['bssid']:
+        hapd1.set("ieee80211w", "1")
+        hapd1.set("sae_require_mfp", "1")
+        hapd1.set("wpa_key_mgmt", "SAE WPA-PSK")
+        hapd1.enable()
+        hapd0.disable()
+    else:
+        hapd0.set("ieee80211w", "1")
+        hapd0.set("sae_require_mfp", "1")
+        hapd0.set("wpa_key_mgmt", "SAE WPA-PSK")
+        hapd0.enable()
+        hapd1.disable()
+    dev[0].wait_connected()
+    status = dev[0].get_status()
+    if status['key_mgmt'] != "SAE":
+        raise Exception("Did not use SAE with WPA3-Personal transition mode AP")
+    if status['pmf'] != "1":
+        raise Exception("Did not use PMF with WPA3-Personal transition mode AP")
 
 def test_sae_mixed_mfp(dev, apdev):
     """Mixed SAE and non-SAE network and MFP required with SAE"""

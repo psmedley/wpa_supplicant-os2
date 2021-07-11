@@ -19,18 +19,6 @@
 #include "scan.h"
 #include "bss.h"
 
-
-#define WPA_BSS_FREQ_CHANGED_FLAG	BIT(0)
-#define WPA_BSS_SIGNAL_CHANGED_FLAG	BIT(1)
-#define WPA_BSS_PRIVACY_CHANGED_FLAG	BIT(2)
-#define WPA_BSS_MODE_CHANGED_FLAG	BIT(3)
-#define WPA_BSS_WPAIE_CHANGED_FLAG	BIT(4)
-#define WPA_BSS_RSNIE_CHANGED_FLAG	BIT(5)
-#define WPA_BSS_WPS_CHANGED_FLAG	BIT(6)
-#define WPA_BSS_RATES_CHANGED_FLAG	BIT(7)
-#define WPA_BSS_IES_CHANGED_FLAG	BIT(8)
-
-
 static void wpa_bss_set_hessid(struct wpa_bss *bss)
 {
 #ifdef CONFIG_INTERWORKING
@@ -588,8 +576,8 @@ static u32 wpa_bss_compare_res(const struct wpa_bss *old,
 }
 
 
-static void notify_bss_changes(struct wpa_supplicant *wpa_s, u32 changes,
-			       const struct wpa_bss *bss)
+void notify_bss_changes(struct wpa_supplicant *wpa_s, u32 changes,
+			const struct wpa_bss *bss)
 {
 	if (changes & WPA_BSS_FREQ_CHANGED_FLAG)
 		wpas_notify_bss_freq_changed(wpa_s, bss->id);
@@ -1390,6 +1378,8 @@ const u8 * wpa_bss_get_fils_cache_id(const struct wpa_bss *bss)
 
 int wpa_bss_ext_capab(const struct wpa_bss *bss, unsigned int capab)
 {
+	if (!bss)
+		return 0;
 	return ieee802_11_ext_capab(wpa_bss_get_ie(bss, WLAN_EID_EXT_CAPAB),
 				    capab);
 }
