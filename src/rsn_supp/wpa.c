@@ -2345,6 +2345,16 @@ void wpa_sm_aborted_cached(struct wpa_sm *sm)
 }
 
 
+void wpa_sm_aborted_external_cached(struct wpa_sm *sm)
+{
+	if (sm && sm->cur_pmksa && sm->cur_pmksa->external) {
+		wpa_dbg(sm->ctx->msg_ctx, MSG_DEBUG,
+			"RSN: Cancelling external PMKSA caching attempt");
+		sm->cur_pmksa = NULL;
+	}
+}
+
+
 static void wpa_eapol_key_dump(struct wpa_sm *sm,
 			       const struct wpa_eapol_key *key,
 			       unsigned int key_data_len,
@@ -2893,6 +2903,15 @@ static void wpa_sm_pmksa_free_cb(struct rsn_pmksa_cache_entry *entry,
 }
 
 
+static bool wpa_sm_pmksa_is_current_cb(struct rsn_pmksa_cache_entry *entry,
+				       void *ctx)
+{
+	struct wpa_sm *sm = ctx;
+
+	return sm->cur_pmksa == entry;
+}
+
+
 /**
  * wpa_sm_init - Initialize WPA state machine
  * @ctx: Context pointer for callbacks; this needs to be an allocated buffer
@@ -2916,7 +2935,8 @@ struct wpa_sm * wpa_sm_init(struct wpa_sm_ctx *ctx)
 	sm->dot11RSNAConfigPMKReauthThreshold = 70;
 	sm->dot11RSNAConfigSATimeout = 60;
 
-	sm->pmksa = pmksa_cache_init(wpa_sm_pmksa_free_cb, sm, sm);
+	sm->pmksa = pmksa_cache_init(wpa_sm_pmksa_free_cb,
+				     wpa_sm_pmksa_is_current_cb, sm, sm);
 	if (sm->pmksa == NULL) {
 		wpa_msg(sm->ctx->msg_ctx, MSG_ERROR,
 			"RSN: PMKSA cache initialization failed");
@@ -3112,9 +3132,11 @@ void wpa_sm_set_pmk(struct wpa_sm *sm, const u8 *pmk, size_t pmk_len,
 #endif /* CONFIG_IEEE80211R */
 
 	if (bssid) {
-		pmksa_cache_add(sm->pmksa, pmk, pmk_len, pmkid, NULL, 0,
-				bssid, sm->own_addr,
-				sm->network_ctx, sm->key_mgmt, NULL);
+		sm->cur_pmksa = pmksa_cache_add(sm->pmksa, pmk, pmk_len,
+						pmkid, NULL, 0, bssid,
+						sm->own_addr,
+						sm->network_ctx, sm->key_mgmt,
+						NULL);
 	}
 }
 
@@ -3865,7 +3887,13 @@ void wpa_sm_update_replay_ctr(struct wpa_sm *sm, const u8 *replay_ctr)
 
 void wpa_sm_pmksa_cache_flush(struct wpa_sm *sm, void *network_ctx)
 {
-	pmksa_cache_flush(sm->pmksa, network_ctx, NULL, 0);
+	pmksa_cache_flush(sm->pmksa, network_ctx, NULL, 0, false);
+}
+
+
+void wpa_sm_external_pmksa_cache_flush(struct wpa_sm *sm, void *network_ctx)
+{
+	pmksa_cache_flush(sm->pmksa, network_ctx, NULL, 0, true);
 }
 
 
@@ -5230,3 +5258,10 @@ void wpa_pasn_pmksa_cache_add(struct wpa_sm *sm, const u8 *pmk, size_t pmk_len,
 					key_mgmt, 0);
 }
 #endif /* CONFIG_PASN */
+
+
+void wpa_sm_pmksa_cache_reconfig(struct wpa_sm *sm)
+{
+	if (sm)
+		pmksa_cache_reconfig(sm->pmksa);
+}

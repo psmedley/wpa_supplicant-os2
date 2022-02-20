@@ -10,7 +10,6 @@ ALL = $(BINALL)
 #ALL += systemd/wpa_supplicant@.service
 #ALL += systemd/wpa_supplicant-nl80211@.service
 #ALL += systemd/wpa_supplicant-wired@.service
-#ALL += dbus/fi.w1.wpa_supplicant1.service
 ifdef CONFIG_BUILD_WPA_CLIENT_SO
 ALL += libwpa_client.so
 endif
@@ -297,6 +296,9 @@ NEED_ASN1=y
 ifdef CONFIG_DPP2
 CFLAGS += -DCONFIG_DPP2
 endif
+ifdef CONFIG_DPP3
+CFLAGS += -DCONFIG_DPP3
+endif
 endif
 
 ifdef CONFIG_OWE
@@ -392,11 +394,10 @@ CONFIG_AP=y
 ifdef CONFIG_P2P_STRICT
 CFLAGS += -DCONFIG_P2P_STRICT
 endif
-endif
-
 ifdef CONFIG_WIFI_DISPLAY
 CFLAGS += -DCONFIG_WIFI_DISPLAY
 OBJS += wifi_display.o
+endif
 endif
 
 ifdef CONFIG_PASN
@@ -1014,7 +1015,6 @@ ifdef CONFIG_PCSC
 # PC/SC interface for smartcards (USIM, GSM SIM)
 CFLAGS += -DPCSC_FUNCS -I/usr/include/PCSC
 OBJS += ../src/utils/pcsc_funcs.o
-# -lpthread may not be needed depending on how pcsc-lite was configured
 ifdef CONFIG_NATIVE_WINDOWS
 #Once MinGW gets support for WinScard, -lwinscard could be used instead of the
 #dynamic symbol loading that is now used in pcsc_funcs.c
@@ -1023,7 +1023,7 @@ else
 ifdef CONFIG_OSX
 LIBS += -framework PCSC
 else
-LIBS += -lpcsclite -lpthread
+LIBS += $(shell $(PKG_CONFIG) --libs libpcsclite)
 endif
 endif
 endif
