@@ -10873,7 +10873,7 @@ static int set_type4_frame_classifier(const char *cmd,
 {
 	const char *pos, *end;
 	u8 classifier_mask = 0;
-	int ret = 0;
+	int ret = -1;
 #ifdef CONFIG_IPV6
 	char addr[INET6_ADDRSTRLEN];
 #else 
@@ -10979,7 +10979,7 @@ static int set_type4_frame_classifier(const char *cmd,
 	if (pos && atoi(pos + 9) > 0) {
 		if (param->ip_version == IPV4)
 			param->ip_params.v4.dst_port = atoi(pos + 9);
-		else
+		else return -1;
 #ifdef CONFIG_IPV6
 			param->ip_params.v6.dst_port = atoi(pos + 9);
 #endif /* CONFIG_IPV6 */
@@ -10990,7 +10990,7 @@ static int set_type4_frame_classifier(const char *cmd,
 	if (pos && atoi(pos + 5) > 0) {
 		if (param->ip_version == IPV4)
 			param->ip_params.v4.dscp = atoi(pos + 5);
-		else
+		else return -1;
 #ifdef CONFIG_IPV6
 			param->ip_params.v6.dscp = atoi(pos + 5);
 #endif /* CONFIG_IPV6 */
@@ -11012,7 +11012,7 @@ static int set_type4_frame_classifier(const char *cmd,
 			}
 			classifier_mask |= BIT(6);
 		}
-	} else {
+	} else { return -1;
 #ifdef CONFIG_IPV6
 		pos = os_strstr(cmd, "next_header=");
 		if (pos) {

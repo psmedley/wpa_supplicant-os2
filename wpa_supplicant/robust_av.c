@@ -1033,7 +1033,7 @@ static int wpas_set_frame_classifier_params(struct dscp_policy_data *policy)
 		}
 
 		policy->type4_param.ip_version = IPV4;
-	} else if (frame_classifier[2] == 6) {
+	} else if (frame_classifier[2] == 6) { return -1;
 #ifdef CONFIG_IPV6
 		if (set_frame_classifier_type4_ipv6(policy)) {
 			wpa_printf(MSG_ERROR,
@@ -1072,7 +1072,7 @@ static bool dscp_valid_domain_name(const char *str)
 static void wpas_add_dscp_policy(struct wpa_supplicant *wpa_s,
 				 struct dscp_policy_data *policy)
 {
-	int ip_ver = 0, res = 0;
+	int ip_ver = 0, res = -1;
 	char policy_str[1000], *pos;
 	int len;
 
@@ -1098,8 +1098,8 @@ static void wpas_add_dscp_policy(struct wpa_supplicant *wpa_s,
 
 		if (type4->ip_version == IPV4)
 			res = write_ipv4_info(pos, len, &type4->ip_params.v4);
-#ifdef CONFIG_IPV6
 		else
+#ifdef CONFIG_IPV6
 			res = write_ipv6_info(pos, len, &type4->ip_params.v6);
 #endif /* CONFIG_IPV6 */
 
