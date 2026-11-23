@@ -207,7 +207,7 @@ static int add_pmk_file(struct wlantest *wt, const char *pmk_file)
 static int add_ptk_file(struct wlantest *wt, const char *ptk_file)
 {
 	FILE *f;
-	u8 ptk[64];
+	u8 ptk[80];
 	size_t ptk_len;
 	char buf[300], *pos;
 	struct wlantest_ptk *p;
@@ -228,7 +228,8 @@ static int add_ptk_file(struct wlantest *wt, const char *ptk_file)
 			continue;
 		ptk_len /= 2;
 		if (ptk_len != 16 && ptk_len != 32 &&
-		    ptk_len != 48 && ptk_len != 64)
+		    ptk_len != 48 && ptk_len != 64 &&
+		    ptk_len != 80)
 			continue;
 		if (hexstr2bin(buf, ptk, ptk_len) < 0)
 			continue;
@@ -239,6 +240,14 @@ static int add_ptk_file(struct wlantest *wt, const char *ptk_file)
 			os_memcpy(p->ptk.tk, ptk, ptk_len);
 			p->ptk.tk_len = ptk_len;
 			p->ptk_len = 32 + ptk_len;
+		} else if (ptk_len == 80) {
+			os_memcpy(p->ptk.kck, ptk, 32);
+			p->ptk.kck_len = 32;
+			os_memcpy(p->ptk.kek, ptk + 32, 16);
+			p->ptk.kek_len = 16;
+			os_memcpy(p->ptk.tk, ptk + 32 + 16, ptk_len - 32 - 16);
+			p->ptk.tk_len = ptk_len - 32 - 16;
+			p->ptk_len = ptk_len;
 		} else {
 			os_memcpy(p->ptk.kck, ptk, 16);
 			p->ptk.kck_len = 16;
@@ -372,7 +381,9 @@ int wlantest_relog(struct wlantest *wt)
 int main(int argc, char *argv[])
 {
 	int c, ret = 0;
-	const char *read_file = NULL;
+	const unsigned int MAX_READ_FILE = 20;
+	const char *read_file[MAX_READ_FILE];
+	unsigned int rf, num_read_file = 0;
 	const char *read_wired_file = NULL;
 	const char *ifname = NULL;
 	const char *ifname_wired = NULL;
@@ -442,7 +453,13 @@ int main(int argc, char *argv[])
 			wpa_debug_level++;
 			break;
 		case 'r':
-			read_file = optarg;
+			if (num_read_file == MAX_READ_FILE) {
+				wpa_printf(MSG_INFO,
+					   "Too many read files (-r) - ignored %s",
+					   optarg);
+				break;
+			}
+			read_file[num_read_file++] = optarg;
 			break;
 		case 'R':
 			read_wired_file = optarg;
@@ -473,7 +490,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (ifname == NULL && ifname_wired == NULL &&
-	    read_file == NULL && read_wired_file == NULL) {
+	    num_read_file == 0 && read_wired_file == NULL) {
 		usage();
 		ret = 0;
 		goto deinit;
@@ -491,9 +508,20 @@ int main(int argc, char *argv[])
 	if ((wt.write_file && write_pcap_init(&wt, wt.write_file) < 0) ||
 	    (wt.pcapng_file && write_pcapng_init(&wt, wt.pcapng_file) < 0) ||
 	    (read_wired_file &&
-	     read_wired_cap_file(&wt, read_wired_file) < 0) ||
-	    (read_file && read_cap_file(&wt, read_file) < 0) ||
-	    (ifname && monitor_init(&wt, ifname) < 0) ||
+	     read_wired_cap_file(&wt, read_wired_file) < 0))
+	{
+		ret = -1;
+		goto deinit;
+	}
+
+	for (rf = 0; rf < num_read_file; rf++) {
+		if (read_cap_file(&wt, read_file[rf]) < 0) {
+			ret = -1;
+			goto deinit;
+		}
+	}
+
+	if ((ifname && monitor_init(&wt, ifname) < 0) ||
 	    (ifname_wired && monitor_init_wired(&wt, ifname_wired) < 0) ||
 	    (ctrl_iface && ctrl_init(&wt) < 0)) {
 		ret = -1;

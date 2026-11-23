@@ -84,6 +84,7 @@ OBJS += ../src/ap/beacon.o
 OBJS += ../src/ap/bss_load.o
 OBJS += ../src/ap/neighbor_db.o
 OBJS += ../src/ap/rrm.o
+OBJS += ../src/common/ptksa_cache.o
 
 OBJS_c = hostapd_cli.o
 OBJS_c += ../src/common/wpa_ctrl.o
@@ -115,7 +116,7 @@ HOBJS += ../src/utils/trace.o
 LDFLAGS += -rdynamic
 CFLAGS += -funwind-tables
 ifdef CONFIG_WPA_TRACE_BFD
-CFLAGS += -DPACKAGE="hostapd" -DWPA_TRACE_BFD
+CFLAGS += -DPACKAGE="hostapd" -DWPA_TRACE_BFD -fno-inline -fno-optimize-sibling-calls
 LIBS += -lbfd -ldl -liberty -lz
 LIBS_c += -lbfd -ldl -liberty -lz
 LIBS_h += -lbfd -ldl -liberty -lz
@@ -167,7 +168,7 @@ OBJS += ../src/eapol_auth/eapol_auth_sm.o
 
 
 ifdef CONFIG_CODE_COVERAGE
-CFLAGS += -O0 -fprofile-arcs -ftest-coverage
+CFLAGS += -O0 -fprofile-arcs -ftest-coverage -U_FORTIFY_SOURCE
 LIBS += -lgcov
 LIBS_c += -lgcov
 LIBS_h += -lgcov
@@ -276,6 +277,8 @@ CFLAGS += -DCONFIG_OCV
 OBJS += ../src/common/ocv.o
 endif
 
+NEED_AES_UNWRAP=y
+
 ifdef CONFIG_IEEE80211R
 CFLAGS += -DCONFIG_IEEE80211R -DCONFIG_IEEE80211R_AP
 OBJS += ../src/ap/wpa_auth_ft.o
@@ -295,8 +298,10 @@ CFLAGS += -DCONFIG_SAE
 OBJS += ../src/common/sae.o
 ifdef CONFIG_SAE_PK
 CFLAGS += -DCONFIG_SAE_PK
+NEED_BASE64=y
 OBJS += ../src/common/sae_pk.o
 endif
+NEED_AES_SIV=y
 NEED_ECC=y
 NEED_DH_GROUPS=y
 NEED_HMAC_SHA256_KDF=y
@@ -339,9 +344,23 @@ ifdef CONFIG_IEEE80211AC
 CFLAGS += -DCONFIG_IEEE80211AC
 endif
 
+ifdef CONFIG_IEEE80211BE
+CONFIG_IEEE80211AX=y
+CFLAGS += -DCONFIG_IEEE80211BE
+OBJS += ../src/ap/ieee802_11_eht.o
+endif
+
 ifdef CONFIG_IEEE80211AX
 CFLAGS += -DCONFIG_IEEE80211AX
 OBJS += ../src/ap/ieee802_11_he.o
+endif
+
+ifdef CONFIG_IEEE80211AX
+ifdef CONFIG_AFC
+CFLAGS += -DCONFIG_AFC
+OBJS += ../src/ap/afc.o
+NEED_JSON=y
+endif
 endif
 
 ifdef CONFIG_MBO
@@ -598,6 +617,27 @@ CFLAGS += -DCONFIG_DPP3
 endif
 endif
 
+ifdef CONFIG_NAN_USD
+OBJS += ../src/common/nan_de.o
+OBJS += ../src/ap/nan_usd_ap.o
+CFLAGS += -DCONFIG_NAN_USD
+endif
+
+ifdef CONFIG_PMKSA_PRIVACY
+CONFIG_ENC_ASSOC=y
+CFLAGS += -DCONFIG_PMKSA_PRIVACY
+endif
+
+ifdef CONFIG_IEEE8021X_AUTH
+CONFIG_ENC_ASSOC=y
+CFLAGS += -DCONFIG_IEEE8021X_AUTH
+endif
+
+ifdef CONFIG_ENC_ASSOC
+CONFIG_PASN=y
+CFLAGS += -DCONFIG_ENC_ASSOC
+endif
+
 ifdef CONFIG_PASN
 CFLAGS += -DCONFIG_PASN
 CFLAGS += -DCONFIG_PTKSA_CACHE
@@ -605,7 +645,6 @@ NEED_HMAC_SHA256_KDF=y
 NEED_HMAC_SHA384_KDF=y
 NEED_SHA256=y
 NEED_SHA384=y
-OBJS += ../src/common/ptksa_cache.o
 endif
 
 ifdef CONFIG_EAP_IKEV2
@@ -667,6 +706,11 @@ ifdef CHAP
 OBJS += ../src/eap_common/chap.o
 endif
 
+ifdef CONFIG_RADIUS_TLS
+TLS_FUNCS=y
+CFLAGS += -DCONFIG_RADIUS_TLS
+endif
+
 ifdef TLS_FUNCS
 NEED_DES=y
 # Shared TLS functions (needed for EAP_TLS, EAP_PEAP, and EAP_TTLS)
@@ -688,6 +732,7 @@ CFLAGS += -DCONFIG_TLSV12
 endif
 
 ifeq ($(CONFIG_TLS), wolfssl)
+CFLAGS += -DCRYPTO_RSA_OAEP_SHA256
 CONFIG_CRYPTO=wolfssl
 ifdef TLS_FUNCS
 OBJS += ../src/crypto/tls_wolfssl.o
@@ -708,6 +753,7 @@ endif
 endif
 
 ifeq ($(CONFIG_TLS), openssl)
+CFLAGS += -DCRYPTO_RSA_OAEP_SHA256
 CONFIG_CRYPTO=openssl
 ifdef TLS_FUNCS
 OBJS += ../src/crypto/tls_openssl.o
@@ -932,9 +978,11 @@ endif
 ifdef NEED_AES_ENCBLOCK
 AESOBJS += ../src/crypto/aes-encblock.o
 endif
+ifneq ($(CONFIG_TLS), openssl)
 ifneq ($(CONFIG_TLS), linux)
 ifneq ($(CONFIG_TLS), wolfssl)
 AESOBJS += ../src/crypto/aes-omac1.o
+endif
 endif
 endif
 ifdef NEED_AES_UNWRAP
@@ -1039,6 +1087,20 @@ ifdef CONFIG_INTERNAL_RC4
 ifndef CONFIG_NO_RC4
 OBJS += ../src/crypto/rc4.o
 endif
+endif
+endif
+
+ifdef CONFIG_SAE
+ifdef CONFIG_IEEE80211BE
+NEED_SHA384=y
+endif
+ifdef NEED_SHA384
+# Need to add HMAC-SHA384 KDF as well, if SHA384 was enabled.
+NEED_HMAC_SHA384_KDF=y
+endif
+ifdef NEED_SHA512
+# Need to add HMAC-SHA512 KDF as well, if SHA512 was enabled.
+NEED_HMAC_SHA512_KDF=y
 endif
 endif
 
@@ -1172,9 +1234,13 @@ endif
 ifdef NEED_AP_MLME
 OBJS += ../src/ap/wmm.o
 OBJS += ../src/ap/ap_list.o
+OBJS += ../src/ap/comeback_token.o
+OBJS += ../src/pasn/pasn_responder.o
+OBJS += ../src/pasn/pasn_common.o
 OBJS += ../src/ap/ieee802_11.o
 OBJS += ../src/ap/hw_features.o
 OBJS += ../src/ap/dfs.o
+OBJS += ../src/ap/interference.o
 CFLAGS += -DNEED_AP_MLME
 endif
 OBJS += ../src/ap/ieee802_11_ht.o
@@ -1272,6 +1338,11 @@ ifdef CONFIG_NO_TKIP
 CFLAGS += -DCONFIG_NO_TKIP
 endif
 
+ifdef CONFIG_PROCESS_COORDINATION
+CFLAGS += -DCONFIG_PROCESS_COORDINATION
+OBJS += ../src/common/proc_coord.o
+endif
+
 $(DESTDIR)$(BINDIR)/%: %
 	install -D $(<) $(@)
 
@@ -1339,6 +1410,16 @@ SOBJS += ../src/common/sae.o
 SOBJS += ../src/common/sae_pk.o
 SOBJS += ../src/common/dragonfly.o
 SOBJS += $(AESOBJS)
+ifneq ($(CONFIG_TLS), openssl)
+ifneq ($(CONFIG_TLS), linux)
+ifneq ($(CONFIG_TLS), gnutls)
+ifneq ($(CONFIG_TLS), wolfssl)
+SOBJS += ../src/crypto/sha384.o
+SOBJS += ../src/crypto/sha512.o
+endif
+endif
+endif
+endif
 SOBJS += ../src/crypto/sha256-prf.o
 SOBJS += ../src/crypto/sha384-prf.o
 SOBJS += ../src/crypto/sha512-prf.o
@@ -1346,6 +1427,14 @@ SOBJS += ../src/crypto/dh_groups.o
 SOBJS += ../src/crypto/sha256-kdf.o
 SOBJS += ../src/crypto/sha384-kdf.o
 SOBJS += ../src/crypto/sha512-kdf.o
+SOBJS += ../src/common/wpa_common.o
+ifdef CONFIG_NO_RANDOM_POOL
+CFLAGS += -DCONFIG_NO_RANDOM_POOL
+else
+SOBJS += ../src/crypto/random.o
+endif
+SOBJS += ../src/crypto/sha1-prf.o
+SOBJS += ../src/utils/eloop.o
 
 _OBJS_VAR := NOBJS
 include ../src/objs.mk

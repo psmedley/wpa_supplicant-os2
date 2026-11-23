@@ -8,8 +8,10 @@
 
 import os
 import re
+import gc
 import sys
 import time
+import glob
 from datetime import datetime
 import argparse
 import subprocess
@@ -48,37 +50,33 @@ def reset_devs(dev, apdev):
         try:
             d.reset()
         except Exception as e:
-            logger.info("Failed to reset device " + d.ifname)
-            print(str(e))
+            logger.exception("Failed to reset device " + d.ifname)
             ok = False
 
-    wpas = None
-    try:
-        wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5', monitor=False)
-        ifaces = wpas.global_request("INTERFACES").splitlines()
-        for iface in ifaces:
-            if iface.startswith("wlan"):
-                wpas.interface_remove(iface)
-    except Exception as e:
-        pass
-    if wpas:
-        wpas.close_ctrl()
-        del wpas
+    for ifname in ['/tmp/wpas-wlan5', '/tmp/wpas-wlan6', '/tmp/wpas-wlan7']:
+        wpas = None
+        try:
+            wpas = WpaSupplicant(global_iface=ifname, monitor=False)
+            ifaces = wpas.global_request("INTERFACES").splitlines()
+            for iface in ifaces:
+                if iface.startswith("wlan"):
+                    wpas.interface_remove(iface)
+        except Exception as e:
+            pass
+        if wpas:
+            wpas.close_ctrl()
+            del wpas
 
     try:
         hapd = HostapdGlobal()
         hapd.flush()
-        hapd.remove('wlan3-6')
-        hapd.remove('wlan3-5')
-        hapd.remove('wlan3-4')
-        hapd.remove('wlan3-3')
-        hapd.remove('wlan3-2')
-        for ap in apdev:
-            hapd.remove(ap['ifname'])
+        ifaces = hapd.request("INTERFACES").splitlines()
+        for iface in ifaces:
+            if iface.startswith("wlan"):
+                hapd.remove(iface)
         hapd.remove('as-erp')
     except Exception as e:
-        logger.info("Failed to remove hostapd interface")
-        print(str(e))
+        logger.exception("Failed to remove hostapd interface")
         ok = False
     return ok
 
@@ -96,8 +94,8 @@ def add_log_file(conn, test, run, type, path):
         conn.execute(sql, params)
         conn.commit()
     except Exception as e:
-        print("sqlite: " + str(e))
-        print("sql: %r" % (params, ))
+        logger.exception("sqlite:")
+        logger.error("sql: %r" % (params, ))
 
 def report(conn, prefill, build, commit, run, test, result, duration, logdir,
            sql_commit=True):
@@ -115,8 +113,8 @@ def report(conn, prefill, build, commit, run, test, result, duration, logdir,
             if sql_commit:
                 conn.commit()
         except Exception as e:
-            print("sqlite: " + str(e))
-            print("sql: %r" % (params, ))
+            logger.exception("sqlite:")
+            logger.error("sql: %r" % (params, ))
 
         if result == "FAIL":
             for log in ["log", "log0", "log1", "log2", "log3", "log5",
@@ -125,16 +123,17 @@ def report(conn, prefill, build, commit, run, test, result, duration, logdir,
                              logdir + "/" + test + "." + log)
 
 class DataCollector(object):
-    def __init__(self, logdir, testname, args):
+    def __init__(self, logdir, testname, kmemleak, args):
         self._logdir = logdir
         self._testname = testname
         self._tracing = args.tracing
         self._dmesg = args.dmesg
+        self._kmemleak = kmemleak
         self._dbus = args.dbus
     def __enter__(self):
         if self._tracing:
             output = os.path.abspath(os.path.join(self._logdir, '%s.dat' % (self._testname, )))
-            self._trace_cmd = subprocess.Popen(['trace-cmd', 'record', '-o', output, '-e', 'mac80211', '-e', 'cfg80211', '-e', 'printk', 'sh', '-c', 'echo STARTED ; read l'],
+            self._trace_cmd = subprocess.Popen(['trace-cmd', 'record', '-o', output, '-T', '-e', 'skb', '-e', 'mac80211', '-e', 'cfg80211', '-e', 'printk', 'sh', '-c', 'echo STARTED ; read l'],
                                                stdin=subprocess.PIPE,
                                                stdout=subprocess.PIPE,
                                                stderr=open('/dev/null', 'w'),
@@ -161,6 +160,66 @@ class DataCollector(object):
             self._trace_cmd.stdin.write(b'DONE\n')
             self._trace_cmd.stdin.flush()
             self._trace_cmd.wait()
+
+        pcap = os.path.join(self._logdir, f'{self._testname}.hwsim0.pcapng')
+        if os.path.exists(pcap):
+            found_key = False
+            pmks_name = os.path.join(self._logdir, f'{self._testname}.pmks')
+            ptks_name = os.path.join(self._logdir, f'{self._testname}.ptks')
+            with open(pmks_name, 'wb') as pmks, \
+                 open(ptks_name, 'wb') as ptks:
+                logs = os.path.join(self._logdir, f'{self._testname}.*')
+                for f in glob.glob(logs):
+                    if f.endswith('.pcapng'): continue
+                    with open(f, 'rb') as logfile:
+                        for line in logfile:
+                            if b'PTK - hexdump' in line:
+                                ptks.write(line.split(b':')[-1].replace(b' ', b''))
+                                found_key = True
+                            if b'PMK - hexdump' in line:
+                                pmks.write(line.split(b':')[-1].replace(b' ', b''))
+                                found_key = True
+
+            if found_key:
+                out_pcap = os.path.join(self._logdir, f'{self._testname}.hwsim0.dec.pcapng')
+                if os.path.isfile('../../wlantest/wlantest'):
+                    wlantest_bin = '../../wlantest/wlantest'
+                else:
+                    wlantest_bin = 'wlantest'
+                with open(os.path.join(self._logdir, f'{self._testname}.dec.log'), 'w') as dec_log:
+                    subprocess.run([wlantest_bin, '-r', pcap, '-f', pmks_name,
+                                    '-T', ptks_name, '-n', out_pcap],
+                                   stdout=dec_log)
+
+        if self._kmemleak:
+            output = os.path.join(self._logdir, '%s.kmemleak' % (self._testname, ))
+            num = 0
+            while os.path.exists(output):
+                output = os.path.join(self._logdir, '%s.kmemleak-%d' % (self._testname, num))
+                num += 1
+
+            # Trigger kmemleak
+            with open('/sys/kernel/debug/kmemleak', 'w+') as kmemleak:
+                kmemleak.write('scan')
+                kmemleak.seek(0)
+
+                # Minimum reporting age
+                time.sleep(5)
+
+                kmemleak.write('scan')
+                kmemleak.seek(0)
+
+                leaks = []
+                while l := kmemleak.read():
+                    leaks.append(l)
+                leaks = ''.join(leaks)
+                if leaks:
+                    with open(output, 'w') as out:
+                        out.write(leaks)
+
+                kmemleak.seek(0)
+                kmemleak.write('clear')
+
         if self._dmesg:
             output = os.path.join(self._logdir, '%s.dmesg' % (self._testname, ))
             num = 0
@@ -184,8 +243,7 @@ def rename_log(logdir, basename, testname, dev):
             dev.relog()
             subprocess.call(['chown', '-f', getpass.getuser(), srcname])
     except Exception as e:
-        logger.info("Failed to rename log files")
-        logger.info(e)
+        logger.exception("Failed to rename log files")
 
 def is_long_duration_test(t):
     return hasattr(t, "long_duration_test") and t.long_duration_test
@@ -199,20 +257,30 @@ def get_test_description(t):
         desc += " [long]"
     return desc
 
-def main():
+def import_test_cases():
     tests = []
     test_modules = []
+    names = set()
     files = os.listdir(scriptsdir)
-    for t in files:
-        m = re.match(r'(test_.*)\.py$', t)
-        if m:
-            logger.debug("Import test cases from " + t)
-            mod = __import__(m.group(1))
-            test_modules.append(mod.__name__.replace('test_', '', 1))
-            for key, val in mod.__dict__.items():
-                if key.startswith("test_"):
-                    tests.append(val)
-    test_names = list(set([t.__name__.replace('test_', '', 1) for t in tests]))
+    re_files = (re.match(r'(test_.*)\.py$', n) for n in files)
+    test_files = (m.group(1) for m in re_files if m)
+    for t in test_files:
+        mod = __import__(t)
+        test_modules.append(mod.__name__.replace('test_', '', 1))
+        for key, val in mod.__dict__.items():
+            if key.startswith("test_"):
+                if val.__doc__ is None:
+                    print(f"Test case {val.__name__} misses __doc__")
+                tests.append(val)
+
+                name = val.__name__.replace('test_', '', 1)
+                if name in names:
+                    print(f"Test case {name} defined multiple times")
+                names.add(name)
+    return tests, test_modules, names
+
+def main():
+    tests, test_modules, test_names = import_test_cases()
 
     run = None
 
@@ -338,8 +406,8 @@ def main():
                 try:
                     conn.execute(sql, params)
                 except Exception as e:
-                    print("sqlite: " + str(e))
-                    print("sql: %r" % (params,))
+                    logger.exception("sqlite:")
+                    logger.error("sql: %r" % (params,))
         if conn:
             conn.commit()
             conn.close()
@@ -396,6 +464,19 @@ def main():
 
     if args.dmesg:
         subprocess.call(['dmesg', '-c'], stdout=open('/dev/null', 'w'))
+
+    try:
+        # try to clear out any leaks that happened earlier
+        with open('/sys/kernel/debug/kmemleak', 'w') as kmemleak:
+            kmemleak.write('scan')
+            kmemleak.seek(0)
+            time.sleep(5)
+            kmemleak.write('scan')
+            kmemleak.seek(0)
+            kmemleak.write('clear')
+        have_kmemleak = True
+    except OSError:
+        have_kmemleak = False
 
     if conn and args.prefill:
         for t in tests_to_run:
@@ -489,8 +570,14 @@ def main():
             log_handler.setFormatter(log_formatter)
             logger.addHandler(log_handler)
 
+        try:
+            with open('/sys/kernel/debug/clear_warn_once', 'w') as f:
+                f.write('1\n')
+        except FileNotFoundError:
+            pass
+
         reset_ok = True
-        with DataCollector(args.logdir, name, args):
+        with DataCollector(args.logdir, name, have_kmemleak, args):
             count = count + 1
             msg = "START {} {}/{}".format(name, count, num_tests)
             logger.info(msg)
@@ -510,8 +597,7 @@ def main():
                         raise Exception("Global PING failed for {}".format(d.ifname))
                     d.request("NOTE TEST-START " + name)
                 except Exception as e:
-                    logger.info("Failed to issue TEST-START before " + name + " for " + d.ifname)
-                    logger.info(e)
+                    logger.exception("Failed to issue TEST-START before " + name + " for " + d.ifname)
                     print("FAIL " + name + " - could not start test")
                     if conn:
                         conn.close()
@@ -519,6 +605,22 @@ def main():
                     if args.stdin_ctrl:
                         set_term_echo(sys.stdin.fileno(), True)
                     sys.exit(1)
+            for ifname in ['/tmp/wpas-wlan5']:
+                wpas = None
+                try:
+                    wpas = WpaSupplicant(global_iface=ifname, monitor=False)
+                    wpas.global_request("NOTE TEST-START " + name)
+                    del wpas
+                except:
+                    logger.exception("Failed to issue TEST-START before " + name + " for " + ifname)
+                    print("FAIL " + name + " - could not start test")
+            try:
+                hapd = HostapdGlobal()
+                hapd.request("NOTE TEST-START " + name)
+                del hapd
+            except Exception as e:
+                logger.exception("Failed to issue TEST-START before " + name + " for hostapd")
+                print("FAIL " + name + " - could not start test")
             skip_reason = None
             try:
                 if is_long_duration_test(t) and not args.long:
@@ -564,51 +666,51 @@ def main():
                 logger.info("Skip test case: %s" % e)
                 skip_reason = e
                 result = "SKIP"
-            except NameError as e:
-                import traceback
-                logger.info(e)
-                traceback.print_exc()
-                result = "FAIL"
             except Exception as e:
-                import traceback
-                logger.info(e)
-                traceback.print_exc()
-                if args.loglevel == logging.WARNING:
-                    print("Exception: " + str(e))
+                logger.exception(f"Exception during test execution: {str(e)}")
                 result = "FAIL"
+
+            # Work around some objects having __del__, we really should
+            # use context managers, but that's complex. Doing this here
+            # will (on cpython at least) at make sure those objects that
+            # are no longer reachable will be collected now, invoking
+            # __del__() on them. This then ensures that __del__() isn't
+            # invoked at a bad time, e.g. causing recursion in locking.
+            gc.collect()
+
             open('/dev/kmsg', 'w').write('TEST-STOP %s @%.6f\n' % (name, time.time()))
             for d in dev:
                 try:
                     d.dump_monitor()
                     d.request("NOTE TEST-STOP " + name)
                 except Exception as e:
-                    logger.info("Failed to issue TEST-STOP after {} for {}".format(name, d.ifname))
-                    logger.info(e)
+                    logger.exception("Failed to issue TEST-STOP after {} for {}".format(name, d.ifname))
                     result = "FAIL"
             if args.no_reset:
                 print("Leaving devices in current state")
             else:
                 reset_ok = reset_devs(dev, apdev)
-            wpas = None
-            try:
-                wpas = WpaSupplicant(global_iface="/tmp/wpas-wlan5",
-                                     monitor=False)
-                rename_log(args.logdir, 'log5', name, wpas)
-                if not args.no_reset:
-                    wpas.remove_ifname()
-            except Exception as e:
-                pass
-            if wpas:
-                wpas.close_ctrl()
-                del wpas
+
+            for i in [5, 6, 7]:
+                wpas = None
+                try:
+                    wpas = WpaSupplicant(global_iface="/tmp/wpas-wlan%d" % i,
+                                         monitor=False)
+                    rename_log(args.logdir, 'log%d' % i, name, wpas)
+                    if not args.no_reset:
+                        wpas.remove_ifname()
+                except Exception as e:
+                    pass
+                if wpas:
+                    wpas.close_ctrl()
+                    del wpas
 
             for i in range(0, 3):
                 rename_log(args.logdir, 'log' + str(i), name, dev[i])
             try:
                 hapd = HostapdGlobal()
             except Exception as e:
-                print("Failed to connect to hostapd interface")
-                print(str(e))
+                logger.exception("Failed to connect to hostapd interface")
                 reset_ok = False
                 result = "FAIL"
                 hapd = None
@@ -638,6 +740,12 @@ def main():
                 logger.info("Kernel issue found in dmesg - mark test failed")
                 result = 'FAIL'
 
+        if result == 'PASS' and have_kmemleak:
+            # The file is only created if a leak was found
+            if os.path.exists(os.path.join(args.logdir, name + '.kmemleak')):
+                logger.info("Kernel memory leak found - mark test failed")
+                result = 'FAIL'
+
         if result == 'PASS':
             passed.append(name)
         elif result == 'SKIP':
@@ -658,6 +766,10 @@ def main():
         if not reset_ok:
             print("Terminating early due to device reset failure")
             break
+
+    for d in dev:
+        d.close_ctrl()
+
     if args.stdin_ctrl:
         set_term_echo(sys.stdin.fileno(), True)
 

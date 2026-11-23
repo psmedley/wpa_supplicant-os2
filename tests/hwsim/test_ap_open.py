@@ -131,7 +131,7 @@ def test_ap_open_assoc_timeout(dev, apdev):
 
 def test_ap_open_auth_drop_sta(dev, apdev):
     """AP dropping station after successful authentication"""
-    hapd = hostapd.add_ap(apdev[0]['ifname'], {"ssid": "open"})
+    hapd = hostapd.add_ap(apdev[0], {"ssid": "open"})
     dev[0].scan(freq="2412")
     hapd.set("ext_mgmt_frame_handling", "1")
     dev[0].connect("open", key_mgmt="NONE", scan_freq="2412",
@@ -539,7 +539,7 @@ def test_ap_open_ps_mc_buf(dev, apdev, params):
                    bg_scan_period="0")
     hapd.wait_sta()
 
-    buffered_mcast = 0
+    buffered_mcast = False
     try:
         dev[0].cmd_execute(['iw', 'dev', dev[0].ifname,
                             'set', 'power_save', 'on'])
@@ -555,16 +555,16 @@ def test_ap_open_ps_mc_buf(dev, apdev, params):
                              "wlan.fc.type_subtype == 0x0008",
                              ["wlan.tim.bmapctl.multicast"])
             for line in out.splitlines():
-                buffered_mcast = int(line)
-                if buffered_mcast == 1:
+                buffered_mcast = parse_bool(line)
+                if buffered_mcast:
                     break
-            if buffered_mcast == 1:
+            if buffered_mcast:
                 break
     finally:
         dev[0].cmd_execute(['iw', 'dev', dev[0].ifname,
                             'set', 'power_save', 'off'])
 
-    if buffered_mcast != 1:
+    if not buffered_mcast:
         raise Exception("AP did not buffer multicast frames")
 
 @remote_compatible
@@ -725,6 +725,9 @@ def test_ap_open_poll_sta_no_ack(dev, apdev):
     hapd.set("ext_mgmt_frame_handling", "1")
     dev[0].request("DISCONNECT")
     dev[0].wait_disconnected()
+    # eat up the deauth frame, so it cannot be processed
+    # after we disable ext_mgmt_frame_handling again
+    hapd.wait_event(["MGMT-RX"], timeout=1)
     hapd.set("ext_mgmt_frame_handling", "0")
     if "OK" not in hapd.request("POLL_STA " + addr):
         raise Exception("POLL_STA failed")
@@ -963,6 +966,11 @@ def test_ap_no_auth_ack(dev, apdev):
     hapd = hostapd.add_ap(apdev[0], {"ssid": "open",
                                      "ap_max_inactivity": "1"})
     hapd.set("ext_mgmt_frame_handling", "1")
+
+    # Avoid race condition with TX status reporting for the broadcast
+    # Deauthentication frame.
+    hapd.wait_event(["MGMT-TX-STATUS"], timeout=0.1)
+
     bssid = hapd.own_addr()
     addr = "02:01:02:03:04:05"
     frame = "b0003a01" + bssid.replace(':', '') + addr.replace(':', '') + bssid.replace(':', '') + "1000" + "000001000000"
@@ -988,16 +996,12 @@ def test_ap_open_layer_2_update(dev, apdev, params):
     cap = os.path.join(params['logdir'], prefix + "." + ifname + ".pcap")
 
     hapd = hostapd.add_ap(apdev[0], {"ssid": "open"})
-    wt = WlantestCapture(ifname, cap)
-    time.sleep(1)
-
-    dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
-    hapd.wait_sta()
-    hwsim_utils.test_connectivity(dev[0], hapd)
-    time.sleep(1)
-    hwsim_utils.test_connectivity(dev[0], hapd)
-    time.sleep(0.5)
-    wt.close()
+    with WlantestCapture(ifname, cap):
+        dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
+        hapd.wait_sta()
+        hwsim_utils.test_connectivity(dev[0], hapd)
+        time.sleep(1)
+        hwsim_utils.test_connectivity(dev[0], hapd)
 
     # Check for Layer 2 Update frame and unexpected frames from the station
     # that did not fully complete authentication.

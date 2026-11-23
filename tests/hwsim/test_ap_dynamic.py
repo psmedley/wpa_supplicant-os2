@@ -497,6 +497,32 @@ def test_ap_multi_bss(dev, apdev):
     if 'rx_packets' not in sta1 or int(sta1['rx_packets']) < 1:
         raise Exception("sta1 did not report receiving packets")
 
+def test_ap_multi_bss_restart(dev, apdev):
+    """Multiple BSSs restart with hostapd"""
+    ifname1 = apdev[0]['ifname']
+    ifname2 = apdev[0]['ifname'] + '-2'
+    hapd1 = hostapd.add_bss(apdev[0], ifname1, 'bss-1.conf')
+    hapd2 = hostapd.add_bss(apdev[0], ifname2, 'bss-2.conf')
+
+    hostapd.cmd_execute(apdev[0], ['ip', 'link', 'set', ifname1, 'down'])
+    hostapd.cmd_execute(apdev[0], ['ip', 'link', 'set', ifname1, 'up'])
+
+    hostapd.cmd_execute(apdev[0], ['ip', 'link', 'set', ifname2, 'down'])
+    hostapd.cmd_execute(apdev[0], ['ip', 'link', 'set', ifname2, 'up'])
+
+    dev[0].connect("bss-1", key_mgmt="NONE", scan_freq="2412")
+    dev[1].connect("bss-2", key_mgmt="NONE", scan_freq="2412")
+
+    hwsim_utils.test_connectivity(dev[0], hapd1)
+    hwsim_utils.test_connectivity(dev[1], hapd2)
+
+    sta0 = hapd1.get_sta(dev[0].own_addr())
+    sta1 = hapd2.get_sta(dev[1].own_addr())
+    if 'rx_packets' not in sta0 or int(sta0['rx_packets']) < 1:
+        raise Exception("sta0 did not report receiving packets")
+    if 'rx_packets' not in sta1 or int(sta1['rx_packets']) < 1:
+        raise Exception("sta1 did not report receiving packets")
+
 @remote_compatible
 def test_ap_add_with_driver(dev, apdev):
     """Add hostapd interface with driver specified"""
@@ -584,3 +610,26 @@ def test_ap_bss_config_file(dev, apdev, params):
             break
     if os.path.exists(pidfile):
         raise Exception("PID file exits after process termination")
+
+def test_ap_reload_bss_only(dev, apdev, params):
+    """Dynamic SSID change on only one BSS using RELOAD_BSS"""
+    ifname1 = apdev[0]['ifname']
+    ifname2 = apdev[0]['ifname'] + '-2'
+    hapd1 = hostapd.add_bss(apdev[0], ifname1, 'bss-1.conf')
+    hapd2 = hostapd.add_bss(apdev[0], ifname2, 'bss-2.conf')
+    id = dev[0].connect("bss-1", key_mgmt="NONE", scan_freq="2412")
+    dev[1].connect("bss-2", key_mgmt="NONE", scan_freq="2412")
+
+    res = hapd1.request("SET ssid test-new-ssid")
+    if "OK" not in res:
+        raise Exception("SET command failed")
+    res = hapd1.request("RELOAD_BSS")
+    if "OK" not in res:
+        raise Exception("RELOAD_BSS command failed")
+
+    ev = dev[1].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=1)
+    if ev is not None:
+        raise Exception("Unexpected disconnection when RELOAD_BSS was sent on another BSS.")
+
+    dev[0].set_network_quoted(id, "ssid", "test-new-ssid")
+    dev[0].connect_network(id)

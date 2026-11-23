@@ -74,14 +74,14 @@ def test_wpas_ctrl_network(dev):
              ("freq_list", "2412 2417"),
              ("scan_ssid", "1"),
              ("bssid", "00:11:22:33:44:55"),
-             ("proto", "WPA RSN OSEN"),
+             ("proto", "WPA RSN"),
              ("eap", "TLS"),
              ("go_p2p_dev_addr", "22:33:44:55:66:aa"),
              ("p2p_client_list", "22:33:44:55:66:bb 02:11:22:33:44:55")]
     if "SAE" not in dev[0].get_capability("auth_alg"):
-        tests.append(("key_mgmt", "WPS OSEN"))
+        tests.append(("key_mgmt", "WPS"))
     else:
-        tests.append(("key_mgmt", "WPS SAE FT-SAE OSEN"))
+        tests.append(("key_mgmt", "WPS SAE FT-SAE"))
 
     dev[0].set_network_quoted(id, "ssid", "test")
     for field, value in tests:
@@ -301,8 +301,17 @@ def test_wpas_ctrl_network_oom(dev):
 @remote_compatible
 def test_wpas_ctrl_many_networks(dev, apdev):
     """wpa_supplicant ctrl_iface LIST_NETWORKS with huge number of networks"""
-    for i in range(1000):
-        id = dev[0].add_network()
+    for i in range(999):
+        dev[0].add_network()
+        dev[0].dump_monitor()
+    id = dev[0].add_network()
+    ev = dev[0].wait_event(["CTRL-EVENT-NETWORK-ADDED %d" % id])
+    if ev is None:
+        raise Exception("Network added event not seen for the last network")
+    ev = dev[0].wait_global_event(["CTRL-EVENT-NETWORK-ADDED %d" % id], timeout=10)
+    if ev is None:
+        raise Exception("Network added event (global) not seen for the last network")
+    dev[0].dump_monitor()
     res = dev[0].request("LIST_NETWORKS")
     if str(id) in res:
         raise Exception("Last added network was unexpectedly included")
@@ -313,6 +322,25 @@ def test_wpas_ctrl_many_networks(dev, apdev):
     # power CPU, so increase the command timeout significantly to avoid issues
     # with the test case failing and following reset operation timing out.
     dev[0].request("REMOVE_NETWORK all", timeout=60)
+    seen = seen_global = False
+
+    for i in range(1000):
+        ev = dev[0].wait_event(["CTRL-EVENT-NETWORK-REMOVED"])
+        if ev is None:
+            raise Exception("Network removed event not seen for the last network")
+        if str(id) in ev:
+            seen = True
+        ev = dev[0].wait_global_event(["CTRL-EVENT-NETWORK-REMOVED"],
+                                      timeout=10)
+        if ev is None:
+            raise Exception("Network removed event (global) not seen for the last network")
+        if str(id) in ev:
+            seen_global = True
+    if not seen:
+            raise Exception("Network removed event not seen for the last network")
+    if not seen_global:
+            raise Exception("Network removed event (global) not seen for the last network")
+    dev[0].dump_monitor()
 
 @remote_compatible
 def test_wpas_ctrl_dup_network(dev, apdev):
@@ -453,6 +481,14 @@ def test_wpas_ctrl_cred(dev):
     for i in ("11", "1122", "112233445566778899aabbccddeeff00"):
         if "FAIL" not in dev[0].request("SET_CRED " + str(id) + " roaming_consortium " + i):
             raise Exception("Unexpected success on invalid roaming_consortium")
+        if "FAIL" not in dev[0].request("SET_CRED " + str(id) + " home_ois " + '"' + i + '"'):
+            raise Exception("Unexpected success on invalid home_ois")
+        if "FAIL" not in dev[0].request("SET_CRED " + str(id) + " required_home_ois " + '"' + i + '"'):
+            raise Exception("Unexpected success on invalid required_home_ois")
+    if "FAIL" not in dev[0].request("SET_CRED " + str(id) + " home_ois " + '"112233' + 36*",112233" + '"'):
+            raise Exception("Unexpected success on invalid home_ois")
+    if "FAIL" in dev[0].request("SET_CRED " + str(id) + " home_ois " + '"112233' + 35*",112233" + '"'):
+            raise Exception("Unexpected failure on maximum number of home_ois")
 
     dev[0].set_cred(id, "excluded_ssid", "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff")
     if "FAIL" not in dev[0].request("SET_CRED " + str(id) + " excluded_ssid 00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00"):
@@ -1845,8 +1881,6 @@ def test_wpas_ctrl_error(dev):
              ('WPS_NFC_TOKEN NDEF', 'FAIL',
               2, 'wpa_supplicant_ctrl_iface_wps_nfc_token'),
              ('NFC_GET_HANDOVER_REQ NDEF P2P-CR', None,
-              1, 'wpas_p2p_nfc_handover'),
-             ('NFC_GET_HANDOVER_REQ NDEF P2P-CR', None,
               1, 'wps_build_nfc_handover_req_p2p')]
     for cmd, exp, count, func in tests:
         with fail_test(dev[0], count, func):
@@ -2157,3 +2191,45 @@ def test_wpas_ctrl_interface_add_driver_init_failure(dev, apdev):
         if "FAIL" not in res:
             raise Exception("Unexpected result: " + res)
     dev[0].dump_monitor()
+
+def test_wpas_ctrl_global_freq_list(dev):
+    """wpa_supplicant global freq_list parameter"""
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5")
+    freqs = "2412 2437 2462"
+    wpas.set("freq_list", freqs)
+    vals = wpas.get_config()
+    if 'freq_list' not in vals or vals['freq_list'] != freqs:
+        raise Exception("freq_list not reported correctly in DUMP")
+    val = wpas.request("GET freq_list")
+    if val != freqs:
+        raise Exception("freq_list not reported correctly in GET")
+
+    wpas.set("freq_list", "")
+    vals = wpas.get_config()
+    if 'freq_list' not in vals or vals['freq_list'] != "null":
+        raise Exception("freq_list not reported correctly in DUMP (2)")
+    val = wpas.request("GET freq_list")
+    if not val.startswith("FAIL"):
+        raise Exception("freq_list not reported correctly in GET (2)")
+
+def test_wpas_ctrl_global_bgscan(dev):
+    """wpa_supplicant global bgscan parameter"""
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5")
+    bgscan = '"simple:1:-20:2"'
+    wpas.set("bgscan", bgscan)
+    vals = wpas.get_config()
+    if 'bgscan' not in vals or vals['bgscan'] != bgscan:
+        raise Exception("bgscan not reported correctly in DUMP")
+    val = wpas.request("GET bgscan")
+    if val != bgscan:
+        raise Exception("bgscan not reported correctly in GET")
+
+    wpas.set("bgscan", '""')
+    vals = wpas.get_config()
+    if 'bgscan' not in vals or vals['bgscan'] != '""':
+        raise Exception("bgscan not reported correctly in DUMP (2)")
+    val = wpas.request("GET bgscan")
+    if val != '""':
+        raise Exception("bgscan not reported correctly in GET (2)")

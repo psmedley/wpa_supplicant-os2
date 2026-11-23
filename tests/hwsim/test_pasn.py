@@ -27,7 +27,7 @@ def check_pasn_capab(dev):
     if "PASN" not in dev.get_capability("auth_alg"):
         raise HwsimSkip("PASN not supported")
 
-def pasn_ap_params(akmp="PASN", cipher="CCMP", group="19"):
+def pasn_ap_params(akmp="PASN", cipher="CCMP", group="19", rsno=False):
     params = {"ssid": "test-wpa2-pasn",
               "wpa_passphrase": "12345678",
               "wpa": "2",
@@ -35,6 +35,11 @@ def pasn_ap_params(akmp="PASN", cipher="CCMP", group="19"):
               "wpa_key_mgmt": "WPA-PSK " + akmp,
               "rsn_pairwise": cipher,
               "pasn_groups" : group}
+
+    if rsno:
+        params['rsn_override_key_mgmt'] = akmp + ' SAE-EXT-KEY'
+        params['rsn_override_pairwise'] = 'CCMP GCMP-256'
+        params['rsn_override_mfp'] = '2'
 
     return params
 
@@ -47,23 +52,41 @@ def start_pasn_ap(apdev, params):
             raise HwsimSkip("PASN not supported")
         raise
 
-def check_pasn_ptk(dev, hapd, cipher, fail_ptk=False, clear_keys=True):
+def check_pasn_ptk(dev, hapd, cipher, fail_ptk=False, clear_keys=True,
+                   require_kdk=False):
     sta_ptksa = dev.get_ptksa(hapd.own_addr(), cipher)
     ap_ptksa = hapd.get_ptksa(dev.own_addr(), cipher)
+
+    # There's no event indicating hostapd has finished
+    # processing - so just try once more if it isn't
+    # yet available, it might become available still.
+    for i in range(10):
+        if ap_ptksa:
+            break
+        time.sleep(0.1)
+        ap_ptksa = hapd.get_ptksa(dev.own_addr(), cipher)
 
     if not (sta_ptksa and ap_ptksa):
         if fail_ptk:
             return
-        raise Exception("Could not get PTKSA entry")
+        if not sta_ptksa and not ap_ptksa:
+            source = 'both'
+        elif sta_ptksa:
+            source = 'ap'
+        else:
+            source = 'sta'
+        raise Exception("Could not get PTKSA entry from %s" % source)
 
     logger.info("sta: TK: %s KDK: %s" % (sta_ptksa['tk'], sta_ptksa['kdk']))
     logger.info("ap : TK: %s KDK: %s" % (ap_ptksa['tk'], ap_ptksa['kdk']))
 
     if sta_ptksa['tk'] != ap_ptksa['tk'] or sta_ptksa['kdk'] != ap_ptksa['kdk']:
         raise Exception("TK/KDK mismatch")
-    elif fail_ptk:
+    if fail_ptk:
         raise Exception("TK/KDK match although key derivation should have failed")
-    elif clear_keys:
+    if require_kdk and sta_ptksa['kdk'] == '':
+        raise Exception("KDK was not derived")
+    if clear_keys:
         cmd = "PASN_DEAUTH bssid=%s" % hapd.own_addr()
         dev.request(cmd)
 
@@ -105,6 +128,11 @@ def check_pasn_akmp_cipher(dev, hapd, akmp="PASN", cipher="CCMP",
 
     if status:
         return
+
+    # There is a small window for a race condition here since the hostapd side
+    # might not yet have processed the PASN message 3 and added the PTKSA entry,
+    # so wait a bit before checking the results.
+    time.sleep(0.1)
 
     check_pasn_ptk(dev, hapd, cipher, fail_ptk)
 
@@ -148,6 +176,19 @@ def test_pasn_gcmp_256(dev, apdev):
 
     check_pasn_akmp_cipher(dev[0], hapd, "PASN", "GCMP-256")
 
+def test_pasn_ccmp_ap_rsno(dev, apdev):
+    """PASN authentication with WPA2/CCMP AP that enables RSNO"""
+    check_pasn_capab(dev[0])
+
+    params = pasn_ap_params("PASN", "CCMP", "19", rsno=True)
+    hapd = start_pasn_ap(apdev[0], params)
+
+    try:
+        dev[0].set("rsn_overriding", "1")
+        check_pasn_akmp_cipher(dev[0], hapd, "PASN", "CCMP")
+    finally:
+        dev[0].set("rsn_overriding", "0")
+
 @remote_compatible
 def test_pasn_group_mismatch(dev, apdev):
     """PASN authentication with WPA2/CCMP AP with group mismatch"""
@@ -156,7 +197,15 @@ def test_pasn_group_mismatch(dev, apdev):
     params = pasn_ap_params("PASN", "CCMP", "20")
     hapd = start_pasn_ap(apdev[0], params)
 
-    check_pasn_akmp_cipher(dev[0], hapd, "PASN", "CCMP", status=77)
+    # Restrict the station to group 19 only so that when the AP rejects it
+    # (AP supports group 20 only), there is no fallback group to retry with.
+    # The final PASN-AUTH-STATUS reports status=1 (failure after retry
+    # exhaustion) rather than the AP's status=77 rejection code.
+    dev[0].set("pasn_groups", "19")
+    try:
+        check_pasn_akmp_cipher(dev[0], hapd, "PASN", "CCMP", status=1)
+    finally:
+        dev[0].set("pasn_groups", "")
 
 @remote_compatible
 def test_pasn_channel_mismatch(dev, apdev):
@@ -309,6 +358,7 @@ def test_pasn_sae_kdk(dev, apdev):
         hapd = start_pasn_ap(apdev[0], params)
 
         dev[0].set("force_kdk_derivation", "1")
+        dev[0].set("sae_groups", "")
         dev[0].set("sae_pwe", "2")
         dev[0].connect("test-sae", psk="12345678", key_mgmt="SAE",
                        scan_freq="2412")
@@ -318,6 +368,57 @@ def test_pasn_sae_kdk(dev, apdev):
         dev[0].set("force_kdk_derivation", "0")
         dev[0].set("sae_pwe", "0")
 
+def test_pasn_sae_kdk_ft(dev, apdev):
+    """Station authentication with SAE AP with KDK derivation during connection with FT protocol"""
+    check_pasn_capab(dev[0])
+    check_sae_capab(dev[0])
+
+    try:
+        params = hostapd.wpa2_params(ssid="test-sae",
+                                     passphrase="12345678")
+        params['wpa_key_mgmt'] = 'FT-SAE'
+        params['sae_pwe'] = "2"
+        params['force_kdk_derivation'] = "1"
+        params['nas_identifier'] = "nas1.w1.fi"
+        params['r1_key_holder'] = "000102030405"
+        params['r0kh'] = ["02:00:00:00:03:00 nas1.w1.fi 100102030405060708090a0b0c0d0e0f100102030405060708090a0b0c0d0e0f",
+                          "02:00:00:00:04:00 nas2.w1.fi 300102030405060708090a0b0c0d0e0f300102030405060708090a0b0c0d0e0f"]
+        params['r1kh'] = "02:00:00:00:04:00 00:01:02:03:04:06 200102030405060708090a0b0c0d0e0f200102030405060708090a0b0c0d0e0f"
+        hapd = start_pasn_ap(apdev[0], params)
+
+        dev[0].set("force_kdk_derivation", "1")
+        dev[0].set("sae_groups", "")
+        dev[0].set("sae_pwe", "2")
+        dev[0].connect("test-sae", psk="12345678", key_mgmt="FT-SAE",
+                       scan_freq="2412")
+
+        check_pasn_ptk(dev[0], hapd, "CCMP", clear_keys=False)
+
+        params = hostapd.wpa2_params(ssid="test-sae",
+                                     passphrase="12345678")
+        params['wpa_key_mgmt'] = 'FT-SAE'
+        params['sae_pwe'] = "2"
+        params['force_kdk_derivation'] = "1"
+        params['nas_identifier'] = "nas2.w1.fi"
+        params['r1_key_holder'] = "000102030406"
+        params['r0kh'] = ["02:00:00:00:03:00 nas1.w1.fi 200102030405060708090a0b0c0d0e0f200102030405060708090a0b0c0d0e0f",
+                          "02:00:00:00:04:00 nas2.w1.fi 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f"]
+        params['r1kh'] = "02:00:00:00:03:00 00:01:02:03:04:05 300102030405060708090a0b0c0d0e0f300102030405060708090a0b0c0d0e0f"
+        hapd2 = start_pasn_ap(apdev[1], params)
+
+        bssid = hapd2.own_addr()
+        dev[0].scan_for_bss(bssid, freq="2412")
+        dev[0].roam(bssid)
+
+        check_pasn_ptk(dev[0], hapd2, "CCMP", clear_keys=False)
+
+        bssid = hapd.own_addr()
+        dev[0].roam(bssid)
+
+        check_pasn_ptk(dev[0], hapd, "CCMP", clear_keys=False)
+    finally:
+        dev[0].set("force_kdk_derivation", "0")
+        dev[0].set("sae_pwe", "0")
 
 def check_pasn_fils_kdk(dev, apdev, params, key_mgmt):
     check_fils_capa(dev[0])
@@ -416,6 +517,63 @@ def test_pasn_sae(dev, apdev):
         dev[0].set("sae_pwe", "0")
 
 @remote_compatible
+def test_pasn_sae_ext_key(dev, apdev):
+    """PASN authentication with SAE-EXT-KEY AP with PMK derivation + PMKSA caching"""
+    run_pasn_sae_ext_key(dev, apdev, None)
+
+@remote_compatible
+def test_pasn_sae_ext_key_19(dev, apdev):
+    """PASN Authentication with SAE-EXT-KEY AKM (group 19)"""
+    run_pasn_sae_ext_key(dev, apdev, 19)
+
+@remote_compatible
+def test_pasn_sae_ext_key_20(dev, apdev):
+    """PASN Authentication with SAE-EXT-KEY AKM (group 20)"""
+    run_pasn_sae_ext_key(dev, apdev, 20)
+
+@remote_compatible
+def test_pasn_sae_ext_key_21(dev, apdev):
+    """PASN Authentication with SAE-EXT-KEY AKM (group 21)"""
+    run_pasn_sae_ext_key(dev, apdev, 21)
+
+def run_pasn_sae_ext_key(dev, apdev, group):
+    check_pasn_capab(dev[0])
+    check_sae_capab(dev[0])
+
+    params = hostapd.wpa2_params(ssid="test-pasn-sae",
+                                 passphrase="12345678")
+    params['wpa_key_mgmt'] = 'SAE SAE-EXT-KEY PASN'
+    params['sae_pwe'] = "2"
+    if group:
+        params['pasn_groups'] = "19 20 21"
+        params['sae_groups'] = "19 20 21"
+    else:
+        group = "19"
+    hapd = start_pasn_ap(apdev[0], params)
+
+    try:
+        dev[0].set("sae_pwe", "2")
+        dev[0].connect("test-pasn-sae", psk="12345678", key_mgmt="SAE-EXT-KEY",
+                       scan_freq="2412", only_add_network=True)
+
+        # first test with a valid PSK
+        check_pasn_akmp_cipher(dev[0], hapd, "SAE-EXT-KEY", "CCMP", group=group,
+                               nid="0")
+
+        # And now with PMKSA caching
+        check_pasn_akmp_cipher(dev[0], hapd, "SAE-EXT-KEY", "CCMP", group=group)
+
+        # And now with a wrong passphrase
+        if "FAIL" in dev[0].request("PMKSA_FLUSH"):
+            raise Exception("PMKSA_FLUSH failed")
+
+        dev[0].set_network_quoted(0, "psk", "12345678787")
+        check_pasn_akmp_cipher(dev[0], hapd, "SAE-EXT-KEY", "CCMP", group=group,
+                               status=1, nid="0")
+    finally:
+        dev[0].set("sae_pwe", "0")
+
+@remote_compatible
 def test_pasn_sae_while_connected_same_channel(dev, apdev):
     """PASN SAE authentication while connected same channel"""
     check_pasn_capab(dev[0])
@@ -494,7 +652,7 @@ def pasn_fils_setup(wpas, apdev, params, key_mgmt):
     params['erp_domain'] = 'example.com'
     params['fils_realm'] = 'example.com'
     params['disable_pmksa_caching'] = '1'
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0], params)
 
     id = wpas.connect("fils", key_mgmt=key_mgmt,
                       eap="PSK", identity="psk.user@example.com",
@@ -852,3 +1010,444 @@ def test_pasn_kdk_derivation(dev, apdev):
         check_pasn_akmp_cipher(dev[0], hapd1, "PASN", "CCMP")
     finally:
         dev[0].set("force_kdk_derivation", "0")
+
+def test_pasn_sae_kdk_secure_ltf(dev, apdev):
+    """Station authentication with SAE AP with KDK derivation during connection based on Secure LTF support"""
+    run_pasn_sae_kdk_secure_ltf(dev, apdev, True, True)
+
+def test_pasn_sae_kdk_secure_ltf_ap(dev, apdev):
+    """Station authentication with SAE AP with Secure LTF support only on AP"""
+    run_pasn_sae_kdk_secure_ltf(dev, apdev, True, False)
+
+def test_pasn_sae_kdk_secure_ltf_sta(dev, apdev):
+    """Station authentication with SAE AP with Secure LTF support only on STA"""
+    run_pasn_sae_kdk_secure_ltf(dev, apdev, False, True)
+
+def run_pasn_sae_kdk_secure_ltf(dev, apdev, ap_secure_ltf, sta_secure_ltf):
+    params = hostapd.wpa2_params(ssid="test-sae",
+                                 passphrase="12345678")
+    params['wpa_key_mgmt'] = 'SAE'
+    params['sae_pwe'] = "2"
+    if ap_secure_ltf:
+        params['driver_params'] = "secure_ltf=1"
+    hapd = start_pasn_ap(apdev[0], params)
+
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    if sta_secure_ltf:
+        wpas.interface_add("wlan5", drv_params="secure_ltf=1")
+    else:
+        wpas.interface_add("wlan5")
+    check_pasn_capab(wpas)
+    check_sae_capab(wpas)
+
+    try:
+        wpas.set("sae_groups", "")
+        wpas.set("sae_pwe", "2")
+        wpas.connect("test-sae", psk="12345678", key_mgmt="SAE",
+                     scan_freq="2412")
+
+        check_pasn_ptk(wpas, hapd, "CCMP", clear_keys=False,
+                       require_kdk=ap_secure_ltf and sta_secure_ltf)
+    finally:
+        wpas.set("sae_pwe", "0")
+
+def test_pasn_owe_kdk_secure_ltf(dev, apdev):
+    """Station authentication with OWE AP with KDK derivation during connection based on Secure LTF support"""
+    params = {"ssid": "owe",
+              "wpa": "2",
+              "ieee80211w": "2",
+              "wpa_key_mgmt": "OWE",
+              "rsn_pairwise": "CCMP"}
+    params['driver_params'] = "secure_ltf=1"
+    hapd = start_pasn_ap(apdev[0], params)
+
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5", drv_params="secure_ltf=1")
+    check_pasn_capab(wpas)
+    check_owe_capab(wpas)
+
+    wpas.connect("owe", key_mgmt="OWE", ieee80211w="2", scan_freq="2412")
+
+    check_pasn_ptk(wpas, hapd, "CCMP", clear_keys=False, require_kdk=True)
+
+def test_pasn_owe_tm_kdk_secure_ltf(dev, apdev):
+    """Station authentication with OWE transition mode AP with KDK derivation during connection based on Secure LTF support"""
+    params = {"ssid": "owe-random",
+              "wpa": "2",
+              "ieee80211w": "2",
+              "wpa_key_mgmt": "OWE",
+              "rsn_pairwise": "CCMP",
+              "owe_transition_bssid": apdev[1]['bssid'],
+              "owe_transition_ssid": '"owe-test"',
+              "ignore_broadcast_ssid": "1",
+              'driver_params': "secure_ltf=1"}
+    hapd = start_pasn_ap(apdev[0], params)
+    bssid = hapd.own_addr()
+
+    params = {"ssid": "owe-test",
+              "owe_transition_bssid": apdev[0]['bssid'],
+              "owe_transition_ssid": '"owe-random"',
+              'driver_params': "secure_ltf=1"}
+    hapd2 = hostapd.add_ap(apdev[1], params)
+    bssid2 = hapd2.own_addr()
+
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5", drv_params="secure_ltf=1")
+    check_pasn_capab(wpas)
+    check_owe_capab(wpas)
+    wpas.flush_scan_cache()
+
+    wpas.scan_for_bss(bssid, freq="2412")
+    wpas.scan_for_bss(bssid2, freq="2412")
+
+    wpas.connect("owe-test", key_mgmt="OWE", ieee80211w="2", scan_freq="2412")
+
+    check_pasn_ptk(wpas, hapd, "CCMP", clear_keys=False, require_kdk=True)
+
+    wpas.scan(type="ONLY", freq=2412)
+
+    wpas.request("DISCONNECT")
+    wpas.wait_disconnected()
+    wpas.request("RECONNECT")
+    wpas.wait_connected()
+    check_pasn_ptk(wpas, hapd, "CCMP", clear_keys=False, require_kdk=True)
+
+def test_pasn_noauth_0(dev, apdev):
+    """PASN without mutual authentication disabled on the AP"""
+    check_pasn_capab(dev[0])
+
+    params = pasn_ap_params("PASN", "CCMP", "19")
+    params["pasn_noauth"] = "0"
+    hapd = start_pasn_ap(apdev[0], params)
+
+    check_pasn_akmp_cipher(dev[0], hapd, "PASN", "CCMP", status=1)
+
+def test_pasn_sae_driver(dev, apdev):
+    """PASN authentication using driver event as trigger"""
+    check_pasn_capab(dev[0])
+    check_sae_capab(dev[0])
+
+    params = hostapd.wpa2_params(ssid="test-pasn-sae",
+                                 passphrase="12345678")
+    params['ieee80211w'] = "2"
+    params['wpa_key_mgmt'] = 'SAE SAE-EXT-KEY PASN'
+    params['sae_pwe'] = "2"
+    hapd = start_pasn_ap(apdev[0], params)
+    bssid = hapd.own_addr()
+
+    params = hostapd.wpa2_params(ssid="test-pasn-sae",
+                                 passphrase="12345678")
+    params['wpa_key_mgmt'] = 'SAE PASN'
+    params['sae_pwe'] = "0"
+    hapd2 = start_pasn_ap(apdev[1], params)
+    bssid2 = hapd2.own_addr()
+
+    dev[0].scan_for_bss(bssid, freq=2412)
+    dev[0].scan_for_bss(bssid2, freq=2412)
+
+    try:
+        dev[0].set("sae_pwe", "2")
+        cmd = f"PASN_DRIVER auth bssid={bssid} bssid=02:11:22:33:44:55 bssid={bssid2}"
+        if "OK" not in dev[0].request(cmd):
+            raise Exception("PASN_DRIVER failed")
+
+        ev = dev[0].wait_event(["PASN-AUTH-STATUS"], timeout=10)
+        if ev is None:
+            raise Exception("No PASN-AUTH-STATUS event (1)")
+        if f"{bssid} akmp=PASN, status=0" not in ev:
+            raise Exception("Unexpected event 1 contents: " + ev)
+
+        ev = dev[0].wait_event(["PASN-AUTH-STATUS"], timeout=10)
+        if ev is None:
+            raise Exception("No PASN-AUTH-STATUS event (2)")
+        if f"{bssid2} akmp=PASN, status=0" not in ev:
+            raise Exception("Unexpected event 2 contents: " + ev)
+
+        hapd2.disable()
+        time.sleep(1)
+        dev[0].dump_monitor()
+
+        cmd2 = f"PASN_DRIVER del bssid={bssid} bssid={bssid2}"
+        if "OK" not in dev[0].request(cmd2):
+            raise Exception("PASN_DRIVER failed")
+
+        if "OK" not in dev[0].request(cmd):
+            raise Exception("PASN_DRIVER failed")
+
+        ev = dev[0].wait_event(["PASN-AUTH-STATUS"], timeout=10)
+        if ev is None:
+            raise Exception("No PASN-AUTH-STATUS event (1b)")
+        if f"{bssid} akmp=PASN, status=0" not in ev:
+            raise Exception("Unexpected event 1b contents: " + ev)
+
+        ev = dev[0].wait_event(["PASN-AUTH-STATUS"], timeout=10)
+        if ev is None:
+            raise Exception("No PASN-AUTH-STATUS event (2b)")
+        if f"{bssid2} akmp=PASN, status=1" not in ev:
+            raise Exception("Unexpected event 2b contents: " + ev)
+    finally:
+        dev[0].set("sae_pwe", "0")
+
+def test_pasn_sae_driver_params(dev, apdev):
+    """PASN authentication using driver event as trigger"""
+    check_pasn_capab(dev[0])
+    check_sae_capab(dev[0])
+
+    params = hostapd.wpa2_params(ssid="test-pasn-sae",
+                                 passphrase="12345678")
+    params['ieee80211w'] = "2"
+    params['wpa_key_mgmt'] = 'SAE SAE-EXT-KEY PASN'
+    params['sae_pwe'] = "2"
+    hapd = start_pasn_ap(apdev[0], params)
+    bssid = hapd.own_addr()
+
+    params = hostapd.wpa2_params(ssid="test-pasn-sae-2",
+                                 passphrase="12345678")
+    params['wpa_key_mgmt'] = 'SAE PASN'
+    params['sae_pwe'] = "2"
+    hapd2 = start_pasn_ap(apdev[1], params)
+    bssid2 = hapd2.own_addr()
+
+    dev[0].scan_for_bss(bssid, freq=2412)
+    dev[0].scan_for_bss(bssid2, freq=2412)
+
+
+    try:
+        dev[0].set("sae_pwe", "2")
+        cmd = f"PASN_DRIVER auth bssid={bssid} akmp=SAE cipher=CCMP password=12345678"
+
+        cmd += " " + f"bssid={bssid2} akmp=SAE cipher=CCMP password=12345678"
+
+        if "OK" not in dev[0].request(cmd):
+            raise Exception("PASN_DRIVER failed")
+
+        ev = dev[0].wait_event(["PASN-AUTH-STATUS"], timeout=10)
+        if ev is None:
+            raise Exception("No PASN-AUTH-STATUS event (1)")
+        if f"{bssid} akmp=SAE, status=0" not in ev:
+            raise Exception("Unexpected event 1 contents: " + ev)
+
+        ev = dev[0].wait_event(["PASN-AUTH-STATUS"], timeout=10)
+        if ev is None:
+            raise Exception("No PASN-AUTH-STATUS event (2)")
+        if f"{bssid2} akmp=SAE, status=0" not in ev:
+            raise Exception("Unexpected event 2 contents: " + ev)
+
+        hapd2.disable()
+        time.sleep(1)
+        dev[0].dump_monitor()
+
+        cmd2 = f"PASN_DRIVER del bssid={bssid} bssid={bssid2}"
+        if "OK" not in dev[0].request(cmd2):
+            raise Exception("PASN_DRIVER failed")
+
+        if "OK" not in dev[0].request(cmd):
+            raise Exception("PASN_DRIVER failed")
+
+        ev = dev[0].wait_event(["PASN-AUTH-STATUS"], timeout=10)
+        if ev is None:
+            raise Exception("No PASN-AUTH-STATUS event (1b)")
+        if f"{bssid} akmp=SAE, status=0" not in ev:
+            raise Exception("Unexpected event 1b contents: " + ev)
+
+        ev = dev[0].wait_event(["PASN-AUTH-STATUS"], timeout=10)
+        if ev is None:
+            raise Exception("No PASN-AUTH-STATUS event (2b)")
+        if f"{bssid2} akmp=SAE, status=1" not in ev:
+            raise Exception("Unexpected event 2b contents: " + ev)
+
+    finally:
+        dev[0].set("sae_pwe", "0")
+
+@remote_compatible
+def test_pasn_driver_comeback(dev, apdev, params):
+    """PASN authentication with comeback flow"""
+    check_pasn_capab(dev[0])
+
+    params = pasn_ap_params("PASN", "CCMP", "19")
+    params['sae_anti_clogging_threshold'] = '0'
+    hapd = hostapd.add_ap(apdev[0], params)
+    bssid = hapd.own_addr()
+
+    dev[0].scan(type="ONLY", freq=2412)
+    cmd = "PASN_DRIVER auth bssid=%s akmp=PASN cipher=CCMP group=19" % bssid
+
+    resp = dev[0].request(cmd)
+    if "OK" not in resp:
+        raise Exception("Failed to start PASN authentication")
+
+    ev = dev[0].wait_event(["PASN-AUTH-STATUS"], 3)
+    if not ev:
+        raise Exception("PASN: PASN-AUTH-STATUS not seen")
+
+    if bssid + " akmp=PASN, status=30 comeback_after=" not in ev:
+        raise Exception("PASN: unexpected status")
+
+    comeback = re.split("comeback=", ev)[1]
+
+    cmd = "PASN_DRIVER auth bssid=%s akmp=PASN cipher=CCMP group=19 comeback=%s" % \
+            (bssid, comeback)
+
+    resp = dev[0].request(cmd)
+    if "OK" not in resp:
+        raise Exception("Failed to start PASN authentication")
+
+    ev = dev[0].wait_event(["PASN-AUTH-STATUS"], 3)
+    if not ev:
+        raise Exception("PASN: PASN-AUTH-STATUS not seen")
+
+    if bssid + " akmp=PASN, status=0" not in ev:
+        raise Exception("PASN: unexpected status with comeback token")
+
+    check_pasn_ptk(dev[0], hapd, "CCMP")
+
+def test_pasn_sae_driver_comeback_0(dev, apdev):
+    """PASN authentication using driver event as trigger"""
+    check_pasn_capab(dev[0])
+    check_sae_capab(dev[0])
+
+    params = hostapd.wpa2_params(ssid="test-pasn-sae",
+                                 passphrase="12345678")
+    params['wpa_key_mgmt'] = 'SAE SAE-EXT-KEY PASN'
+    params['sae_pwe'] = "2"
+    params['anti_clogging_threshold'] = '0'
+    params['pasn_comeback_after'] = '0'
+
+    hapd = start_pasn_ap(apdev[0], params)
+    bssid = hapd.own_addr()
+
+
+    dev[0].scan_for_bss(bssid, freq=2412)
+
+
+    try:
+        dev[0].set("sae_groups", "19")
+        dev[0].set("sae_pwe", "2")
+
+        cmd = f"PASN_DRIVER auth bssid={bssid} akmp=SAE cipher=CCMP password=12345678"
+
+        if "OK" not in dev[0].request(cmd):
+            raise Exception("PASN_DRIVER failed")
+
+        ev = dev[0].wait_event(["PASN-AUTH-STATUS"], timeout=10)
+        if ev is None:
+            raise Exception("No PASN-AUTH-STATUS event (1)")
+        if f"{bssid} akmp=SAE, status=0" not in ev:
+            raise Exception("Unexpected event 1 contents: " + ev)
+
+    finally:
+        dev[0].set("sae_pwe", "0")
+
+def check_pasn_sta_groups(dev, hapd, akmp="PASN", cipher="CCMP",
+                          expected_status=0):
+    """Trigger PASN via PASN_DRIVER and verify result"""
+    dev.flush_scan_cache()
+    dev.scan(type="ONLY", freq=2412)
+    bssid = hapd.own_addr()
+
+    cmd = "PASN_DRIVER auth bssid=%s akmp=%s cipher=%s" % (bssid, akmp, cipher)
+    resp = dev.request(cmd)
+    if "OK" not in resp:
+        raise Exception("Failed to start PASN authentication")
+
+    ev = dev.wait_event(["PASN-AUTH-STATUS"], 10)
+    if not ev:
+        raise Exception("PASN: PASN-AUTH-STATUS not seen")
+
+    if bssid + " akmp=" + akmp + ", status=" + str(expected_status) not in ev:
+        raise Exception("PASN: unexpected status: " + ev)
+
+    if expected_status == 0:
+        time.sleep(0.1)
+        check_pasn_ptk(dev, hapd, cipher)
+
+def run_pasn_sta_group(dev, apdev, group):
+    check_pasn_capab(dev[0])
+
+    params = pasn_ap_params("PASN", "CCMP", "19 20 21")
+    hapd = start_pasn_ap(apdev[0], params)
+
+    dev[0].set("pasn_groups", str(group))
+    try:
+        check_pasn_sta_groups(dev[0], hapd)
+    finally:
+        dev[0].set("pasn_groups", "")
+
+@remote_compatible
+def test_pasn_sta_groups_20(dev, apdev):
+    """PASN authentication with station pasn_groups configured to group 20"""
+    run_pasn_sta_group(dev, apdev, 20)
+
+@remote_compatible
+def test_pasn_sta_groups_21(dev, apdev):
+    """PASN authentication with station pasn_groups configured to group 21"""
+    run_pasn_sta_group(dev, apdev, 21)
+
+@remote_compatible
+def test_pasn_sta_groups_skip_unsuitable(dev, apdev):
+    """PASN authentication: station skips unsuitable group and uses next valid one"""
+    # Group 1 (MODP-768) is not a suitable ECC group; wpas_pasn_get_group()
+    # skips it and uses group 20 from the list.
+    run_pasn_sta_group(dev, apdev, "1 20")
+
+@remote_compatible
+def test_pasn_sta_groups_all_unsuitable(dev, apdev):
+    """PASN authentication: all configured groups unsuitable, authentication fails"""
+    check_pasn_capab(dev[0])
+
+    params = pasn_ap_params("PASN", "CCMP", "19")
+    hapd = start_pasn_ap(apdev[0], params)
+
+    # Groups 1 and 2 are not suitable ECC groups. When the user explicitly
+    # configures only unsuitable groups, wpas_pasn_get_group() returns
+    # failure without any fallback to default groups.
+    dev[0].set("pasn_groups", "1 2")
+    try:
+        dev[0].flush_scan_cache()
+        dev[0].scan(type="ONLY", freq=2412)
+        bssid = hapd.own_addr()
+
+        cmd = "PASN_DRIVER auth bssid=%s akmp=PASN cipher=CCMP" % bssid
+        resp = dev[0].request(cmd)
+        if "OK" not in resp:
+            raise Exception("Failed to queue PASN authentication")
+
+        # Authentication fails before any frame exchange (no suitable group
+        # found), so no PASN-AUTH-STATUS event is expected.
+        ev = dev[0].wait_event(["PASN-AUTH-STATUS"], 2)
+        if ev:
+            raise Exception("Unexpected PASN-AUTH-STATUS event: " + ev)
+    finally:
+        dev[0].set("pasn_groups", "")
+
+@remote_compatible
+def test_pasn_group_negotiation_success(dev, apdev):
+    """PASN group negotiation: AP rejects group 19, station retries with group 20 and succeeds"""
+    check_pasn_capab(dev[0])
+
+    # AP supports only groups 20 and 21, not 19.
+    # Station uses default groups {19, 20, 21}: tries 19 first, AP rejects
+    # (advertises {20, 21}), station retries with 20 and succeeds.
+    params = pasn_ap_params("PASN", "CCMP", "20 21")
+    hapd = start_pasn_ap(apdev[0], params)
+
+    check_pasn_sta_groups(dev[0], hapd)
+
+@remote_compatible
+def test_pasn_group_negotiation_downgrade_attack(dev, apdev):
+    """PASN group negotiation: downgrade attack - rejected group reappears in success frame"""
+    check_pasn_capab(dev[0])
+
+    # AP actually supports groups 19, 20, and 21.
+    # Inject a reduced group list {20, 21} into the rejection frame to simulate
+    # a downgrade attack: the attacker removes group 19 from the rejection
+    # frame's Supported Groups element, forcing the station to use group 20.
+    params = pasn_ap_params("PASN", "CCMP", "19 20 21")
+    params['pasn_test_groups'] = "20 21"
+    hapd = start_pasn_ap(apdev[0], params)
+
+    # Station tries group 19, receives rejection frame with injected {20, 21}
+    # (group 19 absent), retries with 20. The success frame (MIC-protected)
+    # carries the real supported groups {19, 20, 21}. The station detects that
+    # the previously rejected group 19 reappears and aborts.
+    check_pasn_sta_groups(dev[0], hapd, expected_status=1)

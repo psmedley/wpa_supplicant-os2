@@ -15,7 +15,13 @@ export LOGDIR
 if [ -z "$DBFILE" ]; then
     DB=""
 else
-    DB="-S $DBFILE --commit $(git rev-parse HEAD)"
+    DB="-S $DBFILE"
+    if [ -z "$COMMITID" ]; then
+	COMMITID="$(git rev-parse HEAD)"
+    fi
+    if [ -n "$COMMITID" ]; then
+	DB="$DB --commit $COMMITID"
+    fi
     if [ -n "$BUILD" ]; then
 	DB="$DB -b $BUILD"
     fi
@@ -128,9 +134,12 @@ if [ "$(id -u)" != 0 ]; then
 else
 	SUDO=
 fi
-${SUDO} ./run-tests.py -D --logdir "$LOGDIR" $TRACE_ARGS -q $DB $RUN_TEST_ARGS || errors=1
+${SUDO} env VM=$VM ./run-tests.py -D --logdir "$LOGDIR" $TRACE_ARGS -q $DB $RUN_TEST_ARGS || errors=1
 
 ./stop.sh
+
+ps ax > $LOGDIR/after-stop-ps-ax
+netstat -tnlu > $LOGDIR/after-stop-netstat
 
 if [ ! -z "$VALGRIND" ] ; then
     failures=`grep "ERROR SUMMARY" $LOGDIR/valgrind-* | grep -v " 0 errors" | wc -l`

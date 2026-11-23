@@ -22,9 +22,7 @@ def start_ap_wpa2_psk(ap):
     return hostapd.add_ap(ap, params)
 
 def connectivity(dev, hapd):
-    hwsim_utils.test_connectivity_sta(dev[0], dev[1])
-    hwsim_utils.test_connectivity(dev[0], hapd)
-    hwsim_utils.test_connectivity(dev[1], hapd)
+    check_connectivity(dev[0], dev[1], hapd)
 
 def connect_2sta(dev, ssid, hapd, sae=False):
     key_mgmt = "SAE" if sae else "WPA-PSK"
@@ -112,6 +110,8 @@ def tdls_check_ap(sta0, sta1, bssid, addr0, addr1):
         raise Exception("Invalid frames through AP path")
 
 def check_connectivity(sta0, sta1, hapd):
+    # give a bit of time for all sides to mark kernel STAs authorized
+    time.sleep(0.1)
     hwsim_utils.test_connectivity_sta(sta0, sta1)
     hwsim_utils.test_connectivity(sta0, hapd)
     hwsim_utils.test_connectivity(sta1, hapd)
@@ -358,6 +358,8 @@ def test_ap_wpa2_tdls_bssid_mismatch(dev, apdev):
                        bssid=apdev[0]['bssid'])
         dev[1].connect(ssid, psk=passphrase, scan_freq="2412",
                        bssid=apdev[1]['bssid'])
+        # give a bit of time for all sides to mark kernel STAs authorized
+        time.sleep(0.1)
         hwsim_utils.test_connectivity_sta(dev[0], dev[1])
         hwsim_utils.test_connectivity_iface(dev[0], hapd, "ap-br0")
         hwsim_utils.test_connectivity_iface(dev[1], hapd, "ap-br0")
@@ -415,6 +417,7 @@ def test_ap_open_tdls_vht(dev, apdev):
 
 def test_ap_open_tdls_vht80(dev, apdev):
     """Open AP and two stations using TDLS with VHT 80"""
+    clear_scan_cache(apdev[0])
     params = {"ssid": "test-open",
               "country_code": "US",
               "hw_mode": "a",
@@ -440,9 +443,8 @@ def test_ap_open_tdls_vht80(dev, apdev):
         for i in range(2):
             cmd = subprocess.Popen(['iw', dev[0].ifname, 'station', 'dump'],
                                    stdout=subprocess.PIPE)
-            res = cmd.stdout.read()
-            cmd.stdout.close()
-            logger.info("Station dump on dev[%d]:\n%s" % (i, res.decode()))
+            out, err = cmd.communicate()
+            logger.info("Station dump on dev[%d]:\n%s" % (i, out.decode()))
     except Exception as e:
         if isinstance(e, Exception) and str(e) == "AP startup failed":
             if not vht_supported():
@@ -453,6 +455,7 @@ def test_ap_open_tdls_vht80(dev, apdev):
 
 def test_ap_open_tdls_vht80plus80(dev, apdev):
     """Open AP and two stations using TDLS with VHT 80+80"""
+    clear_scan_cache(apdev[0])
     params = {"ssid": "test-open",
               "country_code": "US",
               "hw_mode": "a",
@@ -484,9 +487,8 @@ def test_ap_open_tdls_vht80plus80(dev, apdev):
         for i in range(2):
             cmd = subprocess.Popen(['iw', dev[0].ifname, 'station', 'dump'],
                                    stdout=subprocess.PIPE)
-            res = cmd.stdout.read()
-            cmd.stdout.close()
-            logger.info("Station dump on dev[%d]:\n%s" % (i, res.decode()))
+            out, err = cmd.communicate()
+            logger.info("Station dump on dev[%d]:\n%s" % (i, out.decode()))
     except Exception as e:
         if isinstance(e, Exception) and str(e) == "AP startup failed":
             if not vht_supported():
@@ -513,7 +515,8 @@ def test_ap_open_tdls_vht160(dev, apdev):
         ev = hapd.wait_event(["AP-ENABLED"], timeout=2)
         if not ev:
             cmd = subprocess.Popen(["iw", "reg", "get"], stdout=subprocess.PIPE)
-            reg = cmd.stdout.readlines()
+            out, err = cmd.communicate()
+            reg = out.splitlines()
             for r in reg:
                 if "5490" in r and "DFS" in r:
                     raise HwsimSkip("ZA regulatory rule did not have DFS requirement removed")
@@ -529,9 +532,8 @@ def test_ap_open_tdls_vht160(dev, apdev):
         for i in range(2):
             cmd = subprocess.Popen(['iw', dev[0].ifname, 'station', 'dump'],
                                    stdout=subprocess.PIPE)
-            res = cmd.stdout.read()
-            cmd.stdout.close()
-            logger.info("Station dump on dev[%d]:\n%s" % (i, res.decode()))
+            out, err = cmd.communicate()
+            logger.info("Station dump on dev[%d]:\n%s" % (i, out.decode()))
     except Exception as e:
         if isinstance(e, Exception) and str(e) == "AP startup failed":
             if not vht_supported():
@@ -601,6 +603,9 @@ def _test_ap_open_tdls_external_control(dev, apdev):
     dev[1].connect("test-open", key_mgmt="NONE", scan_freq="2412")
     addr0 = dev[0].own_addr()
     addr1 = dev[1].own_addr()
+    hapd.wait_sta()
+    hapd.wait_sta()
+    connectivity(dev, hapd)
 
     dev[0].set("tdls_external_control", "1")
     if "FAIL" in dev[0].request("TDLS_SETUP " + addr1):

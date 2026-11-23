@@ -180,7 +180,7 @@ APIRET xPmPrintfCheckAvail()
 	if (xPmPrintfAvail == TRUE)	return NO_ERROR;
 	else return ERROR_INVALID_FUNCTION;
 }
-	#endif /* CONFIG_PMPRINTF */
+#endif /* CONFIG_PMPRINTF */
 
 
 void wpa_debug_print_timestamp(void)
@@ -245,9 +245,10 @@ static int syslog_priority(int level)
 int wpa_debug_open_linux_tracing(void)
 {
 	int mounts, trace_fd;
+	char path[128] = {};
 	char buf[4096] = {};
 	ssize_t buflen;
-	char *line, *tmp1, *path = NULL;
+	char *line, *tmp1;
 
 	mounts = open("/proc/mounts", O_RDONLY);
 	if (mounts < 0) {
@@ -263,29 +264,42 @@ int wpa_debug_open_linux_tracing(void)
 	}
 	buf[buflen] = '\0';
 
-	line = strtok_r(buf, "\n", &tmp1);
-	while (line) {
+	for (line = strtok_r(buf, "\n", &tmp1);
+	     line;
+	     line = strtok_r(NULL, "\n", &tmp1)) {
 		char *tmp2, *tmp_path, *fstype;
 		/* "<dev> <mountpoint> <fs type> ..." */
 		strtok_r(line, " ", &tmp2);
 		tmp_path = strtok_r(NULL, " ", &tmp2);
 		fstype = strtok_r(NULL, " ", &tmp2);
-		if (fstype && strcmp(fstype, "debugfs") == 0) {
-			path = tmp_path;
-			break;
+
+		if (!line[0] || !tmp_path || !fstype)
+			continue;
+
+		if (os_strcmp(fstype, "debugfs") == 0) {
+			os_snprintf(path, sizeof(path) - 1,
+				    "%s/tracing/trace_marker",
+				    tmp_path);
+			/*
+			 * Don't break to prefer tracefs, which if present may
+			 * mean debugfs doesn't have tracing/ (depending on the
+			 * kernel version).
+			 */
 		}
 
-		line = strtok_r(NULL, "\n", &tmp1);
+		if (os_strcmp(fstype, "tracefs") == 0) {
+			os_snprintf(path, sizeof(path) - 1, "%s/trace_marker",
+				    tmp_path);
+			break;
+		}
 	}
 
-	if (path == NULL) {
-		printf("debugfs mountpoint not found\n");
+	if (!path[0]) {
+		printf("tracefs/debugfs not found\n");
 		return -1;
 	}
 
-	snprintf(buf, sizeof(buf) - 1, "%s/tracing/trace_marker", path);
-
-	trace_fd = open(buf, O_WRONLY);
+	trace_fd = open(path, O_WRONLY);
 	if (trace_fd < 0) {
 		printf("failed to open trace_marker file\n");
 		return -1;
@@ -327,38 +341,42 @@ void wpa_printf(int level, const char *fmt, ...)
 {
 	va_list ap;
 
-	va_start(ap, fmt);
 	if (level >= wpa_debug_level) {
 #ifdef CONFIG_ANDROID_LOG
+		va_start(ap, fmt);
 		__android_log_vprint(wpa_to_android_level(level),
 				     ANDROID_LOG_NAME, fmt, ap);
+		va_end(ap);
 #else /* CONFIG_ANDROID_LOG */
 #ifdef CONFIG_DEBUG_SYSLOG
 		if (wpa_debug_syslog) {
+			va_start(ap, fmt);
 			vsyslog(syslog_priority(level), fmt, ap);
-		} else {
+			va_end(ap);
+		}
 #endif /* CONFIG_DEBUG_SYSLOG */
 		wpa_debug_print_timestamp();
 #ifdef CONFIG_DEBUG_FILE
 		if (out_file) {
+			va_start(ap, fmt);
 			vfprintf(out_file, fmt, ap);
 			fprintf(out_file, "\n");
-		} else {
-#endif /* CONFIG_DEBUG_FILE */
-		vprintf(fmt, ap);
-		printf("\n");
-#ifdef CONFIG_PMPRINTF
-		xPmPrintfVa( (char *) fmt, ap);
-#endif /* CONFIG_PMPRINTF */
-#ifdef CONFIG_DEBUG_FILE
-			}
-#endif /* CONFIG_DEBUG_FILE */
-#ifdef CONFIG_DEBUG_SYSLOG
+			va_end(ap);
 		}
-#endif /* CONFIG_DEBUG_SYSLOG */
+#endif /* CONFIG_DEBUG_FILE */
+		if (!wpa_debug_syslog && !out_file) {
+			va_start(ap, fmt);
+			vprintf(fmt, ap);
+			printf("\n");
+			va_end(ap);
+#ifdef CONFIG_PMPRINTF
+			va_start(ap, fmt);
+			xPmPrintfVa((char *) fmt, ap);
+			va_end(ap);
+#endif /* CONFIG_PMPRINTF */
+		}
 #endif /* CONFIG_ANDROID_LOG */
 	}
-	va_end(ap);
 
 #ifdef CONFIG_DEBUG_LINUX_TRACING
 	if (wpa_debug_tracing_file != NULL) {
@@ -518,10 +536,9 @@ static void _wpa_hexdump(int level, const char *title, const u8 *buf,
 		printf("\n");
 #ifdef CONFIG_PMPRINTF
 		xPmPrintf("%s", pBufStart);
+		os_free(pBufStart);
 #endif /* CONFIG_PMPRINTF */
-#ifdef CONFIG_DEBUG_FILE
 	}
-#endif /* CONFIG_DEBUG_FILE */
 #endif /* CONFIG_ANDROID_LOG */
 }
 
@@ -739,13 +756,21 @@ int wpa_debug_open_file(const char *path)
 }
 
 
-void wpa_debug_close_file(void)
+void wpa_debug_stop_log(void)
 {
 #ifdef CONFIG_DEBUG_FILE
 	if (!out_file)
 		return;
 	fclose(out_file);
 	out_file = NULL;
+#endif /* CONFIG_DEBUG_FILE */
+}
+
+
+void wpa_debug_close_file(void)
+{
+#ifdef CONFIG_DEBUG_FILE
+	wpa_debug_stop_log();
 	os_free(last_path);
 	last_path = NULL;
 #endif /* CONFIG_DEBUG_FILE */

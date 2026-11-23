@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 #
 # Parallel VM test case executor
-# Copyright (c) 2014-2019, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2014-2024, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -13,6 +13,8 @@ import logging
 import multiprocessing
 import os
 import selectors
+import shutil
+import signal
 import subprocess
 import sys
 import time
@@ -22,6 +24,12 @@ logger = logging.getLogger()
 
 # Test cases that take significantly longer time to execute than average.
 long_tests = ["ap_roam_open",
+              "hostapd_oom_wpa2_eap_connect_1",
+              "hostapd_oom_wpa2_eap_connect_2",
+              "hostapd_oom_wpa2_eap_connect_3",
+              "hostapd_oom_wpa2_eap_connect_4",
+              "hostapd_oom_wpa2_eap_connect_5",
+              "ap_wpa2_eap_eke_many",
               "wpas_mesh_password_mismatch_retry",
               "wpas_mesh_password_mismatch",
               "hostapd_oom_wpa2_psk_connect",
@@ -61,7 +69,6 @@ long_tests = ["ap_roam_open",
               "dfs_radar_vht80_downgrade",
               "ap_acs_dfs",
               "grpform_cred_ready_timeout",
-              "hostapd_oom_wpa2_eap_connect",
               "wpas_ap_dfs",
               "autogo_many",
               "hostapd_oom_wpa2_eap",
@@ -70,7 +77,9 @@ long_tests = ["ap_roam_open",
               "proxyarp_open_ebtables_ipv6",
               "radius_failover",
               "obss_scan_40_intolerant",
-              "dbus_connect_oom",
+              "dbus_connect_oom_1_100",
+              "dbus_connect_oom_101_200",
+              "dbus_connect_oom_201_300",
               "proxyarp_open",
               "proxyarp_open_ipv6",
               "ap_wps_iteration",
@@ -86,6 +95,39 @@ long_tests = ["ap_roam_open",
               "p2p_go_move_scm_peer_does_not_support",
               "p2p_go_move_scm_multi"]
 
+# Test cases that have common, but random, issues with UML.
+uml_issue_tests = ["eht_connect_invalid_link",
+                   "eht_mld_connect_probes",
+                   "gas_anqp_address3_ap_forced",
+                   "gas_anqp_address3_ap_non_compliant",
+                   "gas_anqp_address3_not_assoc",
+                   "gas_anqp_address3_assoc",
+                   "p2p_channel_random_social_with_op_class_change",
+                   "ap_open_ps_mc_buf",
+                   "wmediumd_path_rann",
+                   "mbo_assoc_disallow",
+                   "mesh_scan_oom",
+                   "fst_session_oom",
+                   "authsrv_oom",
+                   "gas_failures",
+                   "prefer_ht40",
+                   "ieee8021x_reauth_wep"]
+
+# Test cases that depend on dumping full process memory
+memory_read_tests = ["ap_wpa2_eap_fast_pac_lifetime",
+                     "wpa2_eap_ttls_pap_key_lifetime_in_memory",
+                     "wpa2_eap_peap_gtc_key_lifetime_in_memory",
+                     "ft_psk_key_lifetime_in_memory",
+                     "wpa2_psk_key_lifetime_in_memory",
+                     "ap_wpa2_tdls_long_lifetime",
+                     "ap_wpa2_tdls_wrong_lifetime_resp",
+                     "erp_key_lifetime_in_memory",
+                     "sae_key_lifetime_in_memory",
+                     "sae_okc_pmk_lifetime",
+                     "sae_pmk_lifetime",
+                     "wpas_ap_lifetime_in_memory",
+                     "wpas_ap_lifetime_in_memory2"]
+
 def get_failed(vm):
     failed = []
     for i in range(num_servers):
@@ -96,6 +138,7 @@ def vm_read_stdout(vm, test_queue):
     global total_started, total_passed, total_failed, total_skipped
     global rerun_failures
     global first_run_failures
+    global all_failed
 
     ready = False
     try:
@@ -107,6 +150,7 @@ def vm_read_stdout(vm, test_queue):
         if e.errno == errno.EAGAIN:
             return False
         raise
+    vm['last_stdout'] = time.time()
     logger.debug("VM[%d] stdout.read[%s]" % (vm['idx'], out.rstrip()))
     pending = vm['pending'] + out
     lines = []
@@ -124,6 +168,7 @@ def vm_read_stdout(vm, test_queue):
         elif line.startswith("PASS"):
             ready = True
             total_passed += 1
+            vm['current_name'] = None
         elif line.startswith("FAIL"):
             ready = True
             total_failed += 1
@@ -136,9 +181,11 @@ def vm_read_stdout(vm, test_queue):
                 name = vals[1]
             logger.debug("VM[%d] test case failed: %s" % (vm['idx'], name))
             vm['failed'].append(name)
+            all_failed.append(name)
             if name != vm['current_name']:
                 logger.info("VM[%d] test result mismatch: %s (expected %s)" % (vm['idx'], name, vm['current_name']))
             else:
+                vm['current_name'] = None
                 count = vm['current_count']
                 if count == 0:
                     first_run_failures.append(name)
@@ -152,6 +199,7 @@ def vm_read_stdout(vm, test_queue):
         elif line.startswith("SKIP"):
             ready = True
             total_skipped += 1
+            vm['current_name'] = None
         elif line.startswith("REASON"):
             vm['skip_reason'].append(line[7:])
         elif line.startswith("START"):
@@ -199,24 +247,44 @@ def vm_read_stderr(vm):
             raise
 
 def vm_next_step(_vm, scr, test_queue):
-    scr.move(_vm['idx'] + 1, 10)
-    scr.clrtoeol()
+    max_y, max_x = scr.getmaxyx()
+    status_line = num_servers
+    if status_line >= max_y:
+        status_line = max_y - 1
+    if _vm['idx'] < status_line:
+        scr.move(_vm['idx'], 10)
+        scr.clrtoeol()
     if not test_queue:
         _vm['proc'].stdin.write(b'\n')
         _vm['proc'].stdin.flush()
-        scr.addstr("shutting down")
+        if _vm['idx'] < status_line:
+            scr.addstr("shutting down")
         logger.info("VM[%d] shutting down" % _vm['idx'])
+        return
+    if _vm['max_tests'] and _vm['started_tests'] >= _vm['max_tests']:
+        _vm['proc'].stdin.write(b'\n')
+        _vm['proc'].stdin.flush()
+        if _vm['idx'] < status_line:
+            scr.addstr("shutting down for VM restart")
+        logger.info("VM[%d] shutting down for VM restart" % _vm['idx'])
+        _vm['restart'] = True
         return
     (name, count) = test_queue.pop(0)
     _vm['current_name'] = name
     _vm['current_count'] = count
     _vm['proc'].stdin.write(name.encode() + b'\n')
     _vm['proc'].stdin.flush()
-    scr.addstr(name)
+    _vm['started_tests'] += 1
+    if _vm['idx'] < status_line:
+        scr.addstr(name)
     logger.debug("VM[%d] start test %s" % (_vm['idx'], name))
 
 def check_vm_start(scr, sel, test_queue):
     running = False
+    max_y, max_x = scr.getmaxyx()
+    status_line = num_servers
+    if status_line >= max_y:
+        status_line = max_y - 1
     for i in range(num_servers):
         if vm[i]['proc']:
             running = True
@@ -229,59 +297,125 @@ def check_vm_start(scr, sel, test_queue):
         num_starting = num_vm_starting()
         if vm[i]['cmd'] and len(test_queue) > num_starting and \
            num_starting < max_start:
-            scr.move(i + 1, 10)
-            scr.clrtoeol()
-            scr.addstr(i + 1, 10, "starting VM")
+            if i < status_line:
+                scr.move(i, 10)
+                scr.clrtoeol()
+                scr.addstr(i, 10, "starting VM")
             start_vm(vm[i], sel)
             return True, True
 
     return running, False
 
 def vm_terminated(_vm, scr, sel, test_queue):
+    logger.debug("VM[%s] terminated" % _vm['idx'])
     updated = False
     for stream in [_vm['proc'].stdout, _vm['proc'].stderr]:
         sel.unregister(stream)
     _vm['proc'] = None
-    scr.move(_vm['idx'] + 1, 10)
-    scr.clrtoeol()
+    max_y, max_x = scr.getmaxyx()
+    status_line = num_servers
+    if status_line >= max_y:
+        status_line = max_y - 1
+    if _vm['idx'] < status_line:
+        scr.move(_vm['idx'], 10)
+        scr.clrtoeol()
     log = '{}/{}.srv.{}/console'.format(dir, timestamp, _vm['idx'] + 1)
     with open(log, 'r') as f:
         if "Kernel panic" in f.read():
-            scr.addstr("kernel panic")
+            if _vm['idx'] < status_line:
+                scr.addstr("kernel panic")
             logger.info("VM[%d] kernel panic" % _vm['idx'])
             updated = True
     if test_queue:
         num_vm = 0
         for i in range(num_servers):
-            if _vm['proc']:
+            if vm[i]['proc']:
                 num_vm += 1
-        if len(test_queue) > num_vm:
-            scr.addstr("unexpected exit")
-            logger.info("VM[%d] unexpected exit" % i)
+        if _vm['restart']:
+            if _vm['idx'] < status_line:
+                scr.addstr("restarting VM")
+            logger.info("VM[%d] restarting VM" % _vm['idx'])
             updated = True
+            _vm['started_tests'] = 0
+            _vm['cmd'] = _vm['orig_cmd']
+        elif len(test_queue) > num_vm:
+            if _vm['idx'] < status_line:
+                scr.addstr("unexpected exit")
+            logger.info("VM[%d] unexpected exit" % _vm['idx'])
+            updated = True
+
+    if _vm['current_name']:
+        global total_failed, all_failed, first_run_failures, rerun_failures
+        name = _vm['current_name']
+        if _vm['idx'] < status_line:
+            if updated:
+                scr.addstr(" - ")
+            scr.addstr(name + " - did not complete")
+        logger.info("VM[%d] did not complete test %s" % (_vm['idx'], name))
+        total_failed += 1
+        _vm['failed'].append(name)
+        all_failed.append(name)
+
+        count = _vm['current_count']
+        if count == 0:
+            first_run_failures.append(name)
+        if rerun_failures and count < 1:
+            logger.debug("Requeue test case %s" % name)
+            test_queue.append((name, count + 1))
+        updated = True
+
     return updated
 
 def update_screen(scr, total_tests):
-    scr.move(num_servers + 1, 10)
+    max_y, max_x = scr.getmaxyx()
+    status_line = num_servers
+    if status_line >= max_y:
+        status_line = max_y - 1
+    scr.move(status_line, 10)
     scr.clrtoeol()
     scr.addstr("{} %".format(int(100.0 * (total_passed + total_failed + total_skipped) / total_tests)))
-    scr.addstr(num_servers + 1, 20,
+    scr.addstr(status_line, 20,
                "TOTAL={} STARTED={} PASS={} FAIL={} SKIP={}".format(total_tests, total_started, total_passed, total_failed, total_skipped))
-    failed = get_failed(vm)
-    if len(failed) > 0:
-        scr.move(num_servers + 2, 0)
-        scr.clrtoeol()
-        scr.addstr("Failed test cases: ")
+    global all_failed
+    max_y, max_x = scr.getmaxyx()
+    max_lines = max_y - num_servers - 3
+    if len(all_failed) > 0 and max_lines > 0 and num_servers + 1 < max_y - 1:
+        scr.move(num_servers + 1, 0)
+        scr.addstr("Last failed test cases:")
+        if max_lines >= len(all_failed):
+            max_lines = len(all_failed)
         count = 0
-        for f in failed:
+        for i in range(len(all_failed) - max_lines, len(all_failed)):
             count += 1
-            if count > 30:
-                scr.addstr('...')
-                scr.clrtoeol()
+            if num_servers + 2 + count >= max_y:
                 break
-            scr.addstr(f)
-            scr.addstr(' ')
+            scr.move(num_servers + 1 + count, 0)
+            scr.addstr(all_failed[i])
+            scr.clrtoeol()
     scr.refresh()
+
+def has_uml_mconsole(_vm):
+    if not shutil.which('uml_mconsole'):
+        return False
+    dir = os.path.join(os.path.expanduser('~/.uml'), 'hwsim-' + _vm['DATE'])
+    return os.path.exists(dir)
+
+def kill_uml_vm(_vm):
+    fname = os.path.join(os.path.expanduser('~/.uml'), 'hwsim-' + _vm['DATE'],
+                         'pid')
+    with open(fname, 'r') as f:
+        pid = int(f.read())
+    logger.info("Kill hung VM[%d] PID[%d]" % (_vm['idx'] + 1, pid))
+    try:
+        subprocess.call(['uml_mconsole', 'hwsim-' + _vm['DATE'],
+                         'halt'], stdout=open('/dev/null', 'w'),
+                        timeout=5)
+    except subprocess.TimeoutExpired:
+        logger.info("uml_console timed out - kill UML process")
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except Exception as e:
+            logger.info("os.kill() failed: " + str(e))
 
 def show_progress(scr):
     global num_servers
@@ -300,13 +434,17 @@ def show_progress(scr):
     start_vm(vm[0], sel)
 
     scr.leaveok(1)
-    scr.addstr(0, 0, "Parallel test execution status", curses.A_BOLD)
+    max_y, max_x = scr.getmaxyx()
+    status_line = num_servers
+    if status_line > max_y:
+        status_line = max_y
     for i in range(0, num_servers):
-        scr.addstr(i + 1, 0, "VM %d:" % (i + 1), curses.A_BOLD)
-        status = "starting VM" if vm[i]['proc'] else "not yet started"
-        scr.addstr(i + 1, 10, status)
-    scr.addstr(num_servers + 1, 0, "Total:", curses.A_BOLD)
-    scr.addstr(num_servers + 1, 20, "TOTAL={} STARTED=0 PASS=0 FAIL=0 SKIP=0".format(total_tests))
+        if i < status_line:
+            scr.addstr(i, 0, "VM %d:" % (i + 1), curses.A_BOLD)
+            status = "starting VM" if vm[i]['proc'] else "not yet started"
+            scr.addstr(i, 10, status)
+    scr.addstr(status_line, 0, "Total:", curses.A_BOLD)
+    scr.addstr(status_line, 20, "TOTAL={} STARTED=0 PASS=0 FAIL=0 SKIP=0".format(total_tests))
     scr.refresh()
 
     while True:
@@ -322,21 +460,51 @@ def show_progress(scr):
                 updated = True
             vm_read_stderr(_vm)
             if _vm['proc'].poll() is not None:
-                if vm_terminated(_vm, scr, sel, test_queue):
-                    updated = True
+                vm_terminated(_vm, scr, sel, test_queue)
+                updated = True
 
         running, run_update = check_vm_start(scr, sel, test_queue)
         if updated or run_update:
             update_screen(scr, total_tests)
         if not running:
             break
+
+        status_line = num_servers
+        if status_line >= max_y:
+            status_line = max_y - 1
+        max_y, max_x = scr.getmaxyx()
+        updated = False
+
+        now = time.time()
+        for i in range(num_servers):
+            _vm = vm[i]
+            if not _vm['proc']:
+                continue
+            last = _vm['last_stdout']
+            if last and now - last > 10:
+                if _vm['idx'] < status_line:
+                    scr.move(_vm['idx'], max_x - 25)
+                    scr.clrtoeol()
+                    scr.addstr("(no update in %d s)" % (now - last))
+                    updated = True
+            if (not _vm['killed']) and has_uml_mconsole(_vm) and \
+               last and now - last > 120:
+                if _vm['idx'] < status_line:
+                    scr.move(_vm['idx'], 10)
+                    scr.clrtoeol()
+                    scr.addstr("terminating due to no updates received")
+                _vm['killed'] = True
+                kill_uml_vm(_vm)
+        if updated:
+            scr.refresh()
+
     sel.close()
 
     for i in range(num_servers):
         if not vm[i]['proc']:
             continue
         vm[i]['proc'] = None
-        scr.move(i + 1, 10)
+        scr.move(i, 10)
         scr.clrtoeol()
         scr.addstr("still running")
         logger.info("VM[%d] still running" % i)
@@ -366,6 +534,7 @@ def main():
     import os
     global num_servers
     global vm
+    global all_failed
     global dir
     global timestamp
     global tests
@@ -380,7 +549,8 @@ def main():
 
     debug_level = logging.INFO
     rerun_failures = True
-    timestamp = int(time.time())
+    start_time = time.time()
+    timestamp = int(start_time)
 
     scriptsdir = os.path.dirname(os.path.realpath(sys.argv[0]))
 
@@ -411,6 +581,9 @@ def main():
                    help="enable telnet server inside VMs, specify the base port here")
     p.add_argument('--nocurses', dest='nocurses', action='store_const',
                    const=True, default=False, help="Don't use curses for output")
+    p.add_argument('--max-tests', dest='maxtests',
+                   metavar='<maximum number of tests per VM>', type=int,
+                   help="limit the number of test cases to be executed per a VM instance")
     p.add_argument('params', nargs='*')
     args = p.parse_args()
 
@@ -470,6 +643,22 @@ def main():
             if l in tests:
                 tests.remove(l)
                 tests.insert(0, l)
+
+        # Move test cases that have shown frequent, but random, issues UML
+        # to the beginning of the run to minimize risk of false failures.
+        for l in uml_issue_tests:
+            if l in tests:
+                tests.remove(l)
+                tests.insert(0, l)
+
+        # Test cases that read full wpa_supplicant or hostapd process memory
+        # can apparently cause resources issues at least with newer python3
+        # versions, so run them first before possible memory fragmentation has
+        # made this need more resources.
+        for l in memory_read_tests:
+            if l in tests:
+                tests.remove(l)
+                tests.insert(0, l)
     if args.short:
         tests = [t for t in tests if t not in long_tests]
 
@@ -484,6 +673,7 @@ def main():
     log_handler.setFormatter(log_formatter)
     logger.addHandler(log_handler)
 
+    all_failed = []
     vm = {}
     for i in range(0, num_servers):
         cmd = [os.path.join(scriptsdir, 'vm-run.sh'),
@@ -494,9 +684,11 @@ def main():
             cmd += ['--telnet', str(args.telnet + i)]
         vm[i] = {}
         vm[i]['idx'] = i
+        vm[i]['DATE'] = str(timestamp) + '.srv.' + str(i + 1)
         vm[i]['starting'] = False
         vm[i]['started'] = False
         vm[i]['cmd'] = cmd
+        vm[i]['orig_cmd'] = cmd
         vm[i]['proc'] = None
         vm[i]['out'] = ""
         vm[i]['pending'] = ""
@@ -504,6 +696,13 @@ def main():
         vm[i]['failed'] = []
         vm[i]['fail_seq'] = []
         vm[i]['skip_reason'] = []
+        vm[i]['current_name'] = None
+        vm[i]['last_stdout'] = None
+        vm[i]['killed'] = False
+        vm[i]['max_tests'] = args.maxtests if args.maxtests else None
+        vm[i]['started_tests'] = 0
+        vm[i]['restart'] = False
+
     print('')
 
     if not args.nocurses:
@@ -520,6 +719,9 @@ def main():
                 pass
             def clrtoeol(self):
                 pass
+            def getmaxyx(self):
+                return (25, 80)
+
         show_progress(FakeScreen())
 
     with open('{}/{}-parallel.log'.format(dir, timestamp), 'w') as f:
@@ -555,6 +757,7 @@ def main():
                     skip -= 1
                     continue
                 print(t, end=' ')
+            logger.info("Failure sequence: " + " ".join(vm[i]['fail_seq']))
             print('')
         print("Failed test cases:")
         for f in first_run_failures:
@@ -640,9 +843,9 @@ def main():
             if not known_output(tests, line):
                 unknown += line + "\n"
         if unknown:
-            print("\nVM %d - unexpected stdout output:\n%s" % (i, unknown))
+            print("\nVM %d - unexpected stdout output:\n%s" % (i + 1, unknown))
         if vm[i]['err']:
-            print("\nVM %d - unexpected stderr output:\n%s\n" % (i, vm[i]['err']))
+            print("\nVM %d - unexpected stderr output:\n%s\n" % (i + 1, vm[i]['err']))
 
     if codecov:
         print("Code coverage - preparing report")
@@ -655,6 +858,15 @@ def main():
                                logdir])
         print("file://%s/index.html" % logdir)
         logger.info("Code coverage report: file://%s/index.html" % logdir)
+
+    end_time = time.time()
+    try:
+        cmd = subprocess.Popen(['git', 'describe'], stdout=subprocess.PIPE)
+        ver = cmd.stdout.read().decode().strip()
+    except:
+        ver = "unknown"
+        pass
+    logger.info("Tests run: {}  Tests failed: {}  Total time: {}  Version: {}".format(total_started, total_failed, end_time - start_time, ver))
 
     if double_failed or (failed and not rerun_failures):
         logger.info("Test run complete - failures found")

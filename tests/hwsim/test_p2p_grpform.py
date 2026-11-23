@@ -308,6 +308,7 @@ def test_grpform_per_sta_psk(dev):
     pin = dev[2].wps_read_pin()
     dev[0].p2p_go_authorize_client(pin)
     c_res = dev[2].p2p_connect_group(dev[0].p2p_dev_addr(), pin, timeout=60)
+    dev[0].wait_sta(dev[2].p2p_interface_addr())
     check_grpform_results(i_res, c_res)
 
     if r_res['psk'] == c_res['psk']:
@@ -329,6 +330,7 @@ def test_grpform_per_sta_psk_wps(dev):
     dev[2].request("WPS_PBC")
     dev[2].wait_connected(timeout=30)
 
+    dev[0].wait_sta(dev[2].p2p_interface_addr())
     hwsim_utils.test_connectivity_p2p_sta(dev[1], dev[2])
 
     dev[0].remove_group()
@@ -956,7 +958,7 @@ def test_grpform_not_ready2(dev):
     if not dev[1].discover_peer(addr0):
         raise Exception("Could not discover peer")
     dev[1].global_request("P2P_CONNECT " + addr0 + " pbc")
-    ev = dev[0].wait_global_event(["P2P-GO-NEG-REQUEST"], timeout=5)
+    ev = dev[0].wait_global_event(["P2P-GO-NEG-REQUEST"], timeout=10)
     if ev is None:
         raise Exception("No P2P-GO-NEG-REQUEST event")
     dev[0].dump_monitor()

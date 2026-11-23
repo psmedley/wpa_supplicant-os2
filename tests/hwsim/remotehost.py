@@ -83,7 +83,10 @@ class Host():
         if self.host is None:
             return self.local_execute(command)
 
-        cmd = ["ssh", self.user + "@" + self.host, ' '.join(command)]
+        if self.user:
+            cmd = ["ssh", self.user + "@" + self.host, ' '.join(command)]
+        else:
+            cmd = ["ssh", self.host, ' '.join(command)]
         _cmd = self.name + " execute: " + ' '.join(cmd)
         logger.debug(_cmd)
         err = tempfile.TemporaryFile()
@@ -114,7 +117,10 @@ class Host():
         if self.host is None:
             cmd = _command
         else:
-            cmd = ["ssh", self.user + "@" + self.host, ' '.join(_command)]
+            if self.user:
+                cmd = ["ssh", self.user + "@" + self.host, ' '.join(_command)]
+            else:
+                cmd = ["ssh", self.host, ' '.join(_command)]
         _cmd = self.name + " thread_run: " + ' '.join(cmd)
         logger.debug(_cmd)
         t = threading.Thread(target=execute_thread, name=filename, args=(cmd, res))
@@ -161,8 +167,8 @@ class Host():
         if t.is_alive():
             t.join(wait)
 
-    def pending(self, s, timeout=0):
-        [r, w, e] = select.select([s], [], [], timeout)
+    def proc_pending(self, proc, timeout=0):
+        [r, w, e] = select.select([proc.stdout], [], [], timeout)
         if r:
             return True
         return False
@@ -174,7 +180,10 @@ class Host():
         _command = [filename] + command
 
         if self.host:
-            cmd = ["ssh", self.user + "@" + self.host, ' '.join(_command)]
+            if self.user:
+                cmd = ["ssh", self.user + "@" + self.host, ' '.join(_command)]
+            else:
+                cmd = ["ssh", self.host, ' '.join(_command)]
         else:
             cmd = _command
 
@@ -194,7 +203,7 @@ class Host():
         start = os.times()[4]
         try:
             while True:
-                while self.pending(proc.stdout):
+                while self.proc_pending(proc):
                     line = proc.stdout.readline()
                     if not line:
                         return None
@@ -207,12 +216,25 @@ class Host():
                 remaining = start + timeout - now
                 if remaining <= 0:
                     break
-                if not self.pending(proc.stdout, timeout=remaining):
+                if not self.proc_pending(proc, timeout=remaining):
                     break
         except:
             logger.debug(traceback.format_exc())
             pass
         return None
+
+    def proc_write(self, proc, cmd):
+        return proc.stdout.write(cmd)
+
+    def proc_read(self, proc, timeout=0):
+        if not self.proc_pending(proc):
+            return None
+        res = proc.stdout.read(4094).decode()
+        try:
+            r = str(res)
+        except UnicodeDecodeError as e:
+            r = res
+        return r
 
     def proc_stop(self, proc):
         if not proc:
@@ -248,12 +270,18 @@ class Host():
     def get_logs(self, local_log_dir=None):
         for log in self.logs:
             if local_log_dir:
-                self.local_execute(["scp", self.user + "@[" + self.host + "]:" + log, local_log_dir])
+                if self.user:
+                    self.local_execute(["scp", self.user + "@[" + self.host + "]:" + log, local_log_dir])
+                else:
+                    self.local_execute(["scp", "[" + self.host + "]:" + log, local_log_dir])
             self.execute(["rm", log])
         del self.logs[:]
 
     def send_file(self, src, dst):
         if self.host is None:
             return
-        self.local_execute(["scp", src,
-                            self.user + "@[" + self.host + "]:" + dst])
+        if self.user:
+            self.local_execute(["scp", src,
+                                self.user + "@[" + self.host + "]:" + dst])
+        else:
+            self.local_execute(["scp", src, "[" + self.host + "]:" + dst])

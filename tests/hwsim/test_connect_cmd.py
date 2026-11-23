@@ -119,6 +119,7 @@ def test_connect_cmd_concurrent_grpform_while_connecting(dev, apdev):
     wpas.dump_monitor()
 
     logger.info("Confirm AP connection after P2P group removal")
+    hapd.wait_sta()
     hwsim_utils.test_connectivity(wpas, hapd)
 
     wpas.request("DISCONNECT")
@@ -127,18 +128,18 @@ def test_connect_cmd_concurrent_grpform_while_connecting(dev, apdev):
 
 def test_connect_cmd_reject_assoc(dev, apdev):
     """Connection using cfg80211 connect command getting rejected"""
-    params = {"ssid": "sta-connect",
-              "require_ht": "1"}
-    hostapd.add_ap(apdev[0], params)
+    params = {"ssid": "sta-connect"}
+    hapd = hostapd.add_ap(apdev[0], params)
 
     wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
     wpas.interface_add("wlan5", drv_params="force_connect_cmd=1")
-    wpas.connect("sta-connect", key_mgmt="NONE", scan_freq="2412",
-                 disable_ht="1", wait_connect=False)
-    ev = wpas.wait_event(["CTRL-EVENT-ASSOC-REJECT"], timeout=15)
-    if ev is None:
-        raise Exception("Association rejection timed out")
-    if "status_code=27" not in ev:
+    with fail_test(hapd, 1, "hostapd_get_aid"):
+        wpas.connect("sta-connect", key_mgmt="NONE", scan_freq="2412",
+                     wait_connect=False)
+        ev = wpas.wait_event(["CTRL-EVENT-ASSOC-REJECT"], timeout=15)
+        if ev is None:
+            raise Exception("Association rejection timed out")
+    if "status_code=17" not in ev:
         raise Exception("Unexpected rejection status code")
 
     wpas.request("DISCONNECT")

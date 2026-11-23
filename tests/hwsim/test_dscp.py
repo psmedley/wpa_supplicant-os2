@@ -14,12 +14,6 @@ import hostapd
 from wpasupplicant import WpaSupplicant
 from utils import *
 
-def register_dscp_req(hapd):
-    type = 0x00d0
-    match = "7e506f9a1a"
-    if "OK" not in hapd.request("REGISTER_FRAME %04x %s" % (type, match)):
-        raise Exception("Could not register frame reception for Vendor specific protected type")
-
 def send_dscp_req(hapd, da, oui_subtype, dialog_token, req_control, qos_ie,
                   truncate=False):
     type = 0
@@ -116,7 +110,6 @@ def ap_sta_connectivity(dev, apdev, params):
     p["ieee80211w"] = "1"
     p.update(params)
     hapd = hostapd.add_ap(apdev[0], p)
-    register_dscp_req(hapd)
 
     dev[0].request("SET enable_dscp_policy_capa 1")
     dev[0].connect("dscp", psk="12345678", ieee80211w="1",
@@ -340,6 +333,11 @@ def test_dscp_response(dev, apdev):
     qos_ie += ie
     send_dscp_req(hapd, da, 1, dialog_token, 0, qos_ie)
 
+    ev = dev[0].wait_event(["CTRL-EVENT-DSCP-POLICY"], timeout=5)
+    if ev is None:
+        raise Exception("DSCP event not reported")
+    if "request_start" not in ev:
+        raise Exception("Unexpected DSCP event: " + ev)
     cmd = "DSCP_RESP solicited policy_id=1 status=0 policy_id=4 status=0"
     if "OK" not in dev[0].request(cmd):
         raise Exception("Sending DSCP Response failed")
