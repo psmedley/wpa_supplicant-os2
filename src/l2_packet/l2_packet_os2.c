@@ -296,7 +296,6 @@ static int eth_get(const char *device, u8 ea[ETH_ALEN])		// 20190126 AB does not
 	for (p = buf; p < buf + len; p += ifm->ifm_msglen) {
 		ifm = (struct if_msghdr *)p;
 		sdl = (struct sockaddr_dl *)(ifm + 1);
-		wpa_printf(MSG_ERROR, "test buf=%-40s", buf);
 		if (ifm->ifm_type != RTM_IFINFO ||
 				(ifm->ifm_addrs & RTA_IFP) == 0)
 			continue;
