@@ -280,6 +280,7 @@ static int eth_get(const char *device, u8 ea[ETH_ALEN])		// 20190126 AB does not
 	struct sockaddr_dl *sdl;
 	u_char *p, *buf;
 	size_t len;
+	int found;
 	int mib[] = { CTL_NET, AF_ROUTE, 0, AF_LINK, NET_RT_IFLIST, 0 };
 
 	if (sysctl(mib, 6, NULL, &len, NULL, 0) < 0) {
@@ -305,9 +306,10 @@ static int eth_get(const char *device, u8 ea[ETH_ALEN])		// 20190126 AB does not
 		os_memcpy(ea, LLADDR(sdl), sdl->sdl_alen);
 		break;
 	}
+	found = p < buf + len;
 	os_free(buf);
 
-	if (p >= buf + len) {
+	if (!found) {
 		errno = ESRCH;
 		return -1;
 	}
