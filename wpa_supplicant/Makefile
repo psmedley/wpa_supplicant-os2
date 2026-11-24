@@ -2082,6 +2082,7 @@ wpa_supplicant: $(BCHECK) $(OBJS) $(EXTRA_progs)
 #	@$(E) "  EXTRALIBS " $(EXTRALIBS)
 	$(Q)$(LDO) $(LDFLAGS) -o wpa_supplicant $(OBJS) $(LIBS) $(EXTRALIBS) bldlvl.def
 	@$(E) "  LD " $@
+	mapxqs $@.map -o $@.xqs -l
 
 _OBJS_VAR := OBJS_t
 include ../src/objs.mk
@@ -2100,12 +2101,14 @@ include ../src/objs.mk
 wpa_passphrase: $(OBJS_p)
 	$(Q)$(LDO) $(LDFLAGS) -o wpa_passphrase $(OBJS_p) $(LIBS_p) $(LIBS) bldlvl.def
 	@$(E) "  LD " $@
+	mapxqs $@.map -o $@.xqs -l
 
 _OBJS_VAR := OBJS_c
 include ../src/objs.mk
 wpa_cli: $(OBJS_c)
 	$(Q)$(LDO) $(LDFLAGS) -o wpa_cli $(OBJS_c) $(LIBS_c) bldlvl.def
 	@$(E) "  LD " $@
+	mapxqs $@.map -o $@.xqs -l
 
 LIBCTRL += ../src/common/wpa_ctrl.o
 LIBCTRL += ../src/utils/os_$(CONFIG_OS).o

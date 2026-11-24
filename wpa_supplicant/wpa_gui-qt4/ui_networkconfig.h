@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'networkconfig.ui'
 **
-** Created: Sun Jan 23 11:58:13 2022
+** Created: Sun Feb 27 10:30:14 2022
 **      by: Qt User Interface Compiler version 4.7.3
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!

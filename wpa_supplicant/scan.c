@@ -308,6 +308,7 @@ int wpa_supplicant_trigger_scan(struct wpa_supplicant *wpa_s,
 	struct wpa_driver_scan_params *ctx;
 	struct wpabuf *ies = NULL;
 
+// 20220313 AB test commented out - work better/faster, otherwise 5-6 seconds until no "Faild to initiate AP scan"
 	if (wpa_s->scan_work) {
 		wpa_dbg(wpa_s, MSG_INFO, "Reject scan trigger since one is already pending");
 		return -1;

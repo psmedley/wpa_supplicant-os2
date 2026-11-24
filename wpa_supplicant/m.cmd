@@ -1,6 +1,7 @@
 @REM "P:\usr\lib\qt4\bin\lrelease.exe"
 @REM add to path
 call envqt.cmd
+@set V=1
 
 @REM make --debug or -d for debug output
 @REM m config <-- better not doing that
@@ -20,7 +21,14 @@ make %1 %2 %3 %4 %5 2>&1 | tee out.log
 @REM
 make -C wpa_gui-qt4  %1 %2 %3 %4 %5 2>&1 | tee out2.log
 
-@REM temporary for test
-replace wpa_supplicant.exe e:\_work\xwlan\trunk\release\. /u
-replace wpa_supplicant.exe e:\_work\xwlan\trunk\debug\. /u
+@REM
+@REM Next copy all necessary files to \xwlan directory for easy testing. Not needed for build. 
+@REM
+@REM 20220227 AB, update for exceptq (.xqs) files, 
+@REM          now use copy from 4os2 as standard replace is to dumb
+@REM
+@copy /U wpa_supplicant.exe e:\_work\xwlan\trunk\release\. /u
+@copy /U wpa_supplicant.xqs e:\_work\xwlan\trunk\release\. /u
+@copy /U wpa_supplicant.exe e:\_work\xwlan\trunk\debug\. /u
+@copy /U wpa_supplicant.xqs e:\_work\xwlan\trunk\debug\. /u
 

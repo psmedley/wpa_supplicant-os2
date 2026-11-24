@@ -1473,6 +1473,9 @@ static int wpas_set_frame_classifier_params(struct dscp_policy_data *policy)
 		}
 
 		policy->type4_param.ip_version = IPV6;
+#else /* CONFIG_IPV6 */
+		wpa_printf(MSG_ERROR, "QM: IPv6 frame classifier not supported");
+		return -1;
 #endif /* CONFIG_IPV6 */
 	} else {
 		wpa_printf(MSG_ERROR,
@@ -1503,7 +1506,7 @@ static bool dscp_valid_domain_name(const char *str)
 static void wpas_add_dscp_policy(struct wpa_supplicant *wpa_s,
 				 struct dscp_policy_data *policy)
 {
-	int ip_ver = 0, res = 0;
+	int ip_ver = 0, res = -1;
 	char policy_str[1000], *pos;
 	int len;
 

@@ -7696,6 +7696,7 @@ radio_add_work(struct wpa_supplicant *wpa_s, unsigned int freq,
 	if (work == NULL)
 		return NULL;
 	wpa_dbg(wpa_s, MSG_DEBUG, "Add radio work '%s'@%p", type, work);
+	wpa_dbg(wpa_s, MSG_INFO, "Add radio work '%s'@%p", type, work);			// 20220313 AB test more infos
 	os_get_reltime(&work->time);
 	work->freq = freq;
 	work->type = type;
@@ -7951,6 +7952,13 @@ static int wpa_supplicant_init_iface(struct wpa_supplicant *wpa_s,
 	} else
 		wpa_s->conf = wpa_config_alloc_empty(iface->ctrl_interface,
 						     iface->driver_param);
+
+	wpa_printf(MSG_DEBUG, "Initializing interface '%s' conf '%s' driver "
+		   "'%s' ctrl_interface '%s' bridge '%s'", iface->ifname,
+		   iface->confname ? iface->confname : "N/A",
+		   iface->driver ? iface->driver : "default",
+		   iface->ctrl_interface ? iface->ctrl_interface : "N/A",
+		   iface->bridge_ifname ? iface->bridge_ifname : "N/A");
 
 	if (wpa_s->conf == NULL) {
 		wpa_printf(MSG_ERROR, "\nNo configuration found.");

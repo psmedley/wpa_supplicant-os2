@@ -1,11 +1,13 @@
 @set LANG=en
+@set V=1
+
 @REM not necessary anymore cause default SET LIB=P:/usr/lib;U:/extras/lib/crypto.lib
 @call envQT.cmd -NOANSI
 @
 @REM set shell after envQT - in envQT necessary to clear???
 @SET MAKESHELL=P:/usr/bin/sh.exe
 @REM make %2 %3 %4 %5 --debug
-@make %1 %2 %3 %4 %5
+@make %1 %2 %3 %4 %5 2>&1 | tee out.log
 @
 @REM temporary for test
 @replace wpa_supplicant.exe e:\_work\xwlan\trunk\release\. /u

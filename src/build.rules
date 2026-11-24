@@ -84,7 +84,7 @@ _make_dirs:
 
 $(BUILDDIR)/$(PROJ)/src/%.o: $(ROOTDIR)src/%.c $(CONFIG_FILE) | _make_dirs
 	@echo $(CURDIR): '$(CC) -c -o $@ $(CFLAGS) $<' >$@.cmd
-	$(Q)$(CC) -c -o $@ $(CFLAGS) $<
+	$(Q)$(CC) -c -o $@ $(CFLAGS) $(ROOTDIR)src/$<
 	@$(E) "  CC " $<
 $(BUILDDIR)/$(PROJ)/%.o: %.c $(CONFIG_FILE) | _make_dirs
 	@echo $(CURDIR): '$(CC) -c -o $@ $(CFLAGS) $<' >$@.cmd
@@ -93,7 +93,7 @@ $(BUILDDIR)/$(PROJ)/%.o: %.c $(CONFIG_FILE) | _make_dirs
 # for the fuzzing tests
 $(BUILDDIR)/$(PROJ)/wpa_supplicant/%.o: $(ROOTDIR)wpa_supplicant/%.c $(CONFIG_FILE) | _make_dirs
 	@echo $(CURDIR): '$(CC) -c -o $@ $(CFLAGS) $<' >$@.cmd
-	$(Q)$(CC) -c -o $@ $(CFLAGS) $<
+	$(Q)$(CC) -c -o $@ $(CFLAGS) $(ROOTDIR)wpa_supplicant/$<
 	@$(E) "  CC " $<
 
 # libraries - they know how to build themselves

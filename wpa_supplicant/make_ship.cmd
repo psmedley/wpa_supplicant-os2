@@ -7,6 +7,7 @@
 @REM This script may use 4os2 extensions. Not tested with plain cmd.exe.
 @REM
 @REM 20180423 AB, initial
+@REM 20220227 AB, update for exceptq (.xqs) files
 @REM
 @REM
 
@@ -29,6 +30,7 @@
 @if NOT DIREXIST ..\..\wpa_supplicant_ship                          ( md ..\..\wpa_supplicant_ship )
 
 @copy /U .\*.exe                         ..\..\wpa_supplicant_ship\.
+@copy /U .\*.xqs                         ..\..\wpa_supplicant_ship\.
 @copy /U .\wpa_supplicant_template.conf  ..\..\wpa_supplicant_ship\.
 @copy /U .\wpa_supplicant_template.conf  ..\..\wpa_supplicant_ship\wpa_supplicant.conf
 
@@ -42,6 +44,7 @@
 @copy /U .\wxwlan.cmd                    ..\..\wpa_supplicant_ship\.
 
 @copy /U .\wpa_gui-qt4\*.exe             ..\..\wpa_supplicant_ship\.
+@copy /U .\wpa_gui-qt4\*.xqs             ..\..\wpa_supplicant_ship\.
 
 set zipname=%_YEAR%%_MONTH%%_DAY%_wpa_supplicant.zip
 IF %_MONTH% LT 10 set zipname=%@INSERT[4,0,%zipname%]

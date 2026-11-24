@@ -9,31 +9,23 @@
  */
 
 #include "includes.h"
-#if defined(__APPLE__) || defined(__GLIBC__)
-	#include <net/bpf.h>
-#endif /* __APPLE__ */
 #include <pcap.h>
 
-#include <sys/ioctl.h>
-#ifdef __sun__
-	#include <libdlpi.h>
-#else /* __sun__ */
-	#include <sys/sysctl.h>
-#endif /* __sun__ */
+//#include <sys/ioctl.h>		// 20220126 AB not needed anymore
+#include <sys/sysctl.h>
 
 #include <net/if.h>
 #include <net/if_dl.h>
 #include <net/route.h>
-#include <netinet/in.h>
-
+//#include <netinet/in.h>		// 20220126 AB not needed anymore
+	
 #include "common.h"
 #include "eloop.h"
 #include "l2_packet.h"
 
 #define WPA_DEBUG       MSG_DEBUG
 
-#if defined(__OS2__)
-	#include "packet32.h"
+#include "packet32.h"
 
 static void *WPA_Event = NULL ;
 
@@ -46,22 +38,7 @@ void wpa_driver_register_event_cb(void *h)
 {
 	WPA_Event = h ;
 }
-#endif /* __OS2__ */
 
-
-//static const u8 pae_group_addr[ETH_ALEN] =
-//{ 0x01, 0x80, 0xc2, 0x00, 0x00, 0x03 };
-
-/*struct l2_packet_data {
-	pcap_t *pcap;
-	char ifname[100];
-	u8 own_addr[ETH_ALEN];
-	void (*rx_callback)(void *ctx, const u8 *src_addr,
-					const u8 *buf, size_t len);
-	void *rx_callback_ctx;
-	int l2_hdr; // whether to include layer 2 (Ethernet) header data
-							// buffers
-}; */
 struct l2_packet_data {
 	char ifname[17];
 	u8 own_addr[ETH_ALEN];
@@ -154,7 +131,7 @@ static void l2_packet_receive(int sock, void *eloop_ctx, void *sock_ctx)
 		int len = ret & 0xFFF ;
 		ULONG *ulP = (ULONG*)buf ;
 
-		//wpa_hexdump(MSG_DEBUG,"STATUS XXXXXX ",buf,len);
+		wpa_hexdump(MSG_DEBUG,"STATUS XXXXXX ",buf,len);
 		if (ulP[0] == 0x4001000b) {
 			wpa_driver_genmac_event_connect(WPA_Event);
 		} else if (ulP[0] == 0x4001000C) {
@@ -166,7 +143,7 @@ static void l2_packet_receive(int sock, void *eloop_ctx, void *sock_ctx)
 	}
 
 	if (ret) {
-		//wpa_hexdump(MSG_DEBUG,"RXDATA ",buf,res);
+		wpa_hexdump(MSG_DEBUG,"RXDATA ",buf,20);
 		l2->rx_callback(l2->rx_callback_ctx, &buf[6], &buf[6+6+2], ret-14);
 	}
 
@@ -249,7 +226,7 @@ static void l2_packet_receive_timeout(void *eloop_ctx, void *timeout_ctx)
 	return 0;
 }
 */
-
+/*
 static int eth_get(const char *device, u8 ea[ETH_ALEN])		// 20190126 AB does not work on OS/2 and not needed
 {
 #ifdef __sun__
@@ -275,7 +252,7 @@ static int eth_get(const char *device, u8 ea[ETH_ALEN])		// 20190126 AB does not
 	}
 	os_memcpy(ea, physaddr, ETH_ALEN);
 	dlpi_close(dh);
-#else /* __sun__ */
+#else // __sun__ 
 	struct if_msghdr *ifm;
 	struct sockaddr_dl *sdl;
 	u_char *p, *buf;
@@ -312,16 +289,16 @@ static int eth_get(const char *device, u8 ea[ETH_ALEN])		// 20190126 AB does not
 		errno = ESRCH;
 		return -1;
 	}
-#endif /* __sun__ */
+#endif // __sun__ 
 	return 0;
 }
-
+*/
 
 struct l2_packet_data * l2_packet_init(
-																			const char *ifname, const u8 *own_addr, unsigned short protocol,
-																			void (*rx_callback)(void *ctx, const u8 *src_addr,
-																													const u8 *buf, size_t len),
-																			void *rx_callback_ctx, int l2_hdr)
+	const char *ifname, const u8 *own_addr, unsigned short protocol,
+	void (*rx_callback)(void *ctx, const u8 *src_addr,
+			    const u8 *buf, size_t len),
+	void *rx_callback_ctx, int l2_hdr)
 {
 	struct l2_packet_data *l2;
 
@@ -335,27 +312,15 @@ struct l2_packet_data * l2_packet_init(
 	l2->rx_callback_ctx = rx_callback_ctx;
 	l2->l2_hdr = l2_hdr;
 
-	// 20180817 AB ToDo: next lines remove? does it work with OS/2
-	if (eth_get(l2->ifname, l2->own_addr) < 0) {
-		//	fprintf(stderr, "Failed to get link-level address for interface '%s'.\n", l2->ifname);
-		//	wpa_printf(MSG_ERROR, "Failed to get link-level address for " "interface '%s'.", l2->ifname);
-		//	os_free(l2);
-		//	return NULL;
-		
-	}
-
-
-	/*	if (l2_packet_init_libpcap(l2, protocol)) {
-			os_free(l2);
-			return NULL;
-		}
-	*/
 	l2->fd = (int)PacketOpenAdapter(l2->ifname);
 	PacketReceiveStart((void*)l2->fd);
 	if (own_addr)memcpy(l2->own_addr, own_addr, ETH_ALEN);
 
 	eloop_register_timeout(0,100000,l2_packet_receive_timeout,l2,l2);
-	//   eloop_register_read_sock(l2->fd, l2_packet_receive, l2, NULL);
+	
+//	if (rx_callback && l2->fd >= 0)
+//		eloop_register_read_sock(l2->fd, l2_packet_receive, l2, NULL);		// 20220227 AB was remmed out !!!!!!! ToDo:
+	
 	return l2;
 }
 

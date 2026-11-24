@@ -11895,7 +11895,7 @@ static int set_type4_frame_classifier(const char *cmd,
 {
 	const char *pos, *end;
 	u8 classifier_mask = 0;
-	int ret = 0;
+	int ret = -1;
 #ifdef CONFIG_IPV6
 	char addr[INET6_ADDRSTRLEN];
 #else 
@@ -11913,6 +11913,12 @@ static int set_type4_frame_classifier(const char *cmd,
 	}
 
 	classifier_mask |= BIT(0);
+#ifndef CONFIG_IPV6
+	if (param->ip_version == IPV6) {
+		wpa_printf(MSG_ERROR, "IPv6 frame classifier not supported");
+		return -1;
+	}
+#endif /* CONFIG_IPV6 */
 
 	pos = os_strstr(cmd, "src_ip=");
 	if (pos) {
@@ -11934,8 +11940,8 @@ static int set_type4_frame_classifier(const char *cmd,
 		if (param->ip_version == IPV4)
 			ret = inet_pton(AF_INET, addr,
 					&param->ip_params.v4.src_ip);
-		else
 #ifdef CONFIG_IPV6
+		else
 			ret = inet_pton(AF_INET6, addr,
 					&param->ip_params.v6.src_ip);
 #endif /* CONFIG_IPV6 */
@@ -11970,8 +11976,8 @@ static int set_type4_frame_classifier(const char *cmd,
 		if (param->ip_version == IPV4)
 			ret = inet_pton(AF_INET, addr,
 					&param->ip_params.v4.dst_ip);
-		else
 #ifdef CONFIG_IPV6
+		else
 			ret = inet_pton(AF_INET6, addr,
 					&param->ip_params.v6.dst_ip);
 #endif /* CONFIG_IPV6 */
@@ -11990,8 +11996,8 @@ static int set_type4_frame_classifier(const char *cmd,
 	if (pos && atoi(pos + 9) > 0) {
 		if (param->ip_version == IPV4)
 			param->ip_params.v4.src_port = atoi(pos + 9);
-		else
 #ifdef CONFIG_IPV6
+		else
 			param->ip_params.v6.src_port = atoi(pos + 9);
 #endif /* CONFIG_IPV6 */
 		classifier_mask |= BIT(3);
@@ -12001,8 +12007,8 @@ static int set_type4_frame_classifier(const char *cmd,
 	if (pos && atoi(pos + 9) > 0) {
 		if (param->ip_version == IPV4)
 			param->ip_params.v4.dst_port = atoi(pos + 9);
-		else
 #ifdef CONFIG_IPV6
+		else
 			param->ip_params.v6.dst_port = atoi(pos + 9);
 #endif /* CONFIG_IPV6 */
 		classifier_mask |= BIT(4);
@@ -12012,8 +12018,8 @@ static int set_type4_frame_classifier(const char *cmd,
 	if (pos && atoi(pos + 5) > 0) {
 		if (param->ip_version == IPV4)
 			param->ip_params.v4.dscp = atoi(pos + 5);
-		else
 #ifdef CONFIG_IPV6
+		else
 			param->ip_params.v6.dscp = atoi(pos + 5);
 #endif /* CONFIG_IPV6 */
 		classifier_mask |= BIT(5);
