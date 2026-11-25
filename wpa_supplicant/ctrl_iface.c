@@ -66,7 +66,7 @@
 
 #ifdef __NetBSD__
 #include <net/if_ether.h>
-#elif !defined(__CYGWIN__) && !defined(CONFIG_NATIVE_WINDOWS)
+#elif !defined(__CYGWIN__) && !defined(CONFIG_NATIVE_WINDOWS) && !(__OS2__)
 #include <net/ethernet.h>
 #endif
 
